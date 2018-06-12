@@ -52,13 +52,13 @@ pub fn print_contract_check(
     }
 }
 
-/// Check if all known contracts of the Rlay protocol have been properly deployed
+/// Check if all known contracts of the Rlay protocol have been properly deployed.
 pub fn check_contracts(
     eloop: &mut tokio_core::reactor::Core,
     web3: &web3::Web3<web3::transports::WebSocket>,
-    contract_addresses: &HashMap<String, String>,
+    config: &Config,
 ) {
-    if contract_addresses.is_empty() {
+    if config.contract_addresses.is_empty() {
         println!(
             "{}",
             style("Skipping contracts check (missing contract_addresses config)").yellow()
@@ -79,23 +79,18 @@ pub fn check_contracts(
 
     let mut contract_deployed: HashMap<&str, Result<bool, Error>> = HashMap::new();
     for (name, bytecode) in contract_bytecodes {
-        let address_bytes = contract_addresses.get(name).expect(&format!(
-            "Could not find configuration key for contract_addresses.{}",
-            name
-        ))[2..]
-            .from_hex()
-            .unwrap();
-        let address_hash: H160 = H160::from_slice(&address_bytes);
+        let address_hash = config.contract_address(name);
         let is_deployed = check_address_code(eloop, &web3, address_hash, bytecode);
         contract_deployed.insert(name, is_deployed);
     }
 
     println!("Checking contracts:");
     for (name, is_deployed) in contract_deployed {
-        print_contract_check(name, &contract_addresses[name], &is_deployed);
+        print_contract_check(name, &config.contract_addresses[name], &is_deployed);
     }
 }
 
+/// Check connection with Web3 JSON-RPC provider.
 pub fn check_web3(
     eloop: &mut tokio_core::reactor::Core,
     web3: &web3::Web3<web3::transports::WebSocket>,
@@ -131,5 +126,5 @@ pub fn run_checks(config: &Config) {
     );
 
     check_web3(&mut eloop, &web3, &config);
-    check_contracts(&mut eloop, &web3, &config.contract_addresses);
+    check_contracts(&mut eloop, &web3, &config);
 }

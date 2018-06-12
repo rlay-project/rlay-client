@@ -1,8 +1,10 @@
 use failure::Error;
+use rustc_hex::FromHex;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
 use toml;
+use web3::types::H160;
 
 #[derive(Debug, Deserialize)]
 pub struct Config {
@@ -34,5 +36,16 @@ impl Config {
         file.read_to_string(&mut contents)?;
         let config = toml::from_str(&contents)?;
         Ok(config)
+    }
+
+    pub fn contract_address(&self, name: &str) -> H160 {
+        let address_bytes = self.contract_addresses.get(name).expect(&format!(
+            "Could not find configuration key for contract_addresses.{}",
+            name
+        ))[2..]
+            .from_hex()
+            .unwrap();
+
+        H160::from_slice(&address_bytes)
     }
 }

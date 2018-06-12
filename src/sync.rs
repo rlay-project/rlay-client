@@ -1,14 +1,12 @@
 use ethabi::{self, Event};
 use multibase::{encode as base_encode, Base};
 use std::collections::HashMap;
-use std::fs::File;
 use web3;
 use tokio_core;
 use web3::futures::{self, Future, Stream};
 use web3::types::{BlockNumber, Filter, FilterBuilder, Log};
 
-const CTR_ABI_PATH: &str = "./OntologyStorage.abi";
-const CTR_ADDRESS: &str = "0xf0cd575450fc03b90eead03d65e79741a19665e4";
+use config::Config;
 
 fn is_stored_event(event_type: &str) -> bool {
     let stored_event_types = vec!["AnnotationStored", "Class", "IndividualStored"];
@@ -63,16 +61,17 @@ fn subscribe_with_history(
     combined_future
 }
 
-pub fn run_sync() {
+pub fn run_sync(config: &Config) {
     let mut eloop = tokio_core::reactor::Core::new().unwrap();
     let web3 = web3::Web3::new(
-        web3::transports::WebSocket::with_event_loop("ws://localhost:8545", &eloop.handle())
-            .unwrap(),
+        web3::transports::WebSocket::with_event_loop(
+            config.network_address.as_ref().unwrap(),
+            &eloop.handle(),
+        ).unwrap(),
     );
 
-    let f = File::open(CTR_ABI_PATH).expect("file not found");
-
-    let contract = ethabi::Contract::load(f).unwrap();
+    let ontology_contract_abi = include_str!("../data/OntologyStorage.abi");
+    let contract = ethabi::Contract::load(ontology_contract_abi.as_bytes()).unwrap();
 
     let signature_map: HashMap<web3::types::H256, Event> = contract
         .events
@@ -81,10 +80,11 @@ pub fn run_sync() {
         .map(|event| (event.signature(), event))
         .collect();
 
+    let ontology_contract_address_hash = config.contract_address("OntologyStorage");
     // Filter for Hello event in our contract
     let filter = FilterBuilder::default()
         .from_block(BlockNumber::Earliest)
-        .address(vec![CTR_ADDRESS.into()])
+        .address(vec![ontology_contract_address_hash])
         .build();
 
     let combined_stream = subscribe_with_history(&web3, filter);

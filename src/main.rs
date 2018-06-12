@@ -22,24 +22,29 @@ mod sync;
 use clap::{App, Arg, SubCommand};
 
 fn main() {
+    let config_path_arg = Arg::with_name("config_path")
+        .long("config")
+        .value_name("FILE")
+        .help("Sets a custom config file")
+        .takes_value(true);
     let matches = App::new("rlay-client")
         .about("Client to interact with the Rlay protocol")
-        .subcommand(SubCommand::with_name("client").about("Run the rlay client"))
+        .subcommand(
+            SubCommand::with_name("client")
+                .about("Run the rlay client")
+                .arg(&config_path_arg),
+        )
         .subcommand(
             SubCommand::with_name("doctor")
                 .about("Diagnose problems by running a series of checks")
-                .arg(
-                    Arg::with_name("config_path")
-                        .long("config")
-                        .value_name("FILE")
-                        .help("Sets a custom config file")
-                        .takes_value(true),
-                ),
+                .arg(&config_path_arg),
         )
         .get_matches();
 
-    if let Some(_matches) = matches.subcommand_matches("client") {
-        sync::run_sync();
+    if let Some(matches) = matches.subcommand_matches("client") {
+        let config_path = matches.value_of("config_path");
+        let config = config::Config::from_path_opt(config_path).expect("Couldn't read config file");
+        sync::run_sync(&config);
     } else if let Some(matches) = matches.subcommand_matches("doctor") {
         let config_path = matches.value_of("config_path");
         let config = config::Config::from_path_opt(config_path).expect("Couldn't read config file");
