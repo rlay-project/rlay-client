@@ -6,6 +6,8 @@ use rustc_hex::FromHex;
 use console::{style, Emoji};
 use failure::{err_msg, Error};
 
+use config::Config;
+
 pub static SUCCESS: Emoji = Emoji("✅  ", "");
 pub static FAILURE: Emoji = Emoji("❌  ", "");
 
@@ -52,7 +54,16 @@ pub fn print_contract_check(
 pub fn check_contracts(
     eloop: &mut tokio_core::reactor::Core,
     web3: &web3::Web3<web3::transports::WebSocket>,
+    contract_addresses: &HashMap<String, String>,
 ) {
+    if contract_addresses.is_empty() {
+        println!(
+            "{}",
+            style("Skipping contracts check (missing contract_addresses config)").yellow()
+        );
+        return;
+    }
+
     let mut contract_bytecodes = HashMap::new();
     contract_bytecodes.insert(
         "OntologyStorage",
@@ -64,23 +75,14 @@ pub fn check_contracts(
         include_str!("../data/PropositionLedger.bin"),
     );
 
-    let mut contract_addresses: HashMap<&str, String> = HashMap::new();
-    contract_addresses.insert(
-        "OntologyStorage",
-        "0xf0cd575450fc03b90eead03d65e79741a19665e4".to_owned(),
-    );
-    contract_addresses.insert(
-        "RlayToken",
-        "0x10ef71366ad76d6bddddc66677c38e137aa564db".to_owned(),
-    );
-    contract_addresses.insert(
-        "PropositionLedger",
-        "0xe90f43a68756d880f2dc83e0ae1bf51d31726d36".to_owned(),
-    );
-
     let mut contract_deployed: HashMap<&str, Result<bool, Error>> = HashMap::new();
     for (name, bytecode) in contract_bytecodes {
-        let address_bytes = contract_addresses[name][2..].from_hex().unwrap();
+        let address_bytes = contract_addresses.get(name).expect(&format!(
+            "Could not find configuration key for contract_addresses.{}",
+            name
+        ))[2..]
+            .from_hex()
+            .unwrap();
         let address_hash: H160 = H160::from_slice(&address_bytes);
         let is_deployed = check_address_code(eloop, &web3, address_hash, bytecode);
         contract_deployed.insert(name, is_deployed);
@@ -92,12 +94,12 @@ pub fn check_contracts(
     }
 }
 
-pub fn run_checks() {
+pub fn run_checks(config: &Config) {
     let mut eloop = tokio_core::reactor::Core::new().unwrap();
     let web3 = web3::Web3::new(
         web3::transports::WebSocket::with_event_loop("ws://localhost:8545", &eloop.handle())
             .unwrap(),
     );
 
-    check_contracts(&mut eloop, &web3);
+    check_contracts(&mut eloop, &web3, &config.contract_addresses);
 }
