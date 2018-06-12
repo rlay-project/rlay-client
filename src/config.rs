@@ -13,7 +13,7 @@ pub struct Config {
 }
 
 fn default_network_address() -> Option<String> {
-    Some("/ip4/127.0.0.1/tcp/8545/ws".to_owned())
+    Some("ws://localhost:8545".to_owned())
 }
 
 impl Config {

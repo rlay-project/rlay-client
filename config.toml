@@ -1,4 +1,4 @@
-network_address = "/ip4/127.0.0.1/tcp/8545/ws"
+network_address = "ws://localhost:8545"
 
 [contract_addresses]
 OntologyStorage = "0xf0cd575450fc03b90eead03d65e79741a19665e4"

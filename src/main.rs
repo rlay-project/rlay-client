@@ -5,6 +5,7 @@ extern crate clap;
 extern crate console;
 extern crate ethabi;
 extern crate failure;
+extern crate futures_timer;
 extern crate itertools;
 extern crate multibase;
 extern crate rustc_hex;

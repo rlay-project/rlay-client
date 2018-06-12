@@ -1,10 +1,12 @@
-use tokio_core;
-use web3;
-use std::collections::HashMap;
-use web3::types::H160;
-use rustc_hex::FromHex;
 use console::{style, Emoji};
 use failure::{err_msg, Error};
+use rustc_hex::FromHex;
+use std::collections::HashMap;
+use std::time::Duration;
+use tokio_core;
+use web3::types::H160;
+use web3;
+use futures_timer::FutureExt;
 
 use config::Config;
 
@@ -94,12 +96,40 @@ pub fn check_contracts(
     }
 }
 
+pub fn check_web3(
+    eloop: &mut tokio_core::reactor::Core,
+    web3: &web3::Web3<web3::transports::WebSocket>,
+    config: &Config,
+) {
+    let version_future = web3.net().version().timeout(Duration::from_secs(10));
+
+    println!("Checking Web3 JSON-RPC connection:");
+    print!("  ");
+    match eloop.run(version_future) {
+        Ok(_) => println!(
+            "{}{} (at \"{}\")",
+            SUCCESS,
+            style("Able to connect to JSON-RPC").green(),
+            config.network_address.as_ref().unwrap()
+        ),
+        Err(_) => println!(
+            "{}{} (at \"{}\")",
+            FAILURE,
+            style("Unable to connect to JSON-RPC after 10s timeout").red(),
+            config.network_address.as_ref().unwrap()
+        ),
+    }
+}
+
 pub fn run_checks(config: &Config) {
     let mut eloop = tokio_core::reactor::Core::new().unwrap();
     let web3 = web3::Web3::new(
-        web3::transports::WebSocket::with_event_loop("ws://localhost:8545", &eloop.handle())
-            .unwrap(),
+        web3::transports::WebSocket::with_event_loop(
+            config.network_address.as_ref().unwrap(),
+            &eloop.handle(),
+        ).unwrap(),
     );
 
+    check_web3(&mut eloop, &web3, &config);
     check_contracts(&mut eloop, &web3, &config.contract_addresses);
 }
