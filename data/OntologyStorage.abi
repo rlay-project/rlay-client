@@ -1,0 +1,406 @@
+[
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "name": "_cid",
+        "type": "bytes"
+      }
+    ],
+    "name": "AnnotationStored",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "name": "_cid",
+        "type": "bytes"
+      }
+    ],
+    "name": "ClassStored",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "name": "_cid",
+        "type": "bytes"
+      }
+    ],
+    "name": "IndividualStored",
+    "type": "event"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "name": "property",
+        "type": "bytes"
+      },
+      {
+        "name": "value",
+        "type": "string"
+      }
+    ],
+    "name": "storeAnnotation",
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "name": "annCid",
+        "type": "bytes"
+      }
+    ],
+    "name": "retrieveAnnotation",
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes"
+      },
+      {
+        "name": "",
+        "type": "string"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "name": "annCid",
+        "type": "bytes"
+      }
+    ],
+    "name": "isStoredAnnotation",
+    "outputs": [
+      {
+        "name": "exists",
+        "type": "bool"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "name": "property",
+        "type": "bytes"
+      },
+      {
+        "name": "value",
+        "type": "string"
+      }
+    ],
+    "name": "calculateHashAnnotation",
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "name": "property",
+        "type": "bytes"
+      },
+      {
+        "name": "value",
+        "type": "string"
+      }
+    ],
+    "name": "calculateCidAnnotation",
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "name": "_annotations",
+        "type": "bytes[]"
+      },
+      {
+        "name": "sub_class_of_class",
+        "type": "bytes[]"
+      }
+    ],
+    "name": "storeClass",
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "name": "classCid",
+        "type": "bytes"
+      }
+    ],
+    "name": "retrieveClass",
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes[]"
+      },
+      {
+        "name": "",
+        "type": "bytes[]"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "name": "classCid",
+        "type": "bytes"
+      }
+    ],
+    "name": "isStoredClass",
+    "outputs": [
+      {
+        "name": "exists",
+        "type": "bool"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "name": "_annotations",
+        "type": "bytes[]"
+      },
+      {
+        "name": "sub_class_of_class",
+        "type": "bytes[]"
+      }
+    ],
+    "name": "calculateHashClass",
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "name": "_annotations",
+        "type": "bytes[]"
+      },
+      {
+        "name": "sub_class_of_class",
+        "type": "bytes[]"
+      }
+    ],
+    "name": "calculateCidClass",
+    "outputs": [
+      {
+        "name": "_cid",
+        "type": "bytes"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "name": "_annotations",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_class_assertions",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_negative_class_assertions",
+        "type": "bytes[]"
+      }
+    ],
+    "name": "storeIndividual",
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "name": "indCid",
+        "type": "bytes"
+      }
+    ],
+    "name": "retrieveIndividual",
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes[]"
+      },
+      {
+        "name": "",
+        "type": "bytes[]"
+      },
+      {
+        "name": "",
+        "type": "bytes[]"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "name": "indCid",
+        "type": "bytes"
+      }
+    ],
+    "name": "isStoredIndividual",
+    "outputs": [
+      {
+        "name": "exists",
+        "type": "bool"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "name": "_annotations",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_class_assertions",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_negative_class_assertions",
+        "type": "bytes[]"
+      }
+    ],
+    "name": "calculateHashIndividual",
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "name": "_annotations",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_class_assertions",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_negative_class_assertions",
+        "type": "bytes[]"
+      }
+    ],
+    "name": "calculateCidIndividual",
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "name": "proposition",
+        "type": "bytes"
+      }
+    ],
+    "name": "isPropositionStored",
+    "outputs": [
+      {
+        "name": "stored",
+        "type": "bool"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  }
+]
