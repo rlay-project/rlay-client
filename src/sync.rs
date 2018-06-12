@@ -7,8 +7,8 @@ use tokio_core;
 use web3::futures::{self, Future, Stream};
 use web3::types::{BlockNumber, Filter, FilterBuilder, Log};
 
-const CTR_ABI_PATH: &'static str = "./OntologyStorage.abi";
-const CTR_ADDRESS: &'static str = "0xf0cd575450fc03b90eead03d65e79741a19665e4";
+const CTR_ABI_PATH: &str = "./OntologyStorage.abi";
+const CTR_ADDRESS: &str = "0xf0cd575450fc03b90eead03d65e79741a19665e4";
 
 fn is_stored_event(event_type: &str) -> bool {
     let stored_event_types = vec!["AnnotationStored", "Class", "IndividualStored"];
@@ -48,7 +48,7 @@ fn subscribe_with_history(
     filter: Filter,
 ) -> impl Stream<Item = Log> {
     let history_future_1 = web3.eth().logs(filter.clone());
-    let subscribe_future_1 = web3.eth_subscribe().subscribe_logs(filter.clone());
+    let subscribe_future_1 = web3.eth_subscribe().subscribe_logs(filter);
 
     let combined_future = history_future_1
         .join(subscribe_future_1)

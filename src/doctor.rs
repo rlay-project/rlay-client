@@ -31,7 +31,7 @@ pub fn check_address_code(
 pub fn print_contract_check(
     contract_name: &str,
     address: &str,
-    deploy_check_res: Result<bool, Error>,
+    deploy_check_res: &Result<bool, Error>,
 ) {
     print!("  ");
     match deploy_check_res {
@@ -89,8 +89,8 @@ pub fn check_contracts(
     }
 
     println!("Checking contracts:");
-    for (name, is_deployed) in contract_deployed.into_iter() {
-        print_contract_check(name, &contract_addresses[name], is_deployed);
+    for (name, is_deployed) in contract_deployed {
+        print_contract_check(name, &contract_addresses[name], &is_deployed);
     }
 }
 
