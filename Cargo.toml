@@ -4,15 +4,13 @@ version = "0.1.0"
 authors = ["Maximilian Goisser <goisser94@gmail.com>"]
 
 [dependencies]
-# web3 = "0.3.0"
-web3 = { path = "../../stuff/rust-web3" }
+web3 = { git = 'https://github.com/forrest-marshall/rust-web3', rev = '9387d9c06d04901bb98b75fd6f8b17f8ce852dea' }
 rustc-hex = "1.0.0"
 tokio-core = "0.1.17"
 ethabi = "5.1.1"
 cid = { git = 'https://github.com/hobofan/rust-cid', rev = '27798e5245c234dae1236470a5a5568cb067a216' }
 multibase = "0.6.0"
 clap = "2.31"
-itertools = "0.7.6"
 console = "0.6.1"
 failure = "0.1.1"
 serde = "1.0.66"
