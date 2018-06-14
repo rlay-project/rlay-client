@@ -3,9 +3,12 @@
 extern crate cid;
 extern crate clap;
 extern crate console;
+extern crate env_logger;
 extern crate ethabi;
 extern crate failure;
 extern crate futures_timer;
+#[macro_use]
+extern crate log;
 extern crate multibase;
 extern crate rlay_ontology;
 extern crate rustc_hex;
@@ -19,9 +22,21 @@ mod config;
 mod doctor;
 mod sync;
 
+use std::io::Write;
 use clap::{App, Arg, SubCommand};
+use log::LevelFilter;
+use env_logger::Builder;
 
 fn main() {
+    let mut builder = Builder::from_default_env();
+
+    if std::env::var("RUST_LOG").is_err() {
+        builder
+            .format(|buf, record| writeln!(buf, "{}", record.args()))
+            .filter_level(LevelFilter::Info);
+    }
+    builder.init();
+
     let config_path_arg = Arg::with_name("config_path")
         .long("config")
         .value_name("FILE")

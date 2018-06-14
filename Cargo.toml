@@ -18,6 +18,8 @@ serde = "1.0.66"
 toml = "0.4.6"
 serde_derive = "1.0.66"
 futures-timer = "0.1.1"
+log = "0.4.2"
+env_logger = "0.5.10"
 
 [patch.crates-io]
 # see https://github.com/ipld/rust-cid/pull/9

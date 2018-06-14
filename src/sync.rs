@@ -56,9 +56,9 @@ fn process_log(
     config: &Config,
     web3: &web3::Web3<web3::transports::WebSocket>,
 ) -> impl Future<Item = Option<Entity>, Error = ()> {
-    println!("got log: {:?} - {:?}", log.transaction_hash, log.log_index);
+    debug!("got log: {:?} - {:?}", log.transaction_hash, log.log_index);
     let event = &signature_map[&log.topics[0]];
-    println!("EVENT TYPE: {:?}", event.name);
+    debug!("EVENT TYPE: {:?}", event.name);
 
     if !is_stored_event(&event.name) {
         return futures::future::Either::B(Ok(None).into_future());
@@ -66,7 +66,7 @@ fn process_log(
 
     let cid = cid_from_log(log, event);
     let cid_base58 = base_encode(Base::Base58btc, &cid);
-    println!("CID {:?}", cid_base58);
+    debug!("CID {:?}", cid_base58);
     let ontology_contract_abi = include_str!("../data/OntologyStorage.abi");
     let contract = web3::contract::Contract::from_json(
         web3.eth(),
@@ -173,7 +173,7 @@ pub fn run_sync(config: &Config) {
     let counter_stream = Interval::new(Duration::from_secs(5))
         .for_each(|_| {
             let entity_map_lock = entity_map_mutex.lock().unwrap();
-            println!("Num entities: {}", entity_map_lock.len());
+            info!("Num entities: {}", entity_map_lock.len());
 
             Ok(())
         })
