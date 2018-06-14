@@ -3,9 +3,9 @@ use multibase::{encode as base_encode, Base};
 use std::collections::{BTreeMap, HashMap};
 use web3;
 use tokio_core;
-use web3::futures::{self, Future, IntoFuture, Stream};
+use web3::futures::{self, Future, IntoFuture, Stream, future::Either};
 use web3::types::{BlockNumber, Filter, FilterBuilder, Log};
-use rlay_ontology::ontology::{self, Annotation};
+use rlay_ontology::ontology::{self, *};
 use cid::ToCid;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -15,6 +15,7 @@ use config::Config;
 
 type EntityMap = BTreeMap<Vec<u8>, Entity>;
 
+// TODO: refactor into rlay-ontology
 #[derive(Debug)]
 pub enum Entity {
     Annotation(ontology::Annotation),
@@ -33,7 +34,7 @@ impl Entity {
 }
 
 fn is_stored_event(event_type: &str) -> bool {
-    let stored_event_types = vec!["AnnotationStored", "Class", "IndividualStored"];
+    let stored_event_types = vec!["AnnotationStored", "ClassStored", "IndividualStored"];
 
     stored_event_types.contains(&event_type)
 }
@@ -61,7 +62,7 @@ fn process_log(
     debug!("EVENT TYPE: {:?}", event.name);
 
     if !is_stored_event(&event.name) {
-        return futures::future::Either::B(Ok(None).into_future());
+        return Either::B(Ok(None).into_future());
     }
 
     let cid = cid_from_log(log, event);
@@ -73,12 +74,13 @@ fn process_log(
         config.contract_address("OntologyStorage"),
         ontology_contract_abi.as_bytes(),
     ).unwrap();
-    let fut = match event.name.as_ref() {
-        "AnnotationStored" => futures::future::Either::A(
+
+    let annotation_fut = match event.name.as_ref() {
+        "AnnotationStored" => Either::A(
             contract
                 .query(
                     "retrieveAnnotation",
-                    (cid,),
+                    (cid.clone(),),
                     None,
                     web3::contract::Options::default(),
                     None,
@@ -90,8 +92,74 @@ fn process_log(
                 .and_then(|res| Ok(Some(res)))
                 .map_err(|_| ()),
         ),
-        _ => futures::future::Either::B(Ok(None).into_future()),
+        _ => Either::B(Ok(None).into_future()),
     };
+    let class_fut = match event.name.as_ref() {
+        "ClassStored" => Either::A(
+            contract
+                .query(
+                    "retrieveClass",
+                    (cid.clone(),),
+                    None,
+                    web3::contract::Options::default(),
+                    None,
+                )
+                .and_then(|res| {
+                    let (annotations, sub_class_of_class): (
+                        Vec<Vec<u8>>,
+                        Vec<Vec<u8>>,
+                    ) = res;
+                    Ok(Entity::Class(Class {
+                        annotations,
+                        sub_class_of_class,
+                    }))
+                })
+                .and_then(|res| Ok(Some(res)))
+                .map_err(|_| ()),
+        ),
+        _ => Either::B(Ok(None).into_future()),
+    };
+    let individual_fut = match event.name.as_ref() {
+        "IndividualStored" => Either::A(
+            contract
+                .query(
+                    "retrieveIndividual",
+                    (cid.clone(),),
+                    None,
+                    web3::contract::Options::default(),
+                    None,
+                )
+                .and_then(|res| {
+                    #[cfg_attr(feature = "cargo-clippy", allow(type_complexity))]
+                    let (annotations, class_assertions, negative_class_assertions): (
+                        Vec<Vec<u8>>,
+                        Vec<Vec<u8>>,
+                        Vec<Vec<u8>>,
+                    ) = res;
+                    Ok(Entity::Individual(Individual {
+                        annotations,
+                        class_assertions,
+                        negative_class_assertions,
+                    }))
+                })
+                .and_then(|res| Ok(Some(res)))
+                .map_err(|_| ()),
+        ),
+        _ => Either::B(Ok(None).into_future()),
+    };
+
+    let fut = Either::A(
+        annotation_fut
+            .join3(class_fut, individual_fut)
+            .and_then(|results| {
+                Ok(match results {
+                    (Some(entity), _, _) => Some(entity),
+                    (_, Some(entity), _) => Some(entity),
+                    (_, _, Some(entity)) => Some(entity),
+                    (None, None, None) => None,
+                })
+            }),
+    );
     fut
 }
 
