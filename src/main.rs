@@ -7,6 +7,7 @@ extern crate ethabi;
 extern crate failure;
 extern crate futures_timer;
 extern crate multibase;
+extern crate rlay_ontology;
 extern crate rustc_hex;
 #[macro_use]
 extern crate serde_derive;

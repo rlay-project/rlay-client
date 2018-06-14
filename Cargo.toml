@@ -9,6 +9,7 @@ rustc-hex = "1.0.0"
 tokio-core = "0.1.17"
 ethabi = "5.1.1"
 cid = { git = 'https://github.com/hobofan/rust-cid', rev = '27798e5245c234dae1236470a5a5568cb067a216' }
+rlay_ontology = { git = 'ssh://git@github.com/rlay-project/rlay-ontology.git', rev = 'bcf07d65d1793bf18571b885cc36c4316753061a' }
 multibase = "0.6.0"
 clap = "2.31"
 console = "0.6.1"
@@ -17,3 +18,7 @@ serde = "1.0.66"
 toml = "0.4.6"
 serde_derive = "1.0.66"
 futures-timer = "0.1.1"
+
+[patch.crates-io]
+# see https://github.com/ipld/rust-cid/pull/9
+cid = { git = 'https://github.com/hobofan/rust-cid', rev = '27798e5245c234dae1236470a5a5568cb067a216' }

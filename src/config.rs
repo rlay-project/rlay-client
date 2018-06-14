@@ -6,7 +6,7 @@ use std::io::Read;
 use toml;
 use web3::types::H160;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct Config {
     #[serde(default = "default_network_address")]
     pub network_address: Option<String>,
