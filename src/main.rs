@@ -21,6 +21,7 @@ extern crate web3;
 mod config;
 mod doctor;
 mod sync;
+mod sync_ontology;
 
 use std::io::Write;
 use clap::{App, Arg, SubCommand};
