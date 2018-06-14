@@ -2,6 +2,7 @@ use failure::Error;
 use rustc_hex::FromHex;
 use std::collections::HashMap;
 use std::fs::File;
+use std::path::Path;
 use std::io::Read;
 use toml;
 use web3::types::H160;
@@ -25,12 +26,28 @@ impl Config {
 
     pub fn from_path_opt(path: Option<&str>) -> Result<Config, Error> {
         match path {
-            Some(inner_path) => Self::from_path(inner_path),
-            None => Ok(Self::default()),
+            Some(inner_path) => Self::from_path(Path::new(inner_path)),
+            None => {
+                let default_path = Path::new("rlay.config.toml");
+                debug!(
+                    "No config file path provided. Looking at default path \"{}\"",
+                    default_path.to_string_lossy()
+                );
+                if default_path.is_file() {
+                    Self::from_path(Path::new(default_path))
+                } else {
+                    debug!("No config file found. Using builtin default config.");
+                    Ok(Self::default())
+                }
+            }
         }
     }
 
-    pub fn from_path(path: &str) -> Result<Config, Error> {
+    pub fn from_path(path: &Path) -> Result<Config, Error> {
+        debug!(
+            "Loading config file from path \"{}\"",
+            path.to_string_lossy()
+        );
         let mut file = File::open(path)?;
         let mut contents = String::new();
         file.read_to_string(&mut contents)?;
