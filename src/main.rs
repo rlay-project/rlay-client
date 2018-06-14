@@ -22,6 +22,7 @@ mod config;
 mod doctor;
 mod sync;
 mod sync_ontology;
+mod sync_proposition_ledger;
 
 use std::io::Write;
 use clap::{App, Arg, SubCommand};

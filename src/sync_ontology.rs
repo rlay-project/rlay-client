@@ -105,7 +105,10 @@ fn process_ontology_storage_log(
     config: &Config,
     web3: &web3::Web3<web3::transports::WebSocket>,
 ) -> impl Future<Item = Option<Entity>, Error = ()> {
-    debug!("got log: {:?} - {:?}", log.transaction_hash, log.log_index);
+    debug!(
+        "got OntologyStorage log: {:?} - {:?}",
+        log.transaction_hash, log.log_index
+    );
     let event = &signature_map[&log.topics[0]];
     debug!("EVENT TYPE: {:?}", event.name);
 

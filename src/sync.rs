@@ -9,6 +9,7 @@ use web3;
 
 use config::Config;
 use sync_ontology::{sync_ontology, Entity};
+use sync_proposition_ledger::{sync_ledger, PropositionLedger};
 
 // TODO: possibly contribute to rust-web3
 /// Subscribe on a filter, but also get all historic logs that fit the filter
@@ -37,16 +38,27 @@ pub fn run_sync(config: &Config) {
 
     let entity_map: BTreeMap<Vec<u8>, Entity> = BTreeMap::new();
     let entity_map_mutex = Arc::new(Mutex::new(entity_map));
+    let proposition_ledger: PropositionLedger = vec![];
+    let proposition_ledger_mutex = Arc::new(Mutex::new(proposition_ledger));
 
-    let final_future = sync_ontology(eloop.handle(), config.clone(), entity_map_mutex.clone());
+    let sync_ontology_fut = sync_ontology(eloop.handle(), config.clone(), entity_map_mutex.clone());
+    let sync_proposition_ledger_fut = sync_ledger(
+        eloop.handle(),
+        config.clone(),
+        proposition_ledger_mutex.clone(),
+    );
     let counter_stream = Interval::new(Duration::from_secs(5))
         .for_each(|_| {
             let entity_map_lock = entity_map_mutex.lock().unwrap();
+            let ledger_lock = proposition_ledger_mutex.lock().unwrap();
             info!("Num entities: {}", entity_map_lock.len());
+            info!("Num propositions: {}", ledger_lock.len());
 
             Ok(())
         })
         .map_err(|_| ());
 
-    eloop.run(final_future.join(counter_stream)).unwrap();
+    eloop
+        .run(sync_ontology_fut.join3(sync_proposition_ledger_fut, counter_stream))
+        .unwrap();
 }
