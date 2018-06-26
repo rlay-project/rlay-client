@@ -52,6 +52,7 @@ pub fn sync_ledger(
     eloop_handle: tokio_core::reactor::Handle,
     config: Config,
     proposition_ledger_mutex: Arc<Mutex<PropositionLedger>>,
+    ledger_block_highwatermark_mtx: Arc<Mutex<u64>>,
 ) -> impl Future<Item = (), Error = ()> {
     let web3 = web3::Web3::new(
         web3::transports::WebSocket::with_event_loop(
@@ -86,7 +87,9 @@ pub fn sync_ledger(
         .map(|res| res.unwrap())
         .for_each(move |proposition: Proposition| {
             let mut proposition_ledger_lock = proposition_ledger_mutex.lock().unwrap();
+            let mut ledger_block_highwatermark = ledger_block_highwatermark_mtx.lock().unwrap();
             debug!("New proposition: {:?}", &proposition);
+            *ledger_block_highwatermark = proposition.block_number.clone();
             proposition_ledger_lock.push(proposition);
             Ok(())
         })

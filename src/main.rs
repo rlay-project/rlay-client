@@ -9,17 +9,21 @@ extern crate failure;
 extern crate futures_timer;
 #[macro_use]
 extern crate log;
+extern crate merkle_light;
 extern crate multibase;
 extern crate rlay_ontology;
 extern crate rustc_hex;
 #[macro_use]
 extern crate serde_derive;
+extern crate tiny_keccak;
 extern crate tokio_core;
 extern crate toml;
 extern crate web3;
 
 mod config;
 mod doctor;
+mod merkle;
+mod payout;
 mod sync;
 mod sync_ontology;
 mod sync_proposition_ledger;
