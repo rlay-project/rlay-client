@@ -20,13 +20,14 @@ extern crate tokio_core;
 extern crate toml;
 extern crate web3;
 
-mod config;
-mod doctor;
-mod merkle;
-mod payout;
-mod sync;
-mod sync_ontology;
-mod sync_proposition_ledger;
+pub mod config;
+pub mod doctor;
+pub mod merkle;
+pub mod payout;
+pub mod payout_calculation;
+pub mod sync;
+pub mod sync_ontology;
+pub mod sync_proposition_ledger;
 
 use std::io::Write;
 use clap::{App, Arg, SubCommand};

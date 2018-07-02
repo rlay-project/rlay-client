@@ -11,7 +11,7 @@ use rustc_hex::ToHex;
 use config::Config;
 use sync_ontology::{sync_ontology, Entity};
 use sync_proposition_ledger::{sync_ledger, PropositionLedger};
-use payout::{fill_epoch_payouts, Payout, PayoutEpochs};
+use payout::{fill_epoch_payouts, submit_epoch_payouts, Payout, PayoutEpochs};
 
 // TODO: possibly contribute to rust-web3
 /// Subscribe on a filter, but also get all historic logs that fit the filter
@@ -93,11 +93,35 @@ pub fn run_sync(config: &Config) {
         })
         .map_err(|_| ());
 
+    let submit_handle = eloop.handle().clone();
+    let submit_payout_epochs_mutex = payout_epochs_mutex.clone();
+    let submit_payouts = Interval::new(Duration::from_secs(5))
+        .map_err(|err| {
+            error!("{:?}", err);
+            ()
+        })
+        .for_each(move |_| {
+            submit_epoch_payouts(
+                &submit_handle,
+                config.clone(),
+                submit_payout_epochs_mutex.clone(),
+            ).map(|_| ())
+                .map_err(|err| {
+                    error!("{:?}", err);
+                    ()
+                })
+        })
+        .map_err(|err| {
+            error!("{:?}", err);
+            ()
+        });
+
     eloop
-        .run(sync_ontology_fut.join4(
+        .run(sync_ontology_fut.join5(
             sync_proposition_ledger_fut,
             calculate_payouts_fut,
             counter_stream,
+            submit_payouts,
         ))
         .unwrap();
 }
