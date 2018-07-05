@@ -2,6 +2,7 @@
 name = "rlay-client"
 version = "0.1.0"
 authors = ["Maximilian Goisser <goisser94@gmail.com>"]
+license = "MIT OR Apache-2.0"
 
 [dependencies]
 web3 = { git = 'https://github.com/forrest-marshall/rust-web3', rev = '9387d9c06d04901bb98b75fd6f8b17f8ce852dea' }
