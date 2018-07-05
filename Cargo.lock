@@ -627,6 +627,11 @@ version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
+name = "merkle_light"
+version = "0.3.1"
+source = "git+https://github.com/hobofan/merkle_light?rev=f069616df909cb7a4426f6deb328bde6422a3510#f069616df909cb7a4426f6deb328bde6422a3510"
+
+[[package]]
 name = "mime"
 version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -993,6 +998,7 @@ dependencies = [
 name = "rlay-client"
 version = "0.1.0"
 dependencies = [
+ "byteorder 1.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "cid 0.2.3 (git+https://github.com/hobofan/rust-cid?rev=27798e5245c234dae1236470a5a5568cb067a216)",
  "clap 2.31.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "console 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1001,11 +1007,14 @@ dependencies = [
  "failure 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures-timer 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "merkle_light 0.3.1 (git+https://github.com/hobofan/merkle_light?rev=f069616df909cb7a4426f6deb328bde6422a3510)",
  "multibase 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rlay_ontology 0.1.0 (git+ssh://git@github.com/rlay-project/rlay-ontology.git?rev=bcf07d65d1793bf18571b885cc36c4316753061a)",
+ "rquantiles 0.1.0 (git+ssh://git@github.com/rlay-project/rquantiles.git?rev=527587adda425b3765575e150cc9a8239bca3a83)",
  "rustc-hex 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.66 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.66 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tiny-keccak 1.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio-core 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
  "toml 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "web3 0.3.0 (git+https://github.com/forrest-marshall/rust-web3?rev=9387d9c06d04901bb98b75fd6f8b17f8ce852dea)",
@@ -1029,6 +1038,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "rquantiles"
+version = "0.1.0"
+source = "git+ssh://git@github.com/rlay-project/rquantiles.git?rev=527587adda425b3765575e150cc9a8239bca3a83#527587adda425b3765575e150cc9a8239bca3a83"
+dependencies = [
+ "rustr 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "rustc-demangle"
 version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1045,6 +1062,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "semver 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
+
+[[package]]
+name = "rustr"
+version = "0.1.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "safemem"
@@ -1803,6 +1825,7 @@ dependencies = [
 "checksum matches 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)" = "100aabe6b8ff4e4a7e32c1c13523379802df0772b82466207ac25b013f193376"
 "checksum memchr 2.0.1 (registry+https://github.com/rust-lang/crates.io-index)" = "796fba70e76612589ed2ce7f45282f5af869e0fdd7cc6199fa1aa1f1d591ba9d"
 "checksum memoffset 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "0f9dc261e2b62d7a622bf416ea3c5245cdd5d9a7fcc428c0d06804dfce1775b3"
+"checksum merkle_light 0.3.1 (git+https://github.com/hobofan/merkle_light?rev=f069616df909cb7a4426f6deb328bde6422a3510)" = "<none>"
 "checksum mime 0.2.6 (registry+https://github.com/rust-lang/crates.io-index)" = "ba626b8a6de5da682e1caa06bdb42a335aee5a84db8e5046a3e8ab17ba0a3ae0"
 "checksum mime 0.3.7 (registry+https://github.com/rust-lang/crates.io-index)" = "0b28683d0b09bbc20be1c9b3f6f24854efb1356ffcffee08ea3f6e65596e85fa"
 "checksum mio 0.6.14 (registry+https://github.com/rust-lang/crates.io-index)" = "6d771e3ef92d58a8da8df7d6976bfca9371ed1de6619d9d5a5ce5b1f29b85bfe"
@@ -1844,9 +1867,11 @@ dependencies = [
 "checksum relay 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "1576e382688d7e9deecea24417e350d3062d97e32e45d70b1cde65994ff1489a"
 "checksum remove_dir_all 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)" = "3488ba1b9a2084d38645c4c08276a1752dcbf2c7130d74f1569681ad5d2799c5"
 "checksum rlay_ontology 0.1.0 (git+ssh://git@github.com/rlay-project/rlay-ontology.git?rev=bcf07d65d1793bf18571b885cc36c4316753061a)" = "<none>"
+"checksum rquantiles 0.1.0 (git+ssh://git@github.com/rlay-project/rquantiles.git?rev=527587adda425b3765575e150cc9a8239bca3a83)" = "<none>"
 "checksum rustc-demangle 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)" = "76d7ba1feafada44f2d38eed812bd2489a03c0f5abb975799251518b68848649"
 "checksum rustc-hex 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "0ceb8ce7a5e520de349e1fa172baeba4a9e8d5ef06c47471863530bc4972ee1e"
 "checksum rustc_version 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "a54aa04a10c68c1c4eacb4337fd883b435997ede17a9385784b990777686b09a"
+"checksum rustr 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)" = "c785c263dc2c0fdec5d4006732a1505d9f0fc1dc059a505a7ed2f7f91574de64"
 "checksum safemem 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "e27a8b19b835f7aea908818e871f5cc3a5a186550c30773be987e155e8163d8f"
 "checksum schannel 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)" = "85fd9df495640643ad2d00443b3d78aae69802ad488debab4f1dd52fc1806ade"
 "checksum scoped-tls 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "332ffa32bf586782a3efaeb58f127980944bbc8c4d6913a86107ac2a5ab24b28"
