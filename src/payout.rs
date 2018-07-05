@@ -11,9 +11,10 @@ use std::hash::Hasher;
 use rustc_hex::ToHex;
 
 use config::Config;
-use payout_calculation::payouts_for_epoch;
-use sync_proposition_ledger::PropositionLedger;
 use merkle::Keccak256Algorithm;
+use payout_calculation::payouts_for_epoch;
+use sync_ontology::EntityMap;
+use sync_proposition_ledger::PropositionLedger;
 
 /// Number of host blockchain blocks that make up a epoch
 // TODO: should be taken from smart contract
@@ -43,6 +44,30 @@ impl Payout {
         // TODO: if only a single or no payout, pad with payout to zero address
         MerkleTree::from_data(payouts)
     }
+
+    /// Sums up all the payouts for each address.
+    ///
+    /// The result of this should be directly usable for `build_merkle_tree`.
+    pub fn compact_payouts(payouts: Vec<Self>) -> Vec<Self> {
+        let mut payouts_by_address: HashMap<Address, Vec<Self>> = HashMap::new();
+        for payout in payouts {
+            let mut payout_group = payouts_by_address
+                .entry(payout.address)
+                .or_insert(Vec::new());
+            payout_group.push(payout);
+        }
+        payouts_by_address
+            .into_iter()
+            .map(|(address, group)| {
+                let total_for_address =
+                    group.iter().fold(U256::zero(), |acc, val| acc + val.amount);
+                Payout {
+                    address,
+                    amount: total_for_address,
+                }
+            })
+            .collect()
+    }
 }
 
 impl<H: Hasher> Hashable<H> for Payout {
@@ -64,6 +89,7 @@ pub fn fill_epoch_payouts(
     ledger_block_highwatermark_mtx: &Mutex<u64>,
     ledger_mtx: &Mutex<PropositionLedger>,
     payout_epochs_mtx: &Mutex<PayoutEpochs>,
+    entity_map_mtx: &Mutex<EntityMap>,
 ) {
     let ledger_block_highwatermark = ledger_block_highwatermark_mtx.lock().unwrap();
     let mut payout_epochs = payout_epochs_mtx.lock().unwrap();
@@ -76,7 +102,7 @@ pub fn fill_epoch_payouts(
             continue;
         }
 
-        let payouts = payouts_for_epoch(epoch, ledger_mtx);
+        let payouts = payouts_for_epoch(epoch, ledger_mtx, entity_map_mtx);
         debug!("Calculated payouts for epoch {}: {:?}", epoch, payouts);
         payout_epochs.insert(epoch, payouts);
     }

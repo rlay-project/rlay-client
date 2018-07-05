@@ -1,5 +1,6 @@
 #![cfg_attr(feature = "cargo-clippy", allow(let_and_return))]
 
+extern crate byteorder;
 extern crate cid;
 extern crate clap;
 extern crate console;
@@ -12,6 +13,7 @@ extern crate log;
 extern crate merkle_light;
 extern crate multibase;
 extern crate rlay_ontology;
+extern crate rquantiles;
 extern crate rustc_hex;
 #[macro_use]
 extern crate serde_derive;
@@ -28,6 +30,7 @@ pub mod payout_calculation;
 pub mod sync;
 pub mod sync_ontology;
 pub mod sync_proposition_ledger;
+pub mod web3_helpers;
 
 use std::io::Write;
 use clap::{App, Arg, SubCommand};

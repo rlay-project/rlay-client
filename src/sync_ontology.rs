@@ -11,11 +11,23 @@ use web3;
 
 use config::Config;
 use sync::subscribe_with_history;
+use web3_helpers::{decode_class_call_output, decode_individual_call_output, raw_query};
 
 pub type EntityMap = BTreeMap<Vec<u8>, Entity>;
 
+pub fn entity_map_individuals(entity_map: &EntityMap) -> Vec<&ontology::Individual> {
+    entity_map
+        .values()
+        .filter_map(|entity| match entity {
+            Entity::Annotation(_) => None,
+            Entity::Class(_) => None,
+            Entity::Individual(val) => Some(val),
+        })
+        .collect()
+}
+
 // TODO: refactor into rlay-ontology
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Entity {
     Annotation(ontology::Annotation),
     Class(ontology::Class),
@@ -76,6 +88,7 @@ pub fn sync_ontology(
         .for_each(move |entity: Entity| {
             let mut entity_map_lock = entity_map_mutex.lock().unwrap();
             entity_map_lock.insert(entity.to_bytes(), entity);
+
             Ok(())
         })
         .map_err(|_| ())
@@ -120,20 +133,33 @@ fn process_ontology_storage_log(
     let cid_base58 = base_encode(Base::Base58btc, &cid);
     debug!("CID {:?}", cid_base58);
     let ontology_contract_abi = include_str!("../data/OntologyStorage.abi");
+    let abi = ethabi::Contract::load(ontology_contract_abi.as_bytes()).unwrap();
     let contract = web3::contract::Contract::from_json(
         web3.eth(),
         config.contract_address("OntologyStorage"),
         ontology_contract_abi.as_bytes(),
     ).unwrap();
 
-    Either::A(get_entity_for_log(&contract, event.name.as_ref(), &cid))
+    Either::A(get_entity_for_log(
+        web3,
+        &abi,
+        &contract,
+        event.name.as_ref(),
+        &cid,
+    ))
 }
 
 fn get_entity_for_log(
+    web3: &web3::Web3<web3::transports::WebSocket>,
+    abi: &ethabi::Contract,
     contract: &web3::contract::Contract<web3::transports::WebSocket>,
     event_name: &str,
     cid: &[u8],
 ) -> impl Future<Item = Option<Entity>, Error = ()> {
+    let annotation_fut_cid = cid.to_owned();
+    let class_fut_cid = cid.to_owned();
+    let individual_fut_cid = cid.to_owned();
+
     let annotation_fut = match event_name {
         "AnnotationStored" => Either::A(
             contract
@@ -144,9 +170,14 @@ fn get_entity_for_log(
                     web3::contract::Options::default(),
                     None,
                 )
-                .and_then(|res| {
+                .and_then(move |res| {
                     let (property, value): (Vec<u8>, String) = res;
-                    Ok(Entity::Annotation(Annotation::new(&property, value)))
+                    let ent = Annotation::new(&property, value);
+                    debug_assert!(
+                        ent.to_cid().unwrap().to_bytes() == annotation_fut_cid,
+                        "CID of retrieved Entity was not correct"
+                    );
+                    Ok(Entity::Annotation(ent))
                 })
                 .and_then(|res| Ok(Some(res)))
                 .map_err(|_| ()),
@@ -155,24 +186,30 @@ fn get_entity_for_log(
     };
     let class_fut = match event_name {
         "ClassStored" => Either::A(
-            contract
-                .query(
-                    "retrieveClass",
-                    (cid.to_owned(),),
-                    None,
-                    web3::contract::Options::default(),
-                    None,
-                )
-                .and_then(|res| {
-                    let (annotations, sub_class_of_class): (
-                        Vec<Vec<u8>>,
-                        Vec<Vec<u8>>,
-                    ) = res;
-                    Ok(Entity::Class(Class {
-                        annotations,
-                        sub_class_of_class,
-                    }))
-                })
+            raw_query(
+                web3.eth(),
+                abi,
+                contract.address(),
+                "retrieveClass",
+                (cid.to_owned(),),
+                None,
+                web3::contract::Options::default(),
+                None,
+            ).and_then(move |res| {
+                let (annotations, sub_class_of_class) = decode_class_call_output(&res.0);
+                let ent = Class {
+                    annotations,
+                    sub_class_of_class,
+                };
+
+                debug_assert_eq!(
+                    ent.to_cid().unwrap().to_bytes(),
+                    class_fut_cid,
+                    "CID of retrieved Entity was not correct"
+                );
+
+                Ok(Entity::Class(ent))
+            })
                 .and_then(|res| Ok(Some(res)))
                 .map_err(|_| ()),
         ),
@@ -180,27 +217,31 @@ fn get_entity_for_log(
     };
     let individual_fut = match event_name {
         "IndividualStored" => Either::A(
-            contract
-                .query(
-                    "retrieveIndividual",
-                    (cid.to_owned(),),
-                    None,
-                    web3::contract::Options::default(),
-                    None,
-                )
-                .and_then(|res| {
-                    #[cfg_attr(feature = "cargo-clippy", allow(type_complexity))]
-                    let (annotations, class_assertions, negative_class_assertions): (
-                        Vec<Vec<u8>>,
-                        Vec<Vec<u8>>,
-                        Vec<Vec<u8>>,
-                    ) = res;
-                    Ok(Entity::Individual(Individual {
-                        annotations,
-                        class_assertions,
-                        negative_class_assertions,
-                    }))
-                })
+            raw_query(
+                web3.eth(),
+                abi,
+                contract.address(),
+                "retrieveIndividual",
+                (cid.to_owned(),),
+                None,
+                web3::contract::Options::default(),
+                None,
+            ).and_then(move |res| {
+                let (annotations, class_assertions, negative_class_assertions) =
+                    decode_individual_call_output(&res.0);
+                let ent = Individual {
+                    annotations,
+                    class_assertions,
+                    negative_class_assertions,
+                };
+
+                debug_assert_eq!(
+                    ent.to_cid().unwrap().to_bytes(),
+                    individual_fut_cid,
+                    "CID of retrieved Entity was not correct"
+                );
+                Ok(Entity::Individual(ent))
+            })
                 .and_then(|res| Ok(Some(res)))
                 .map_err(|_| ()),
         ),

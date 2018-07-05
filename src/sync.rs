@@ -53,12 +53,13 @@ pub fn run_sync(config: &Config) {
         proposition_ledger_mutex.clone(),
         proposition_ledger_block_highwatermark_mutex.clone(),
     );
-    let calculate_payouts_fut = Interval::new(Duration::from_secs(5))
+    let calculate_payouts_fut = Interval::new(Duration::from_secs(15))
         .for_each(|_| {
             fill_epoch_payouts(
                 &proposition_ledger_block_highwatermark_mutex.clone(),
                 &proposition_ledger_mutex.clone(),
                 &payout_epochs_mutex.clone(),
+                &entity_map_mutex.clone(),
             );
             Ok(())
         })
@@ -68,8 +69,21 @@ pub fn run_sync(config: &Config) {
             let entity_map_lock = entity_map_mutex.lock().unwrap();
             let ledger_lock = proposition_ledger_mutex.lock().unwrap();
             let payout_epochs = payout_epochs_mutex.lock().unwrap();
-            info!("Num entities: {}", entity_map_lock.len());
-            info!("Num propositions: {}", ledger_lock.len());
+            debug!("Num entities: {}", entity_map_lock.len());
+            let mut annotation_count = 0;
+            let mut class_count = 0;
+            let mut individual_count = 0;
+            for entity in entity_map_lock.values() {
+                match entity {
+                    Entity::Annotation(_) => annotation_count += 1,
+                    Entity::Class(_) => class_count += 1,
+                    Entity::Individual(_) => individual_count += 1,
+                }
+            }
+            debug!("--- Num annotation: {}", annotation_count);
+            debug!("--- Num class: {}", class_count);
+            debug!("--- Num individual: {}", individual_count);
+            debug!("Num propositions: {}", ledger_lock.len());
 
             for (epoch, payouts) in payout_epochs.iter() {
                 trace!("Payouts for epoch {}: {:?}", epoch, payouts);
