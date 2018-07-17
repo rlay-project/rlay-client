@@ -1,3 +1,4 @@
+data_path = "rlay_data"
 network_address = "ws://localhost:8545"
 
 [contract_addresses]

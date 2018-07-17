@@ -13,10 +13,16 @@ pub struct Config {
     pub network_address: Option<String>,
     #[serde(default)]
     pub contract_addresses: HashMap<String, String>,
+    #[serde(default = "default_data_path")]
+    pub data_path: Option<String>,
 }
 
 fn default_network_address() -> Option<String> {
     Some("ws://localhost:8545".to_owned())
+}
+
+fn default_data_path() -> Option<String> {
+    Some("./data".to_owned())
 }
 
 impl Config {

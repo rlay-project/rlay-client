@@ -25,6 +25,7 @@ log = "0.4.2"
 env_logger = "0.5.10"
 tiny-keccak = "1.4.2"
 byteorder = "1.2.3"
+serde_json = "1.0.22"
 
 [patch.crates-io]
 # see https://github.com/ipld/rust-cid/pull/9

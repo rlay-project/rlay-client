@@ -11,7 +11,8 @@ use rustc_hex::ToHex;
 use config::Config;
 use sync_ontology::{sync_ontology, Entity};
 use sync_proposition_ledger::{sync_ledger, PropositionLedger};
-use payout::{fill_epoch_payouts, submit_epoch_payouts, Payout, PayoutEpochs};
+use payout::{fill_epoch_payouts, fill_epoch_payouts_cumulative, load_epoch_payouts,
+             submit_epoch_payouts, Payout, PayoutEpochs};
 
 // TODO: possibly contribute to rust-web3
 /// Subscribe on a filter, but also get all historic logs that fit the filter
@@ -43,8 +44,14 @@ pub fn run_sync(config: &Config) {
     let proposition_ledger: PropositionLedger = vec![];
     let proposition_ledger_mutex = Arc::new(Mutex::new(proposition_ledger));
     let proposition_ledger_block_highwatermark_mutex = Arc::new(Mutex::new(0u64));
-    let payout_epochs: PayoutEpochs = HashMap::new();
+
+    let mut payout_epochs: PayoutEpochs = HashMap::new();
+    // Load state from storage
+    load_epoch_payouts(config.clone(), &mut payout_epochs);
     let payout_epochs_mutex = Arc::new(Mutex::new(payout_epochs));
+    // Cummulative epoch payouts
+    let payout_epochs_cum: PayoutEpochs = HashMap::new();
+    let payout_epochs_cum_mutex = Arc::new(Mutex::new(payout_epochs_cum));
 
     let sync_ontology_fut = sync_ontology(eloop.handle(), config.clone(), entity_map_mutex.clone());
     let sync_proposition_ledger_fut = sync_ledger(
@@ -61,6 +68,10 @@ pub fn run_sync(config: &Config) {
                 &payout_epochs_mutex.clone(),
                 &entity_map_mutex.clone(),
             );
+            fill_epoch_payouts_cumulative(
+                &payout_epochs_mutex.clone(),
+                &payout_epochs_cum_mutex.clone(),
+            );
             Ok(())
         })
         .map_err(|_| ());
@@ -68,7 +79,7 @@ pub fn run_sync(config: &Config) {
         .for_each(|_| {
             let entity_map_lock = entity_map_mutex.lock().unwrap();
             let ledger_lock = proposition_ledger_mutex.lock().unwrap();
-            let payout_epochs = payout_epochs_mutex.lock().unwrap();
+            let payout_epochs = payout_epochs_cum_mutex.lock().unwrap();
             debug!("Num entities: {}", entity_map_lock.len());
             let mut annotation_count = 0;
             let mut class_count = 0;
@@ -87,7 +98,7 @@ pub fn run_sync(config: &Config) {
 
             for (epoch, payouts) in payout_epochs.iter() {
                 trace!("Payouts for epoch {}: {:?}", epoch, payouts);
-                if payouts.len() <= 1 {
+                if payouts.len() <= 0 {
                     trace!("Not enough payouts to build payout tree");
                     continue;
                 }
@@ -109,6 +120,7 @@ pub fn run_sync(config: &Config) {
 
     let submit_handle = eloop.handle().clone();
     let submit_payout_epochs_mutex = payout_epochs_mutex.clone();
+    let submit_payout_epochs_cum_mutex = payout_epochs_cum_mutex.clone();
     let submit_payouts = Interval::new(Duration::from_secs(5))
         .map_err(|err| {
             error!("{:?}", err);
@@ -119,6 +131,7 @@ pub fn run_sync(config: &Config) {
                 &submit_handle,
                 config.clone(),
                 submit_payout_epochs_mutex.clone(),
+                submit_payout_epochs_cum_mutex.clone(),
             ).map(|_| ())
                 .map_err(|err| {
                     error!("{:?}", err);

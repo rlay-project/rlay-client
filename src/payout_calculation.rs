@@ -330,7 +330,9 @@ fn calculate_payouts(pools: &[PropositionPool]) -> Vec<Payout> {
         let rewarded_propositions_factors = calculate_proposition_in_pool_factors(pool);
         for (proposition, factor) in rewarded_propositions_factors {
             // HACK: *2 since for some reason the sum of all only comes down
-            let reward: f64 = TOKENS_PER_BLOCK as f64 * pool_factor * factor * 2f64;
+            // HACK: *0.999 so that floating point inaccuracies don't push us over the limit of
+            // mined tokens. See issue #2.
+            let reward: f64 = TOKENS_PER_BLOCK as f64 * pool_factor * factor * 2f64 * 0.999f64;
 
             let mut payout = Payout::empty_for_address(proposition.sender);
             payout.amount = payout.amount + (reward as u64).into();

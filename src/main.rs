@@ -17,6 +17,8 @@ extern crate rquantiles;
 extern crate rustc_hex;
 #[macro_use]
 extern crate serde_derive;
+#[macro_use]
+extern crate serde_json;
 extern crate tiny_keccak;
 extern crate tokio_core;
 extern crate toml;
@@ -27,6 +29,7 @@ pub mod doctor;
 pub mod merkle;
 pub mod payout;
 pub mod payout_calculation;
+pub mod payout_cli;
 pub mod sync;
 pub mod sync_ontology;
 pub mod sync_proposition_ledger;
@@ -36,6 +39,8 @@ use std::io::Write;
 use clap::{App, Arg, SubCommand};
 use log::LevelFilter;
 use env_logger::Builder;
+
+use payout_cli::PayoutParams;
 
 fn main() {
     let mut builder = Builder::from_default_env();
@@ -60,6 +65,26 @@ fn main() {
                 .arg(&config_path_arg),
         )
         .subcommand(
+            SubCommand::with_name("payout")
+                .about("Help redeem a reward payout")
+                .arg(&config_path_arg)
+                .subcommand(
+                    SubCommand::with_name("show")
+                        .about("Show available payouts at epoch")
+                        .arg(
+                            Arg::with_name("address")
+                                .required(true)
+                                .help("The address to look up the payouts for."),
+                        )
+                        .arg(
+                            Arg::with_name("epoch")
+                                .required(false)
+                                .default_value("latest")
+                                .help("The epoch to look up the payouts for."),
+                        ),
+                ),
+        )
+        .subcommand(
             SubCommand::with_name("doctor")
                 .about("Diagnose problems by running a series of checks")
                 .arg(&config_path_arg),
@@ -74,5 +99,13 @@ fn main() {
         let config_path = matches.value_of("config_path");
         let config = config::Config::from_path_opt(config_path).expect("Couldn't read config file");
         doctor::run_checks(&config);
+    } else if let Some(matches) = matches.subcommand_matches("payout") {
+        let config_path = matches.value_of("config_path");
+        let config = config::Config::from_path_opt(config_path).expect("Couldn't read config file");
+
+        if let Some(matches) = matches.subcommand_matches("show") {
+            let payout_args = PayoutParams::from_matches(matches.clone());
+            payout_cli::show_payout(&config, payout_args);
+        }
     }
 }

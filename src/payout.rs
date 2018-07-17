@@ -1,14 +1,17 @@
-use tokio_core;
-use web3;
-use std::sync::{Arc, Mutex};
-use std::fmt::Write;
-use std::collections::HashMap;
 use merkle_light::hash::Hashable;
 use merkle_light::merkle2::MerkleTree;
+use rustc_hex::ToHex;
+use serde_json;
+use std::collections::HashMap;
+use std::fmt::Write;
+use std::fs::{self, File};
+use std::hash::Hasher;
+use std::path::Path;
+use std::sync::{Arc, Mutex};
+use tokio_core;
 use web3::futures::{self, prelude::*};
 use web3::types::{Address, H256, U256};
-use std::hash::Hasher;
-use rustc_hex::ToHex;
+use web3;
 
 use config::Config;
 use merkle::Keccak256Algorithm;
@@ -25,7 +28,7 @@ pub const EPOCH_START_BLOCK: u64 = 0;
 
 pub type PayoutEpochs = HashMap<u64, Vec<Payout>>;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Payout {
     pub address: Address,
     pub amount: U256,
@@ -41,7 +44,12 @@ impl Payout {
 
     /// Build a merkle tree for a list of payouts
     pub fn build_merkle_tree(payouts: &[Self]) -> MerkleTree<[u8; 32], Keccak256Algorithm> {
-        // TODO: if only a single or no payout, pad with payout to zero address
+        if payouts.len() < 2 {
+            let mut padded_payouts: Vec<_> = payouts.to_owned();
+            // TODO: maybe also pad with a second address
+            padded_payouts.push(Payout::empty_for_address(Address::zero()));
+            return MerkleTree::from_data(padded_payouts);
+        }
         MerkleTree::from_data(payouts)
     }
 
@@ -108,6 +116,34 @@ pub fn fill_epoch_payouts(
     }
 }
 
+/// Fill the cumulative epoch payouts map from the payouts map.
+pub fn fill_epoch_payouts_cumulative(
+    payout_epochs_mtx: &Mutex<PayoutEpochs>,
+    payout_epochs_cum_mtx: &Mutex<PayoutEpochs>,
+) {
+    let payout_epochs = payout_epochs_mtx.lock().unwrap();
+    let mut payout_epochs_cum = payout_epochs_cum_mtx.lock().unwrap();
+
+    let latest_calculated_epoch = *payout_epochs.keys().max().unwrap();
+    for epoch in 0..=latest_calculated_epoch {
+        if payout_epochs_cum.contains_key(&epoch) {
+            continue;
+        }
+
+        let mut current_epoch_payouts = payout_epochs.get(&epoch).unwrap().clone();
+        if epoch == 0 {
+            payout_epochs_cum.insert(epoch, current_epoch_payouts);
+            continue;
+        }
+
+        let mut prev_epoch_payouts = payout_epochs.get(&(epoch - 1)).unwrap().clone();
+        current_epoch_payouts.append(&mut prev_epoch_payouts);
+        let cumulative_payouts = Payout::compact_payouts(current_epoch_payouts);
+
+        payout_epochs_cum.insert(epoch, cumulative_payouts);
+    }
+}
+
 fn rlay_token_contract(
     config: &Config,
     web3: &web3::Web3<web3::transports::WebSocket>,
@@ -120,12 +156,64 @@ fn rlay_token_contract(
     ).expect("Couldn't load RlayToken contract")
 }
 
+/// Load epoch_payouts from files in data directory.
+pub fn load_epoch_payouts(config: Config, payout_epochs: &mut PayoutEpochs) {
+    let epoch_dir = Path::new(&config.data_path.unwrap()).join(Path::new("./epoch_payouts/"));
+    for epoch_file in fs::read_dir(epoch_dir).unwrap() {
+        let epoch_file = epoch_file.unwrap();
+        trace!("Loading epoch_payouts from file {:?}", epoch_file.path());
+        let file = File::open(epoch_file.path()).unwrap();
+
+        let contents: serde_json::Value =
+            serde_json::from_reader(file).expect("Could not parse JSON file.");
+        let epoch_num = contents.get("epoch").unwrap().as_u64().unwrap();
+        let payouts: Vec<Payout> =
+            serde_json::from_value(contents.get("payouts").unwrap().clone()).unwrap();
+
+        payout_epochs.insert(epoch_num, payouts);
+    }
+}
+
+/// Store epoch_payouts to files in data directory.
+pub fn store_epoch_payouts(config: Config, payout_epochs_mtx: Arc<Mutex<PayoutEpochs>>) {
+    let payout_epochs = payout_epochs_mtx
+        .lock()
+        .expect("Couldn't aquire lock for payout epochs");
+
+    let epoch_dir = Path::new(&config.data_path.unwrap()).join(Path::new("./epoch_payouts/"));
+    ::std::fs::create_dir_all(&epoch_dir).unwrap();
+
+    for (epoch_num, payouts) in payout_epochs.iter() {
+        let filename = format!("{:08}.json", epoch_num);
+        let file_path = epoch_dir.join(Path::new(&filename));
+
+        if file_path.exists() {
+            trace!(
+                "File at {:?} already exists. Not storing epoch payouts.",
+                file_path
+            );
+            continue;
+        }
+
+        let content = json!{{
+            "epoch": epoch_num,
+            "payouts": payouts,
+        }};
+        trace!("Writing payout epochs to {:?}.", file_path);
+        let payout_file = ::std::fs::File::create(file_path).expect("Could not create file.");
+        ::serde_json::to_writer(payout_file, &content).unwrap();
+    }
+}
+
 /// Check if the payout merkle roots for the latest epochs has been submitted to the token contract, and submit them if neccessary.
 pub fn submit_epoch_payouts(
     eloop_handle: &tokio_core::reactor::Handle,
     config: Config,
     payout_epochs_mtx: Arc<Mutex<PayoutEpochs>>,
+    payout_epochs_cum_mtx: Arc<Mutex<PayoutEpochs>>,
 ) -> impl Future<Error = ()> {
+    store_epoch_payouts(config.clone(), payout_epochs_mtx.clone());
+
     let web3 = web3::Web3::new(
         web3::transports::WebSocket::with_event_loop(
             config.network_address.as_ref().unwrap(),
@@ -133,12 +221,12 @@ pub fn submit_epoch_payouts(
         ).unwrap(),
     );
 
-    let payout_epochs = payout_epochs_mtx
+    let payout_epochs_cum = payout_epochs_cum_mtx
         .lock()
         .expect("Couldn't aquire lock for payout epochs");
 
     // Check only the latest epochs so we don't spam the RPC to much
-    let mut newest_epochs: Vec<_> = payout_epochs.iter().collect();
+    let mut newest_epochs: Vec<_> = payout_epochs_cum.iter().collect();
     newest_epochs.sort_by_key(|ref n| n.0);
     newest_epochs.reverse();
     let epochs_to_check: Vec<(u64, Vec<Payout>)> = newest_epochs
@@ -176,7 +264,14 @@ pub fn submit_epoch_payouts(
                     });
 
                 payout_root.and_then(move |existing_payout_root: H256| {
-                    if existing_payout_root != H256::zero() || payouts.len() <= 1 {
+                    if payouts.len() <= 0 {
+                        trace!(
+                            "Payout root for epoch {} does not have enough payouts to submit to smart contract",
+                            epoch
+                        );
+                        return futures::future::Either::A(futures::future::ok(()));
+                    }
+                    if existing_payout_root != H256::zero() {
                         trace!(
                             "Payout root for epoch {} already present in smart contract",
                             epoch
@@ -224,7 +319,7 @@ pub fn format_redeem_payout_call(
     write!(&mut proof_str, "],").unwrap();
     write!(&mut proof_str, "'0x{}'", payout.address.to_hex()).unwrap();
     write!(&mut proof_str, ",").unwrap();
-    write!(&mut proof_str, "{}", payout.amount).unwrap();
+    write!(&mut proof_str, "'{}'", payout.amount).unwrap();
     write!(&mut proof_str, ")").unwrap();
 
     return proof_str;
