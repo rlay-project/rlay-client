@@ -21,10 +21,7 @@ use sync_proposition_ledger::PropositionLedger;
 
 /// Number of host blockchain blocks that make up a epoch
 // TODO: should be taken from smart contract
-pub const EPOCH_LENGTH: u64 = 20;
-/// This block is the start of the first epoch
-// TODO: should be taken from smart contract
-pub const EPOCH_START_BLOCK: u64 = 0;
+pub const EPOCH_LENGTH: u64 = 100;
 
 pub type PayoutEpochs = HashMap<u64, Vec<Payout>>;
 
@@ -88,12 +85,41 @@ impl<H: Hasher> Hashable<H> for Payout {
     }
 }
 
+pub fn retrieve_epoch_start_block(
+    eloop_handle: &tokio_core::reactor::Handle,
+    config: &Config,
+) -> impl Future<Item = U256, Error = ()> {
+    let web3 = web3::Web3::new(
+        web3::transports::WebSocket::with_event_loop(
+            config.network_address.as_ref().unwrap(),
+            &eloop_handle,
+        ).unwrap(),
+    );
+
+    let contract = rlay_token_contract(&config, &web3);
+
+    contract
+        .query(
+            "epochs_start",
+            (),
+            None,
+            web3::contract::Options::default(),
+            None,
+        )
+        .map_err(|err| {
+            error!("{:?}", err);
+            ()
+        })
+}
+
 /// Fill the epoch payouts map with the payouts for all completed epochs.
 ///
 /// See also [`payouts_for_epoch`].
 ///
 /// [`payouts_for_epoch`]: ./fn.payouts_for_epoch.html
 pub fn fill_epoch_payouts(
+    epoch_start_block: U256,
+    epoch_length: U256,
     ledger_block_highwatermark_mtx: &Mutex<u64>,
     ledger_mtx: &Mutex<PropositionLedger>,
     payout_epochs_mtx: &Mutex<PayoutEpochs>,
@@ -102,7 +128,8 @@ pub fn fill_epoch_payouts(
     let ledger_block_highwatermark = ledger_block_highwatermark_mtx.lock().unwrap();
     let mut payout_epochs = payout_epochs_mtx.lock().unwrap();
 
-    let latest_completed_epoch = (*ledger_block_highwatermark - EPOCH_START_BLOCK) / EPOCH_LENGTH;
+    let latest_completed_epoch =
+        (*ledger_block_highwatermark - epoch_start_block.as_u64()) / epoch_length.as_u64();
     debug!("Ledger sync highwatermark: {}", ledger_block_highwatermark);
     debug!("Latest completed epoch: {}", latest_completed_epoch);
     for epoch in 0..=latest_completed_epoch {
@@ -110,7 +137,13 @@ pub fn fill_epoch_payouts(
             continue;
         }
 
-        let payouts = payouts_for_epoch(epoch, ledger_mtx, entity_map_mtx);
+        let payouts = payouts_for_epoch(
+            epoch,
+            epoch_start_block,
+            epoch_length,
+            ledger_mtx,
+            entity_map_mtx,
+        );
         debug!("Calculated payouts for epoch {}: {:?}", epoch, payouts);
         payout_epochs.insert(epoch, payouts);
     }

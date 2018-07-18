@@ -4,7 +4,7 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tokio_core;
 use web3::futures::{self, prelude::*};
-use web3::types::{Filter, Log};
+use web3::types::{Filter, Log, U256};
 use web3;
 use rustc_hex::ToHex;
 
@@ -12,7 +12,7 @@ use config::Config;
 use sync_ontology::{sync_ontology, Entity};
 use sync_proposition_ledger::{sync_ledger, PropositionLedger};
 use payout::{fill_epoch_payouts, fill_epoch_payouts_cumulative, load_epoch_payouts,
-             submit_epoch_payouts, Payout, PayoutEpochs};
+             retrieve_epoch_start_block, submit_epoch_payouts, Payout, PayoutEpochs, EPOCH_LENGTH};
 
 // TODO: possibly contribute to rust-web3
 /// Subscribe on a filter, but also get all historic logs that fit the filter
@@ -53,28 +53,39 @@ pub fn run_sync(config: &Config) {
     let payout_epochs_cum: PayoutEpochs = HashMap::new();
     let payout_epochs_cum_mutex = Arc::new(Mutex::new(payout_epochs_cum));
 
+    // Sync ontology concepts from smart contract to local state
     let sync_ontology_fut = sync_ontology(eloop.handle(), config.clone(), entity_map_mutex.clone());
+    // Sync proposition ledger from smart contract to local state
     let sync_proposition_ledger_fut = sync_ledger(
         eloop.handle(),
         config.clone(),
         proposition_ledger_mutex.clone(),
         proposition_ledger_block_highwatermark_mutex.clone(),
     );
-    let calculate_payouts_fut = Interval::new(Duration::from_secs(15))
-        .for_each(|_| {
-            fill_epoch_payouts(
-                &proposition_ledger_block_highwatermark_mutex.clone(),
-                &proposition_ledger_mutex.clone(),
-                &payout_epochs_mutex.clone(),
-                &entity_map_mutex.clone(),
-            );
-            fill_epoch_payouts_cumulative(
-                &payout_epochs_mutex.clone(),
-                &payout_epochs_cum_mutex.clone(),
-            );
-            Ok(())
-        })
-        .map_err(|_| ());
+    // Calculate the payouts based on proposition ledger
+    let epoch_length: U256 = EPOCH_LENGTH.into();
+    let calculate_payouts_fut = retrieve_epoch_start_block(&eloop.handle().clone(), config)
+        .and_then(|epoch_start_block| {
+            Interval::new(Duration::from_secs(15))
+                .and_then(move |_| Ok(epoch_start_block))
+                .for_each(|epoch_start_block| {
+                    fill_epoch_payouts(
+                        epoch_start_block,
+                        epoch_length,
+                        &proposition_ledger_block_highwatermark_mutex.clone(),
+                        &proposition_ledger_mutex.clone(),
+                        &payout_epochs_mutex.clone(),
+                        &entity_map_mutex.clone(),
+                    );
+                    fill_epoch_payouts_cumulative(
+                        &payout_epochs_mutex.clone(),
+                        &payout_epochs_cum_mutex.clone(),
+                    );
+                    Ok(())
+                })
+                .map_err(|_| ())
+        });
+    // Print some statistics about the local state
     let counter_stream = Interval::new(Duration::from_secs(5))
         .for_each(|_| {
             let entity_map_lock = entity_map_mutex.lock().unwrap();
@@ -118,6 +129,7 @@ pub fn run_sync(config: &Config) {
         })
         .map_err(|_| ());
 
+    // Submit calculated payout roots to smart contract
     let submit_handle = eloop.handle().clone();
     let submit_payout_epochs_mutex = payout_epochs_mutex.clone();
     let submit_payout_epochs_cum_mutex = payout_epochs_cum_mutex.clone();

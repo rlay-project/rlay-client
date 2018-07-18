@@ -6,7 +6,7 @@ use cid::ToCid;
 use tiny_keccak::keccak256;
 use rquantiles::*;
 
-use payout::{Payout, EPOCH_LENGTH, EPOCH_START_BLOCK};
+use payout::Payout;
 use sync_proposition_ledger::{Proposition, PropositionLedger};
 use sync_ontology::{entity_map_individuals, EntityMap};
 
@@ -19,6 +19,8 @@ const TOKENS_PER_BLOCK: f64 = 25000000000000000000f64;
 /// that the local mirror of the ledger has been synced accordingly.
 pub fn payouts_for_epoch(
     epoch: u64,
+    epoch_start_block: U256,
+    epoch_length: U256,
     ledger_mtx: &Mutex<PropositionLedger>,
     entity_map_mtx: &Mutex<EntityMap>,
 ) -> Vec<Payout> {
@@ -28,7 +30,7 @@ pub fn payouts_for_epoch(
     let entity_map = entity_map_mtx
         .lock()
         .expect("Could not gain lock for entity_map mutex");
-    let epoch_end = (epoch * EPOCH_LENGTH) + EPOCH_START_BLOCK;
+    let epoch_end = (epoch * epoch_length.as_u64()) + epoch_start_block.as_u64();
 
     let relevant_propositions: Vec<_> = ledger
         .iter()
