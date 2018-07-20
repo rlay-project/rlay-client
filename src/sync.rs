@@ -155,6 +155,11 @@ pub fn run_sync(config: &Config) {
             ()
         });
 
+    let rpc_config = config.rpc.clone();
+    ::std::thread::spawn(move || {
+        ::rpc::start_rpc(&rpc_config);
+    });
+
     eloop
         .run(sync_ontology_fut.join5(
             sync_proposition_ledger_fut,

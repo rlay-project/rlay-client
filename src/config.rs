@@ -15,6 +15,8 @@ pub struct Config {
     pub contract_addresses: HashMap<String, String>,
     #[serde(default = "default_data_path")]
     pub data_path: Option<String>,
+    #[serde(default = "default_rpc_section")]
+    pub rpc: RpcConfig,
 }
 
 fn default_network_address() -> Option<String> {
@@ -23,6 +25,10 @@ fn default_network_address() -> Option<String> {
 
 fn default_data_path() -> Option<String> {
     Some("./data".to_owned())
+}
+
+fn default_rpc_section() -> RpcConfig {
+    toml::from_str("").unwrap()
 }
 
 impl Config {
@@ -71,4 +77,14 @@ impl Config {
 
         H160::from_slice(&address_bytes)
     }
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct RpcConfig {
+    #[serde(default = "default_rpc_disabled")]
+    pub disabled: bool,
+}
+
+fn default_rpc_disabled() -> bool {
+    true
 }

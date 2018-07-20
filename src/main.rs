@@ -8,6 +8,9 @@ extern crate env_logger;
 extern crate ethabi;
 extern crate failure;
 extern crate futures_timer;
+extern crate hyper;
+extern crate jsonrpc_core;
+extern crate jsonrpc_http_server;
 #[macro_use]
 extern crate log;
 extern crate merkle_light;
@@ -30,6 +33,7 @@ pub mod merkle;
 pub mod payout;
 pub mod payout_calculation;
 pub mod payout_cli;
+pub mod rpc;
 pub mod sync;
 pub mod sync_ontology;
 pub mod sync_proposition_ledger;

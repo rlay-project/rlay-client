@@ -5,3 +5,6 @@ network_address = "ws://localhost:8545"
 OntologyStorage = "0xf0cd575450fc03b90eead03d65e79741a19665e4"
 RlayToken = "0x10ef71366ad76d6bddddc66677c38e137aa564db"
 PropositionLedger = "0xe90f43a68756d880f2dc83e0ae1bf51d31726d36"
+
+[rpc]
+disabled = false
