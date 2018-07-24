@@ -9,6 +9,7 @@ use std::hash::Hasher;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 use tokio_core;
+use web3::Transport;
 use web3::futures::{self, prelude::*};
 use web3::types::{Address, H256, U256};
 use web3;
@@ -18,10 +19,6 @@ use merkle::Keccak256Algorithm;
 use payout_calculation::payouts_for_epoch;
 use sync_ontology::EntityMap;
 use sync_proposition_ledger::PropositionLedger;
-
-/// Number of host blockchain blocks that make up a epoch
-// TODO: should be taken from smart contract
-pub const EPOCH_LENGTH: u64 = 100;
 
 pub type PayoutEpochs = HashMap<u64, Vec<Payout>>;
 
@@ -128,6 +125,11 @@ pub fn fill_epoch_payouts(
     let ledger_block_highwatermark = ledger_block_highwatermark_mtx.lock().unwrap();
     let mut payout_epochs = payout_epochs_mtx.lock().unwrap();
 
+    if *ledger_block_highwatermark < epoch_start_block.as_u64() {
+        trace!("Ledger not synced enough to calculate payouts.");
+        return;
+    }
+
     let latest_completed_epoch =
         (*ledger_block_highwatermark - epoch_start_block.as_u64()) / epoch_length.as_u64();
     debug!("Ledger sync highwatermark: {}", ledger_block_highwatermark);
@@ -179,8 +181,8 @@ pub fn fill_epoch_payouts_cumulative(
 
 fn rlay_token_contract(
     config: &Config,
-    web3: &web3::Web3<web3::transports::WebSocket>,
-) -> web3::contract::Contract<web3::transports::WebSocket> {
+    web3: &web3::Web3<impl Transport>,
+) -> web3::contract::Contract<impl Transport> {
     let token_contract_abi = include_str!("../data/RlayToken.abi");
     web3::contract::Contract::from_json(
         web3.eth(),

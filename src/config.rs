@@ -17,6 +17,9 @@ pub struct Config {
     pub data_path: Option<String>,
     #[serde(default = "default_rpc_section")]
     pub rpc: RpcConfig,
+    // TODO: should be taken from smart contract
+    #[serde(default = "default_epoch_length")]
+    pub epoch_length: u64,
 }
 
 fn default_network_address() -> Option<String> {
@@ -25,6 +28,10 @@ fn default_network_address() -> Option<String> {
 
 fn default_data_path() -> Option<String> {
     Some("./data".to_owned())
+}
+
+fn default_epoch_length() -> u64 {
+    100
 }
 
 fn default_rpc_section() -> RpcConfig {
