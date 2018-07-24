@@ -4,6 +4,7 @@ use rustc_hex::FromHex;
 use std::collections::HashMap;
 use std::time::Duration;
 use tokio_core;
+use web3::Transport;
 use web3::types::H160;
 use web3;
 use futures_timer::FutureExt;
@@ -16,7 +17,7 @@ pub static FAILURE: Emoji = Emoji("❌  ", "");
 /// Check if the contract code at the address is what we expect it to be
 pub fn check_address_code(
     eloop: &mut tokio_core::reactor::Core,
-    web3: &web3::Web3<web3::transports::WebSocket>,
+    web3: &web3::Web3<impl Transport>,
     address: H160,
     bytecode: &str,
 ) -> Result<bool, Error> {
@@ -55,7 +56,7 @@ pub fn print_contract_check(
 /// Check if all known contracts of the Rlay protocol have been properly deployed.
 pub fn check_contracts(
     eloop: &mut tokio_core::reactor::Core,
-    web3: &web3::Web3<web3::transports::WebSocket>,
+    web3: &web3::Web3<impl Transport>,
     config: &Config,
 ) {
     if config.contract_addresses.is_empty() {
@@ -93,7 +94,7 @@ pub fn check_contracts(
 /// Check connection with Web3 JSON-RPC provider.
 pub fn check_web3(
     eloop: &mut tokio_core::reactor::Core,
-    web3: &web3::Web3<web3::transports::WebSocket>,
+    web3: &web3::Web3<impl Transport>,
     config: &Config,
 ) {
     let version_future = web3.net().version().timeout(Duration::from_secs(10));
@@ -118,12 +119,7 @@ pub fn check_web3(
 
 pub fn run_checks(config: &Config) {
     let mut eloop = tokio_core::reactor::Core::new().unwrap();
-    let web3 = web3::Web3::new(
-        web3::transports::WebSocket::with_event_loop(
-            config.network_address.as_ref().unwrap(),
-            &eloop.handle(),
-        ).unwrap(),
-    );
+    let web3 = config.web3_with_handle(&eloop.handle());
 
     check_web3(&mut eloop, &web3, &config);
     check_contracts(&mut eloop, &web3, &config);

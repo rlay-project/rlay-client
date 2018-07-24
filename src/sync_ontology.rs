@@ -7,6 +7,7 @@ use std::sync::{Arc, Mutex};
 use tokio_core;
 use web3::futures::{future::Either, prelude::*};
 use web3::types::{BlockNumber, FilterBuilder};
+use web3::Transport;
 use web3;
 
 use config::Config;
@@ -52,12 +53,7 @@ pub fn sync_ontology(
     config: Config,
     entity_map_mutex: Arc<Mutex<EntityMap>>,
 ) -> impl Future<Item = (), Error = ()> {
-    let web3 = web3::Web3::new(
-        web3::transports::WebSocket::with_event_loop(
-            config.network_address.as_ref().unwrap(),
-            &eloop_handle,
-        ).unwrap(),
-    );
+    let web3 = config.web3_with_handle(&eloop_handle);
 
     let ontology_contract_abi = include_str!("../data/OntologyStorage.abi");
     let contract = ethabi::Contract::load(ontology_contract_abi.as_bytes()).unwrap();
@@ -116,7 +112,7 @@ fn process_ontology_storage_log(
     log: &web3::types::Log,
     signature_map: &HashMap<web3::types::H256, Event>,
     config: &Config,
-    web3: &web3::Web3<web3::transports::WebSocket>,
+    web3: &web3::Web3<impl Transport>,
 ) -> impl Future<Item = Option<Entity>, Error = ()> {
     debug!(
         "got OntologyStorage log: {:?} - {:?}",
@@ -150,9 +146,9 @@ fn process_ontology_storage_log(
 }
 
 fn get_entity_for_log(
-    web3: &web3::Web3<web3::transports::WebSocket>,
+    web3: &web3::Web3<impl Transport>,
     abi: &ethabi::Contract,
-    contract: &web3::contract::Contract<web3::transports::WebSocket>,
+    contract: &web3::contract::Contract<impl Transport>,
     event_name: &str,
     cid: &[u8],
 ) -> impl Future<Item = Option<Entity>, Error = ()> {

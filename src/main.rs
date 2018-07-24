@@ -25,6 +25,7 @@ extern crate serde_json;
 extern crate tiny_keccak;
 extern crate tokio_core;
 extern crate toml;
+extern crate url;
 extern crate web3;
 
 pub mod config;

@@ -86,13 +86,7 @@ pub fn retrieve_epoch_start_block(
     eloop_handle: &tokio_core::reactor::Handle,
     config: &Config,
 ) -> impl Future<Item = U256, Error = ()> {
-    let web3 = web3::Web3::new(
-        web3::transports::WebSocket::with_event_loop(
-            config.network_address.as_ref().unwrap(),
-            &eloop_handle,
-        ).unwrap(),
-    );
-
+    let web3 = config.web3_with_handle(eloop_handle);
     let contract = rlay_token_contract(&config, &web3);
 
     contract
@@ -249,12 +243,7 @@ pub fn submit_epoch_payouts(
 ) -> impl Future<Error = ()> {
     store_epoch_payouts(config.clone(), payout_epochs_mtx.clone());
 
-    let web3 = web3::Web3::new(
-        web3::transports::WebSocket::with_event_loop(
-            config.network_address.as_ref().unwrap(),
-            &eloop_handle,
-        ).unwrap(),
-    );
+    let web3 = config.web3_with_handle(eloop_handle);
 
     let payout_epochs_cum = payout_epochs_cum_mtx
         .lock()

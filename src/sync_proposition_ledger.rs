@@ -55,12 +55,7 @@ pub fn sync_ledger(
     proposition_ledger_mutex: Arc<Mutex<PropositionLedger>>,
     ledger_block_highwatermark_mtx: Arc<Mutex<u64>>,
 ) -> impl Future<Item = (), Error = ()> {
-    let web3 = web3::Web3::new(
-        web3::transports::WebSocket::with_event_loop(
-            config.network_address.as_ref().unwrap(),
-            &eloop_handle,
-        ).unwrap(),
-    );
+    let web3 = config.web3_with_handle(&eloop_handle);
 
     let ledger_contract_abi = include_str!("../data/PropositionLedger.abi");
     let contract = ethabi::Contract::load(ledger_contract_abi.as_bytes()).unwrap();
