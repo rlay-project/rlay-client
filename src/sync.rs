@@ -200,27 +200,36 @@ pub fn run_sync(config: &Config) {
     // Submit calculated payout roots to smart contract
     let submit_handle = eloop.handle().clone();
     let computed_state_submit = computed_state.clone();
-    let submit_payouts = Interval::new(Duration::from_secs(5))
-        .map_err(|err| {
-            error!("{:?}", err);
-            ()
-        })
-        .for_each(move |_| {
-            submit_epoch_payouts(
-                &submit_handle,
-                config.clone(),
-                computed_state_submit.payout_epochs.clone(),
-                computed_state_submit.payout_epochs_cum.clone(),
-            ).map(|_| ())
+    let submit_payouts = match config.payout_root_submission_disabled {
+        true => {
+            trace!("Payout root submission disabled in config.");
+            futures::future::Either::A(futures::future::empty())
+        }
+        false => {
+            let submit_with_interval = Interval::new(Duration::from_secs(5))
                 .map_err(|err| {
                     error!("{:?}", err);
                     ()
                 })
-        })
-        .map_err(|err| {
-            error!("{:?}", err);
-            ()
-        });
+                .for_each(move |_| {
+                    submit_epoch_payouts(
+                        &submit_handle,
+                        config.clone(),
+                        computed_state_submit.payout_epochs.clone(),
+                        computed_state_submit.payout_epochs_cum.clone(),
+                    ).map(|_| ())
+                        .map_err(|err| {
+                            error!("{:?}", err);
+                            ()
+                        })
+                })
+                .map_err(|err| {
+                    error!("{:?}", err);
+                    ()
+                });
+            futures::future::Either::B(submit_with_interval)
+        }
+    };
 
     let rpc_config = config.rpc.clone();
     ::std::thread::spawn(move || {

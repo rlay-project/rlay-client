@@ -1,6 +1,7 @@
 data_path = "rlay_data"
 network_address = "ws://localhost:8545"
 epoch_length = 20
+payout_root_submission_disabled = true
 
 [contract_addresses]
 OntologyStorage = "0xf0cd575450fc03b90eead03d65e79741a19665e4"

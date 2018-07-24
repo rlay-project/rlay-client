@@ -25,6 +25,8 @@ pub struct Config {
     // TODO: should be taken from smart contract
     #[serde(default = "default_epoch_length")]
     pub epoch_length: u64,
+    #[serde(default = "default_payout_root_submission_disabled")]
+    pub payout_root_submission_disabled: bool,
 }
 
 fn default_network_address() -> Option<String> {
@@ -37,6 +39,10 @@ fn default_data_path() -> Option<String> {
 
 fn default_epoch_length() -> u64 {
     100
+}
+
+fn default_payout_root_submission_disabled() -> bool {
+    false
 }
 
 fn default_rpc_section() -> RpcConfig {
@@ -105,7 +111,7 @@ impl Config {
             #[cfg(feature = "transport_ipc")]
             "file" => 
                 web3::transports::Ipc::with_event_loop(
-                    self.network_address.as_ref().unwrap(),
+                    network_address.path(),
                     eloop_handle,
                 ).unwrap()
             ,
