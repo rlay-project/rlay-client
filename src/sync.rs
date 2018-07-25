@@ -13,7 +13,8 @@ use config::Config;
 use sync_ontology::{sync_ontology, Entity};
 use sync_proposition_ledger::{sync_ledger, PropositionLedger};
 use payout::{fill_epoch_payouts, fill_epoch_payouts_cumulative, load_epoch_payouts,
-             retrieve_epoch_start_block, submit_epoch_payouts, Payout, PayoutEpochs};
+             retrieve_epoch_start_block, store_epoch_payouts, submit_epoch_payouts, Payout,
+             PayoutEpochs};
 
 // TODO: possibly contribute to rust-web3
 /// Subscribe on a filter, but also get all historic logs that fit the filter
@@ -197,6 +198,22 @@ pub fn run_sync(config: &Config) {
         })
         .map_err(|_| ());
 
+    // Store calculated payouts on disk
+    let computed_state_store = computed_state.clone();
+    let store_payouts = Interval::new(Duration::from_secs(5))
+        .map_err(|err| {
+            error!("{:?}", err);
+            ()
+        })
+        .for_each(move |_| {
+            store_epoch_payouts(config.clone(), computed_state_store.payout_epochs());
+            Ok(())
+        })
+        .map_err(|err| {
+            error!("{:?}", err);
+            ()
+        });
+
     // Submit calculated payout roots to smart contract
     let submit_handle = eloop.handle().clone();
     let computed_state_submit = computed_state.clone();
@@ -241,7 +258,7 @@ pub fn run_sync(config: &Config) {
             sync_proposition_ledger_fut,
             calculate_payouts_fut,
             counter_stream,
-            submit_payouts,
+            store_payouts.join(submit_payouts),
         ))
         .unwrap();
 }
