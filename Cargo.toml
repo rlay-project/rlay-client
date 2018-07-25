@@ -7,9 +7,9 @@ license = "MIT OR Apache-2.0"
 [dependencies]
 web3 = { git = 'https://github.com/forrest-marshall/rust-web3', rev = '9387d9c06d04901bb98b75fd6f8b17f8ce852dea' }
 cid = { git = 'https://github.com/hobofan/rust-cid', rev = '27798e5245c234dae1236470a5a5568cb067a216' }
-rlay_ontology = { git = 'ssh://git@github.com/rlay-project/rlay-ontology.git', rev = 'bcf07d65d1793bf18571b885cc36c4316753061a' }
+rlay_ontology = { git = 'https://github.com/rlay-project/rlay-ontology', rev = 'bcf07d65d1793bf18571b885cc36c4316753061a' }
 merkle_light = { git = "https://github.com/hobofan/merkle_light", rev = 'f069616df909cb7a4426f6deb328bde6422a3510' }
-rquantiles = { git = "ssh://git@github.com/rlay-project/rquantiles.git", rev = "527587adda425b3765575e150cc9a8239bca3a83" }
+rquantiles = { git = "https://github.com/rlay-project/rquantiles", rev = "527587adda425b3765575e150cc9a8239bca3a83" }
 rustc-hex = "1.0.0"
 tokio-core = "0.1.17"
 ethabi = "5.1.1"
