@@ -6,7 +6,7 @@ use cid::ToCid;
 use tiny_keccak::keccak256;
 use rquantiles::*;
 
-use payout::{Payout, EPOCH_LENGTH, EPOCH_START_BLOCK};
+use payout::Payout;
 use sync_proposition_ledger::{Proposition, PropositionLedger};
 use sync_ontology::{entity_map_individuals, EntityMap};
 
@@ -19,6 +19,8 @@ const TOKENS_PER_BLOCK: f64 = 25000000000000000000f64;
 /// that the local mirror of the ledger has been synced accordingly.
 pub fn payouts_for_epoch(
     epoch: u64,
+    epoch_start_block: U256,
+    epoch_length: U256,
     ledger_mtx: &Mutex<PropositionLedger>,
     entity_map_mtx: &Mutex<EntityMap>,
 ) -> Vec<Payout> {
@@ -28,7 +30,7 @@ pub fn payouts_for_epoch(
     let entity_map = entity_map_mtx
         .lock()
         .expect("Could not gain lock for entity_map mutex");
-    let epoch_end = (epoch * EPOCH_LENGTH) + EPOCH_START_BLOCK;
+    let epoch_end = (epoch * epoch_length.as_u64()) + epoch_start_block.as_u64();
 
     let relevant_propositions: Vec<_> = ledger
         .iter()
@@ -330,7 +332,9 @@ fn calculate_payouts(pools: &[PropositionPool]) -> Vec<Payout> {
         let rewarded_propositions_factors = calculate_proposition_in_pool_factors(pool);
         for (proposition, factor) in rewarded_propositions_factors {
             // HACK: *2 since for some reason the sum of all only comes down
-            let reward: f64 = TOKENS_PER_BLOCK as f64 * pool_factor * factor * 2f64;
+            // HACK: *0.999 so that floating point inaccuracies don't push us over the limit of
+            // mined tokens. See issue #2.
+            let reward: f64 = TOKENS_PER_BLOCK as f64 * pool_factor * factor * 2f64 * 0.999f64;
 
             let mut payout = Payout::empty_for_address(proposition.sender);
             payout.amount = payout.amount + (reward as u64).into();
