@@ -15,11 +15,11 @@ pub fn start_rpc(config: &RpcConfig) {
         return;
     }
 
-    let mut io = ProxyHandler::new("http://localhost:8545");
+    let mut io = ProxyHandler::new(config.proxy_target_network_address.as_ref().unwrap());
     io.add_method("rlay_version", rpc_rlay_version());
 
     let _server = ServerBuilder::new(io)
-        .start_http(&"127.0.0.1:8080".parse().unwrap())
+        .start_http(&config.network_address.parse().unwrap())
         .expect("Unable to start RPC server");
 
     _server.wait();

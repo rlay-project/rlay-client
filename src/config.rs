@@ -11,6 +11,8 @@ use web3::DuplexTransport;
 use web3::types::H160;
 use web3;
 
+pub use self::rpc::RpcConfig;
+
 #[derive(Debug, Deserialize, Clone)]
 pub struct Config {
     #[serde(default = "default_network_address")]
@@ -124,12 +126,28 @@ impl Config {
     }
 }
 
-#[derive(Debug, Deserialize, Clone)]
-pub struct RpcConfig {
-    #[serde(default = "default_rpc_disabled")]
-    pub disabled: bool,
-}
+pub mod rpc {
+    #[derive(Debug, Deserialize, Clone)]
+    pub struct RpcConfig {
+        #[serde(default = "default_rpc_disabled")]
+        pub disabled: bool,
+        #[serde(default = "default_proxy_target_network_address")]
+        /// Network address of the upstream Ethereum RPC.
+        pub proxy_target_network_address: Option<String>,
+        #[serde(default = "default_network_address")]
+        /// Network address to serve the RPC on.
+        pub network_address: String,
+    }
 
-fn default_rpc_disabled() -> bool {
-    true
+    fn default_rpc_disabled() -> bool {
+        true
+    }
+
+    fn default_proxy_target_network_address() -> Option<String> {
+        Some("http://localhost:8545".to_owned())
+    }
+
+    fn default_network_address() -> String {
+        "127.0.0.1:8546".to_owned()
+    }
 }
