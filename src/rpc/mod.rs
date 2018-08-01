@@ -2,14 +2,18 @@ mod proxy;
 
 use jsonrpc_core::*;
 use jsonrpc_http_server::*;
+use serde_json;
 
-use self::proxy::ProxyHandler;
 use config::RpcConfig;
+use payout_calculation::detect_pools;
+use self::proxy::ProxyHandler;
+use sync::SyncState;
+use sync_ontology::entity_map_individuals;
 
 const NETWORK_VERSION: &'static str = "0.2.0";
 const CLIENT_VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
-pub fn start_rpc(config: &RpcConfig) {
+pub fn start_rpc(config: &RpcConfig, sync_state: SyncState) {
     if config.disabled {
         debug!("RPC disabled. Not starting RPC server.");
         return;
@@ -17,6 +21,10 @@ pub fn start_rpc(config: &RpcConfig) {
 
     let mut io = ProxyHandler::new(config.proxy_target_network_address.as_ref().unwrap());
     io.add_method("rlay_version", rpc_rlay_version());
+    io.add_method(
+        "rlay_getPropositionPools",
+        rpc_rlay_get_proposition_pools(sync_state),
+    );
 
     let _server = ServerBuilder::new(io)
         .start_http(&config.network_address.parse().unwrap())
@@ -34,5 +42,17 @@ fn rpc_rlay_version() -> impl RpcMethodSimple {
             "networkVersion": NETWORK_VERSION,
             "clientVersion": format!("rlay-client/{}", CLIENT_VERSION),
         }})
+    }
+}
+
+fn rpc_rlay_get_proposition_pools(sync_state: SyncState) -> impl RpcMethodSimple {
+    move |_: Params| {
+        let proposition_ledger = sync_state.proposition_ledger.lock().unwrap();
+        let entity_map = sync_state.entity_map.lock().unwrap();
+
+        let relevant_propositions: Vec<_> = proposition_ledger.iter().collect();
+        let ontology_individuals = entity_map_individuals(&entity_map);
+        let pools = detect_pools(&ontology_individuals, &relevant_propositions);
+        Ok(serde_json::to_value(pools).unwrap())
     }
 }
