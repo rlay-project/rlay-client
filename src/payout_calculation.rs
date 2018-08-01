@@ -1,10 +1,14 @@
+use cid::ToCid;
+use multibase::{encode as base_encode, Base};
+use rlay_ontology::ontology::Individual;
+use rlay_ontology::ontology;
+use rquantiles::*;
+use serde::Serializer;
+use serde::ser::SerializeSeq;
 use std::collections::{HashMap, HashSet};
 use std::sync::Mutex;
-use web3::types::U256;
-use rlay_ontology::ontology;
-use cid::ToCid;
 use tiny_keccak::keccak256;
-use rquantiles::*;
+use web3::types::U256;
 
 use payout::Payout;
 use sync_proposition_ledger::{Proposition, PropositionLedger};
@@ -65,8 +69,48 @@ pub type PropositionSubject<'a> = &'a [Vec<u8>];
 pub struct PropositionPool {
     pub values: Vec<ontology::Individual>,
     pub propositions: Vec<Proposition>,
-
     cached_quantiles: Option<Quantiles>,
+}
+
+impl ::serde::Serialize for PropositionPool {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: ::serde::Serializer,
+    {
+        #[derive(Serialize)]
+        #[allow(non_snake_case)]
+        struct PropositionPoolSerialize {
+            pub values: Vec<PropositionPoolValuesSerialize>,
+            #[serde(serialize_with = "PropositionPool::serialize_subject")]
+            pub subject: Vec<Vec<u8>>,
+            pub totalWeight: U256,
+        }
+
+        #[derive(Serialize)]
+        #[allow(non_snake_case)]
+        struct PropositionPoolValuesSerialize {
+            pub cid: String,
+            pub totalWeight: U256,
+            pub isAggregatedValue: bool,
+        }
+
+        let formatted_values = self.values
+            .iter()
+            .map(|individual| PropositionPoolValuesSerialize {
+                cid: individual.to_cid().unwrap().to_string(),
+                totalWeight: self.weights_for_value(individual),
+                isAggregatedValue: self.is_aggregated_value_individual(individual),
+            })
+            .collect();
+
+        let ext = PropositionPoolSerialize {
+            values: formatted_values,
+            subject: self.subject().to_owned(),
+            totalWeight: self.total_weight(),
+        };
+
+        Ok(try!(ext.serialize(serializer)))
+    }
 }
 
 impl PropositionPool {
@@ -172,6 +216,25 @@ impl PropositionPool {
         }
     }
 
+    pub fn is_aggregated_value_individual(&self, val: &Individual) -> bool {
+        let aggregated = match self.aggregated_value() {
+            None => return false,
+            Some(val) => val,
+        };
+        let false_value_cid = self.values[0].to_cid().unwrap().to_bytes();
+        let true_value_cid = self.values[1].to_cid().unwrap().to_bytes();
+
+        let val_cid = val.to_cid().unwrap().to_bytes();
+
+        if val_cid == false_value_cid && aggregated == false {
+            return true;
+        }
+        if val_cid == true_value_cid && aggregated == true {
+            return true;
+        }
+        return false;
+    }
+
     pub fn is_aggregated_value(&self, val: &Proposition) -> bool {
         let aggregated = match self.aggregated_value() {
             None => return false,
@@ -187,6 +250,17 @@ impl PropositionPool {
             return true;
         }
         return false;
+    }
+
+    pub fn serialize_subject<S>(vals: &Vec<Vec<u8>>, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut seq = serializer.serialize_seq(Some(vals.len()))?;
+        for val in vals.iter() {
+            seq.serialize_element(&base_encode(Base::Base58btc, val))?;
+        }
+        seq.end()
     }
 }
 
@@ -244,7 +318,7 @@ fn extract_class_assertion_object(
 ///
 /// Goes through all the individuals used in propositions and finds individuals that
 /// assert or negatively assert class memberships about the same subject.
-fn detect_pools(
+pub fn detect_pools(
     ontology_individuals: &[&ontology::Individual],
     propositions: &[&Proposition],
 ) -> Vec<PropositionPool> {
