@@ -48,7 +48,7 @@ pub fn payouts_for_epoch(
     );
 
     let ontology_individuals = entity_map_individuals(&entity_map);
-    let pools = detect_pools(&ontology_individuals, &relevant_propositions);
+    let pools = detect_pools(&ontology_individuals, &relevant_propositions, true);
 
     for pool in &pools {
         trace!("-----POOL START-----");
@@ -69,7 +69,7 @@ pub type PropositionSubject<'a> = &'a [Vec<u8>];
 pub struct PropositionPool {
     pub values: Vec<ontology::Individual>,
     pub propositions: Vec<Proposition>,
-    cached_quantiles: Option<Quantiles>,
+    cached_quantiles: Option<Option<Quantiles>>,
 }
 
 impl ::serde::Serialize for PropositionPool {
@@ -187,20 +187,24 @@ impl PropositionPool {
 
     /// Calculate the weighted quantiles of the propositions in this pool.
     // Currently a speced down version that works with boolean statements
-    fn calculate_quantiles(&self) -> Quantiles {
+    fn calculate_quantiles(&self) -> Option<Quantiles> {
         let false_weight = self.weights_for_value(&self.values[0]).as_u32();
         let true_weight = self.weights_for_value(&self.values[1]).as_u32();
 
+        if false_weight == 0 && true_weight == 0 {
+            return None;
+        }
+
         let values = vec![0, 1];
         let weights = vec![false_weight, true_weight];
-        calculate_quantiles(values, weights)
+        Some(calculate_quantiles(values, weights))
     }
 
     /// Returns the weighted quantiles of the propositions in this pool.
     ///
     /// Internally caches the computation result, as the current way we compute them by calling out
     /// to a R program is very slow.
-    fn quantiles(&self) -> Quantiles {
+    fn quantiles(&self) -> Option<Quantiles> {
         if let Some(ref quantiles) = self.cached_quantiles {
             return quantiles.clone();
         }
@@ -209,7 +213,11 @@ impl PropositionPool {
 
     /// Returns the weighted median of the propositions in this pool.
     pub fn aggregated_value(&self) -> Option<bool> {
-        match self.quantiles().median as i32 {
+        if self.quantiles().is_none() {
+            return None;
+        }
+
+        match self.quantiles().unwrap().median as i32 {
             0 => Some(false),
             1 => Some(true),
             _ => None,
@@ -321,22 +329,29 @@ fn extract_class_assertion_object(
 pub fn detect_pools(
     ontology_individuals: &[&ontology::Individual],
     propositions: &[&Proposition],
+    only_used: bool,
 ) -> Vec<PropositionPool> {
     let used_cids: HashSet<Vec<u8>> = propositions
         .iter()
         .map(|n| n.proposition_cid.clone())
         .collect();
-    let used_individuals: Vec<_> = ontology_individuals
-        .iter()
+    let used_individuals: Vec<&ontology::Individual> = ontology_individuals
+        .into_iter()
         .filter(|n| {
             let cid = n.to_cid().unwrap().to_bytes();
             used_cids.contains(&cid)
         })
+        .map(|n| *n)
         .collect();
+
+    let individuals = match only_used {
+        true => used_individuals,
+        false => ontology_individuals.to_owned(),
+    };
 
     let mut individuals_by_subject: HashMap<PropositionSubject, Vec<&ontology::Individual>> =
         HashMap::new();
-    for individual in used_individuals {
+    for individual in individuals {
         let mut entry = individuals_by_subject
             .entry(&individual.annotations)
             .or_insert(Vec::new());

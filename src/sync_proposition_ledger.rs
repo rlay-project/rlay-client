@@ -1,4 +1,5 @@
 use ethabi::{self, Event};
+use failure::SyncFailure;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use tokio_core;
@@ -48,17 +49,24 @@ impl Proposition {
 
 pub type PropositionLedger = Vec<Proposition>;
 
+#[derive(Fail, Debug)]
+pub enum PropositionLedgerSyncError {
+    #[fail(display = "Web3 error: {}", error)] Web3 { error: SyncFailure<web3::Error> },
+    #[fail(display = "An unknown error has occurred.")] UnknownError,
+}
+
 #[cfg_attr(feature = "cargo-clippy", allow(needless_pass_by_value))]
 pub fn sync_ledger(
     eloop_handle: tokio_core::reactor::Handle,
     config: Config,
     proposition_ledger_mutex: Arc<Mutex<PropositionLedger>>,
     ledger_block_highwatermark_mtx: Arc<Mutex<u64>>,
-) -> impl Future<Item = (), Error = ()> {
+) -> impl Future<Item = (), Error = PropositionLedgerSyncError> {
     let web3 = config.web3_with_handle(&eloop_handle);
 
     let ledger_contract_abi = include_str!("../data/PropositionLedger.abi");
-    let contract = ethabi::Contract::load(ledger_contract_abi.as_bytes()).unwrap();
+    let contract = ethabi::Contract::load(ledger_contract_abi.as_bytes())
+        .expect("Could not load contract ABI");
 
     let signature_map: HashMap<web3::types::H256, Event> = contract
         .events
@@ -77,19 +85,30 @@ pub fn sync_ledger(
     let combined_stream = subscribe_with_history(&web3, filter);
 
     combined_stream
-        .map_err(|_| ())
-        .and_then(move |log| process_ledger_log(&log, &signature_map).into_future())
+        .map_err(|err| PropositionLedgerSyncError::Web3 {
+            error: SyncFailure::new(err),
+        })
+        .and_then(move |log| {
+            process_ledger_log(&log, &signature_map)
+                .into_future()
+                .map_err(|_| PropositionLedgerSyncError::UnknownError)
+        })
         .filter(|res| res.is_some())
         .map(|res| res.unwrap())
         .for_each(move |proposition: Proposition| {
-            let mut proposition_ledger_lock = proposition_ledger_mutex.lock().unwrap();
-            let mut ledger_block_highwatermark = ledger_block_highwatermark_mtx.lock().unwrap();
+            println!("HERE");
+            let mut proposition_ledger_lock = proposition_ledger_mutex
+                .lock()
+                .expect("Unable to get lock for proposition ledger");
+            let mut ledger_block_highwatermark = ledger_block_highwatermark_mtx
+                .lock()
+                .expect("Unable to get lock for proposition ledger highwatermark");
             debug!("New proposition: {:?}", &proposition);
             *ledger_block_highwatermark = proposition.block_number.clone();
             proposition_ledger_lock.push(proposition);
             Ok(())
         })
-        .map_err(|_| ())
+        .map_err(|err| err.into())
 }
 
 fn process_ledger_log(

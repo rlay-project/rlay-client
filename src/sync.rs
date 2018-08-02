@@ -21,7 +21,7 @@ use payout::{fill_epoch_payouts, fill_epoch_payouts_cumulative, load_epoch_payou
 pub fn subscribe_with_history(
     web3: &web3::Web3<impl DuplexTransport>,
     filter: Filter,
-) -> impl Stream<Item = Log> {
+) -> impl Stream<Item = Log, Error = web3::Error> {
     let history_future = web3.eth().logs(filter.clone());
     let subscribe_future = web3.eth_subscribe().subscribe_logs(filter);
 
@@ -121,14 +121,21 @@ pub fn run_sync(config: &Config) {
     let computed_state = ComputedState::load_from_files(config.clone());
 
     // Sync ontology concepts from smart contract to local state
-    let sync_ontology_fut = sync_ontology(eloop.handle(), config.clone(), sync_state.entity_map());
+    let sync_ontology_fut = sync_ontology(eloop.handle(), config.clone(), sync_state.entity_map())
+        .map_err(|err| {
+            error!("Sync ontology: {:?}", err);
+            ()
+        });
     // Sync proposition ledger from smart contract to local state
     let sync_proposition_ledger_fut = sync_ledger(
         eloop.handle(),
         config.clone(),
         sync_state.proposition_ledger(),
         sync_state.proposition_ledger_block_highwatermark(),
-    );
+    ).map_err(|err| {
+        error!("Sync ledger: {:?}", err);
+        ()
+    });
     // Calculate the payouts based on proposition ledger
     let epoch_length: U256 = config.epoch_length.into();
     let calculate_payouts_fut = retrieve_epoch_start_block(&eloop.handle().clone(), config)
@@ -150,7 +157,10 @@ pub fn run_sync(config: &Config) {
                     );
                     Ok(())
                 })
-                .map_err(|_| ())
+                .map_err(|err| {
+                    error!("{:?}", err);
+                    ()
+                })
         });
     let sync_state_counter = sync_state.clone();
     let computed_state_counter = computed_state.clone();
@@ -196,7 +206,10 @@ pub fn run_sync(config: &Config) {
 
             Ok(())
         })
-        .map_err(|_| ());
+        .map_err(|err| {
+            error!("{:?}", err);
+            ()
+        });
 
     // Store calculated payouts on disk
     let computed_state_store = computed_state.clone();

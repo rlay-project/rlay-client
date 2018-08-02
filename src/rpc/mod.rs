@@ -45,6 +45,9 @@ fn rpc_rlay_version() -> impl RpcMethodSimple {
     }
 }
 
+/// `rlay_getPropositionPools` RPC call.
+///
+/// Lists proposition pools.
 fn rpc_rlay_get_proposition_pools(sync_state: SyncState) -> impl RpcMethodSimple {
     move |_: Params| {
         let proposition_ledger = sync_state.proposition_ledger.lock().unwrap();
@@ -52,7 +55,7 @@ fn rpc_rlay_get_proposition_pools(sync_state: SyncState) -> impl RpcMethodSimple
 
         let relevant_propositions: Vec<_> = proposition_ledger.iter().collect();
         let ontology_individuals = entity_map_individuals(&entity_map);
-        let pools = detect_pools(&ontology_individuals, &relevant_propositions);
+        let pools = detect_pools(&ontology_individuals, &relevant_propositions, false);
         Ok(serde_json::to_value(pools).unwrap())
     }
 }
