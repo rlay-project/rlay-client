@@ -153,6 +153,9 @@ pub fn fill_epoch_payouts_cumulative(
     let payout_epochs = payout_epochs_mtx.lock().unwrap();
     let mut payout_epochs_cum = payout_epochs_cum_mtx.lock().unwrap();
 
+    if payout_epochs.len() == 0 {
+        return;
+    }
     let latest_calculated_epoch = *payout_epochs.keys().max().unwrap();
     for epoch in 0..=latest_calculated_epoch {
         if payout_epochs_cum.contains_key(&epoch) {

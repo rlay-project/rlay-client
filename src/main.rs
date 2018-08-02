@@ -7,6 +7,8 @@ extern crate console;
 extern crate env_logger;
 extern crate ethabi;
 extern crate failure;
+#[macro_use]
+extern crate failure_derive;
 extern crate futures_timer;
 extern crate hyper;
 extern crate jsonrpc_core;

@@ -16,7 +16,7 @@ ethabi = "5.1.1"
 multibase = "0.6.0"
 clap = "2.31"
 console = "0.6.1"
-failure = "0.1.1"
+failure = "=0.1.1"
 serde = "1.0.66"
 toml = "0.4.6"
 serde_derive = "1.0.66"
@@ -30,6 +30,7 @@ jsonrpc-core = "8.0.1"
 jsonrpc-http-server = "8.0.0"
 hyper = "0.12.6"
 url = "1.7.1"
+failure_derive = "=0.1.1"
 
 [patch.crates-io]
 # see https://github.com/ipld/rust-cid/pull/9
