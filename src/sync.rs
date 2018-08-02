@@ -261,7 +261,7 @@ pub fn run_sync(config: &Config) {
         }
     };
 
-    let rpc_config = config.rpc.clone();
+    let rpc_config = config.clone();
     let rpc_sync_state = sync_state.clone();
     ::std::thread::spawn(move || {
         ::rpc::start_rpc(&rpc_config, rpc_sync_state);
