@@ -12,7 +12,8 @@ use web3::types::U256;
 
 use payout::Payout;
 use sync_proposition_ledger::{Proposition, PropositionLedger};
-use sync_ontology::{entity_map_individuals, EntityMap};
+use sync_ontology::{entity_map_class_assertions, entity_map_individuals,
+                    entity_map_negative_class_assertions, EntityMap};
 
 // TODO: U256 and get from RlayToken contract
 const TOKENS_PER_BLOCK: f64 = 25000000000000000000f64;
@@ -48,7 +49,15 @@ pub fn payouts_for_epoch(
     );
 
     let ontology_individuals = entity_map_individuals(&entity_map);
-    let pools = detect_pools(&ontology_individuals, &relevant_propositions, true);
+    let ontology_class_assertions = entity_map_class_assertions(&entity_map);
+    let ontology_negative_class_assertions = entity_map_negative_class_assertions(&entity_map);
+    let pools = detect_pools(
+        &ontology_individuals,
+        &ontology_class_assertions,
+        &ontology_negative_class_assertions,
+        &relevant_propositions,
+        true,
+    );
 
     for pool in &pools {
         trace!("-----POOL START-----");
@@ -63,11 +72,11 @@ pub fn payouts_for_epoch(
     payouts
 }
 
-pub type PropositionSubject<'a> = &'a [Vec<u8>];
+pub type PropositionSubject = Vec<u8>;
 
 #[derive(Debug, Clone)]
 pub struct PropositionPool {
-    pub values: Vec<ontology::Individual>,
+    pub values: Vec<ontology::EntityKind>,
     pub propositions: Vec<Proposition>,
     cached_quantiles: Option<Option<Quantiles>>,
 }
@@ -82,7 +91,7 @@ impl ::serde::Serialize for PropositionPool {
         struct PropositionPoolSerialize {
             pub values: Vec<PropositionPoolValuesSerialize>,
             #[serde(serialize_with = "PropositionPool::serialize_subject")]
-            pub subject: Vec<Vec<u8>>,
+            pub subject: Vec<u8>,
             pub totalWeight: U256,
         }
 
@@ -96,10 +105,10 @@ impl ::serde::Serialize for PropositionPool {
 
         let formatted_values = self.values
             .iter()
-            .map(|individual| PropositionPoolValuesSerialize {
-                cid: individual.to_cid().unwrap().to_string(),
-                totalWeight: self.weights_for_value(individual),
-                isAggregatedValue: self.is_aggregated_value_individual(individual),
+            .map(|entity| PropositionPoolValuesSerialize {
+                cid: entity.to_cid().unwrap().to_string(),
+                totalWeight: self.weights_for_value(entity),
+                isAggregatedValue: self.is_aggregated_value_entity(entity),
             })
             .collect();
 
@@ -114,7 +123,8 @@ impl ::serde::Serialize for PropositionPool {
 }
 
 impl PropositionPool {
-    pub fn from_values(mut values: Vec<ontology::Individual>) -> PropositionPool {
+    pub fn from_values(mut values: Vec<ontology::EntityKind>) -> PropositionPool {
+        trace!("from_values: {:?}", values);
         values.sort_by_key(|n| n.to_cid().unwrap().to_bytes());
         PropositionPool {
             values,
@@ -125,11 +135,11 @@ impl PropositionPool {
     }
 
     pub fn subject(&self) -> PropositionSubject {
-        &self.values.get(0).unwrap().annotations
+        self.values.get(0).unwrap().get_subject().unwrap().clone()
     }
 
-    pub fn contains_value(&self, individual: &ontology::Individual) -> bool {
-        self.values.contains(individual)
+    pub fn contains_value(&self, entity: &ontology::EntityKind) -> bool {
+        self.values.contains(entity)
     }
 
     pub fn contains_value_cid(&self, cid: Vec<u8>) -> bool {
@@ -176,7 +186,7 @@ impl PropositionPool {
     }
 
     /// Sum up the weights of all propositions for a single value.
-    fn weights_for_value(&self, value: &ontology::Individual) -> U256 {
+    fn weights_for_value(&self, value: &ontology::EntityKind) -> U256 {
         let cid = value.to_cid().unwrap().to_bytes();
         self.propositions
             .iter()
@@ -224,7 +234,7 @@ impl PropositionPool {
         }
     }
 
-    pub fn is_aggregated_value_individual(&self, val: &Individual) -> bool {
+    pub fn is_aggregated_value_entity(&self, val: &ontology::EntityKind) -> bool {
         let aggregated = match self.aggregated_value() {
             None => return false,
             Some(val) => val,
@@ -260,15 +270,11 @@ impl PropositionPool {
         return false;
     }
 
-    pub fn serialize_subject<S>(vals: &Vec<Vec<u8>>, serializer: S) -> Result<S::Ok, S::Error>
+    pub fn serialize_subject<S>(val: &Vec<u8>, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
-        let mut seq = serializer.serialize_seq(Some(vals.len()))?;
-        for val in vals.iter() {
-            seq.serialize_element(&base_encode(Base::Base58btc, val))?;
-        }
-        seq.end()
+        serializer.serialize_str(&base_encode(Base::Base58btc, val))
     }
 }
 
@@ -277,50 +283,12 @@ fn debug_unsupported_individual(individual: &ontology::Individual, msg: &str) {
     debug!("Can't use individual {} for pool building: {}", cid, msg);
 }
 
-type ClassAssertionObject = Vec<Vec<u8>>;
-
-/// Tries to find either a class_assertion or a negative_class_assertion in an Individual.
-fn extract_class_assertion_object(
-    individual: &ontology::Individual,
-) -> Option<ClassAssertionObject> {
-    let mut class_assertion_object: Option<ClassAssertionObject> = None;
-
-    if individual.class_assertions.len() > 0 {
-        if individual.class_assertions.len() > 1 {
-            debug_unsupported_individual(
-                individual,
-                "multiple class_assertions are currently not supported",
-            );
-            return None;
-        }
-        class_assertion_object = Some(vec![individual.class_assertions.get(0).unwrap().to_owned()]);
-    }
-    if individual.negative_class_assertions.len() > 0 {
-        if individual.negative_class_assertions.len() > 1 {
-            debug_unsupported_individual(
-                individual,
-                "multiple negative_class_assertions are currently not supported",
-            );
-            return None;
-        }
-        if class_assertion_object.is_some() {
-            debug_unsupported_individual(
-                        individual,
-                        "individuals with both class_assertions and negative_class_assertions are are currently not supported",
-                    );
-            return None;
-        }
-        class_assertion_object = Some(vec![
-            individual
-                .negative_class_assertions
-                .get(0)
-                .unwrap()
-                .to_owned(),
-        ]);
-    }
-
-    class_assertion_object
+fn debug_unsupported_assertion(entity: &ontology::EntityKind, msg: &str) {
+    let cid = entity.to_cid().unwrap();
+    debug!("Can't use entity {} for pool building: {}", cid, msg);
 }
+
+type ClassAssertionObject = Vec<u8>;
 
 /// Constructs all the existent pools that arise from all used propositions.
 ///
@@ -328,6 +296,8 @@ fn extract_class_assertion_object(
 /// assert or negatively assert class memberships about the same subject.
 pub fn detect_pools(
     ontology_individuals: &[&ontology::Individual],
+    ontology_classassert: &[&ontology::ClassAssertion],
+    ontology_negativeclassassert: &[&ontology::NegativeClassAssertion],
     propositions: &[&Proposition],
     only_used: bool,
 ) -> Vec<PropositionPool> {
@@ -335,7 +305,8 @@ pub fn detect_pools(
         .iter()
         .map(|n| n.proposition_cid.clone())
         .collect();
-    let used_individuals: Vec<&ontology::Individual> = ontology_individuals
+    trace!("classasserts {:?}", ontology_classassert);
+    let used_class_assertions: Vec<&ontology::ClassAssertion> = ontology_classassert
         .into_iter()
         .filter(|n| {
             let cid = n.to_cid().unwrap().to_bytes();
@@ -343,47 +314,72 @@ pub fn detect_pools(
         })
         .map(|n| *n)
         .collect();
+    let used_negative_class_assertions: Vec<&ontology::NegativeClassAssertion> =
+        ontology_negativeclassassert
+            .into_iter()
+            .filter(|n| {
+                let cid = n.to_cid().unwrap().to_bytes();
+                used_cids.contains(&cid)
+            })
+            .map(|n| *n)
+            .collect();
 
-    let individuals = match only_used {
-        true => used_individuals,
-        false => ontology_individuals.to_owned(),
-    };
+    let mut used_assertions: Vec<ontology::EntityKind> = Vec::new();
+    used_assertions.append(&mut used_class_assertions
+        .into_iter()
+        .map(|n| n.to_owned().into())
+        .collect());
+    used_assertions.append(&mut used_negative_class_assertions
+        .into_iter()
+        .map(|n| n.to_owned().into())
+        .collect());
 
-    let mut individuals_by_subject: HashMap<PropositionSubject, Vec<&ontology::Individual>> =
+    // TODO: ?
+    let assertions = used_assertions;
+    trace!("assertions {:?}", assertions);
+    // let assertions = match only_used {
+    // true => used_assertions,
+    // false => ontology_assertions.to_owned(),
+    // };
+
+    let mut assertions_by_subject: HashMap<PropositionSubject, Vec<ontology::EntityKind>> =
         HashMap::new();
-    for individual in individuals {
-        let mut entry = individuals_by_subject
-            .entry(&individual.annotations)
+    for assertion in assertions {
+        let mut entry = assertions_by_subject
+            .entry(assertion.get_subject().unwrap().clone())
             .or_insert(Vec::new());
-        entry.push(individual);
+        entry.push(assertion);
     }
 
     let mut pools = Vec::new();
-    for (_, individuals) in individuals_by_subject {
-        let mut individuals_by_class_assertion_object: HashMap<
+    for (_, assertions) in assertions_by_subject {
+        let mut assertions_by_class_assertion_object: HashMap<
             ClassAssertionObject,
-            Vec<&ontology::Individual>,
+            Vec<ontology::EntityKind>,
         > = HashMap::new();
 
-        for individual in individuals {
-            let mut class_assertion_object = extract_class_assertion_object(individual);
-            if class_assertion_object.is_none() {
-                debug_unsupported_individual(
-                        individual,
-                        "individuals without class_assertions and negative_class_assertions are are currently not supported",
+        for assertion in assertions {
+            trace!("assertion {:?}", assertion);
+            let class_assertion_object = match assertion {
+                ontology::EntityKind::ClassAssertion(ref entity) => entity.class.clone(),
+                ontology::EntityKind::NegativeClassAssertion(ref entity) => entity.class.clone(),
+                _ => {
+                    debug_unsupported_assertion(
+                        &assertion,
+                        "only class_assertions and negative_class_assertions are are currently supported",
                     );
-                continue;
-            }
-
-            let class_assertion_obj = class_assertion_object.unwrap();
-            let entry = individuals_by_class_assertion_object
-                .entry(class_assertion_obj)
+                    continue;
+                }
+            };
+            let entry = assertions_by_class_assertion_object
+                .entry(class_assertion_object)
                 .or_insert(Vec::new());
-            entry.push(individual);
+            entry.push(assertion);
         }
 
-        for (_, values) in individuals_by_class_assertion_object {
+        for (_, values) in assertions_by_class_assertion_object {
             let pool = PropositionPool::from_values(values.iter().map(|n| (*n).clone()).collect());
+            // TODO: complete pool in case of only_used = false
             if !pool.is_complete() {
                 debug!("Pool of values {:?} is incomplete", pool.fmt_values());
                 continue;

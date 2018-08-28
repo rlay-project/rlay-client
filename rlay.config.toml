@@ -4,9 +4,9 @@ epoch_length = 20
 payout_root_submission_disabled = true
 
 [contract_addresses]
-OntologyStorage = "0xf0cd575450fc03b90eead03d65e79741a19665e4"
-RlayToken = "0x10ef71366ad76d6bddddc66677c38e137aa564db"
-PropositionLedger = "0xe90f43a68756d880f2dc83e0ae1bf51d31726d36"
+OntologyStorage = "0x4f9405d4e24842b6cb5a669c66f30740b340f8f0"
+RlayToken = "0x30fe82641c8ee46210031297010b1b879cae6409"
+PropositionLedger = "0x28208f2ad2abb7cb82136f1d6234fb0aee8571d2"
 
 [rpc]
 disabled = false

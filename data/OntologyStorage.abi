@@ -1,15 +1,392 @@
 [
   {
-    "anonymous": false,
-    "inputs": [
+    "constant": true,
+    "inputs": [],
+    "name": "objectoneof_storage",
+    "outputs": [
       {
-        "indexed": false,
-        "name": "_cid",
-        "type": "bytes"
+        "name": "",
+        "type": "address"
       }
     ],
-    "name": "AnnotationStored",
-    "type": "event"
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "dataallvaluesfrom_storage",
+    "outputs": [
+      {
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "objectallvaluesfrom_storage",
+    "outputs": [
+      {
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "objectproperty_storage",
+    "outputs": [
+      {
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "objectpropertyassertion_storage",
+    "outputs": [
+      {
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "inverseobjectproperty_storage",
+    "outputs": [
+      {
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "annotation_storage",
+    "outputs": [
+      {
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "individual_storage",
+    "outputs": [
+      {
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "datahasvalue_storage",
+    "outputs": [
+      {
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "negativeobjectpropertyassertion_storage",
+    "outputs": [
+      {
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "objectmincardinality_storage",
+    "outputs": [
+      {
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "dataexactcardinality_storage",
+    "outputs": [
+      {
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "datamaxcardinality_storage",
+    "outputs": [
+      {
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "classassertion_storage",
+    "outputs": [
+      {
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "objectintersectionof_storage",
+    "outputs": [
+      {
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "objectunionof_storage",
+    "outputs": [
+      {
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "objectcomplementof_storage",
+    "outputs": [
+      {
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "objectsomevaluesfrom_storage",
+    "outputs": [
+      {
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "negativeclassassertion_storage",
+    "outputs": [
+      {
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "objectexactcardinality_storage",
+    "outputs": [
+      {
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "objecthasvalue_storage",
+    "outputs": [
+      {
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "objecthasself_storage",
+    "outputs": [
+      {
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "class_storage",
+    "outputs": [
+      {
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "datasomevaluesfrom_storage",
+    "outputs": [
+      {
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "annotationproperty_storage",
+    "outputs": [
+      {
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "datamincardinality_storage",
+    "outputs": [
+      {
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "objectmaxcardinality_storage",
+    "outputs": [
+      {
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "name": "_storage_delegate_addrs",
+        "type": "address[]"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "constructor"
   },
   {
     "anonymous": false,
@@ -32,119 +409,308 @@
         "type": "bytes"
       }
     ],
+    "name": "ObjectIntersectionOfStored",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "name": "_cid",
+        "type": "bytes"
+      }
+    ],
+    "name": "ObjectUnionOfStored",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "name": "_cid",
+        "type": "bytes"
+      }
+    ],
+    "name": "ObjectComplementOfStored",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "name": "_cid",
+        "type": "bytes"
+      }
+    ],
+    "name": "ObjectOneOfStored",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "name": "_cid",
+        "type": "bytes"
+      }
+    ],
+    "name": "ObjectSomeValuesFromStored",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "name": "_cid",
+        "type": "bytes"
+      }
+    ],
+    "name": "ObjectAllValuesFromStored",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "name": "_cid",
+        "type": "bytes"
+      }
+    ],
+    "name": "ObjectHasValueStored",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "name": "_cid",
+        "type": "bytes"
+      }
+    ],
+    "name": "ObjectHasSelfStored",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "name": "_cid",
+        "type": "bytes"
+      }
+    ],
+    "name": "ObjectMinCardinalityStored",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "name": "_cid",
+        "type": "bytes"
+      }
+    ],
+    "name": "ObjectMaxCardinalityStored",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "name": "_cid",
+        "type": "bytes"
+      }
+    ],
+    "name": "ObjectExactCardinalityStored",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "name": "_cid",
+        "type": "bytes"
+      }
+    ],
+    "name": "DataSomeValuesFromStored",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "name": "_cid",
+        "type": "bytes"
+      }
+    ],
+    "name": "DataAllValuesFromStored",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "name": "_cid",
+        "type": "bytes"
+      }
+    ],
+    "name": "DataHasValueStored",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "name": "_cid",
+        "type": "bytes"
+      }
+    ],
+    "name": "DataMinCardinalityStored",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "name": "_cid",
+        "type": "bytes"
+      }
+    ],
+    "name": "DataMaxCardinalityStored",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "name": "_cid",
+        "type": "bytes"
+      }
+    ],
+    "name": "DataExactCardinalityStored",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "name": "_cid",
+        "type": "bytes"
+      }
+    ],
+    "name": "ObjectPropertyStored",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "name": "_cid",
+        "type": "bytes"
+      }
+    ],
+    "name": "InverseObjectPropertyStored",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "name": "_cid",
+        "type": "bytes"
+      }
+    ],
+    "name": "AnnotationStored",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "name": "_cid",
+        "type": "bytes"
+      }
+    ],
     "name": "IndividualStored",
     "type": "event"
   },
   {
-    "constant": false,
+    "anonymous": false,
     "inputs": [
       {
-        "name": "property",
-        "type": "bytes"
-      },
-      {
-        "name": "value",
-        "type": "string"
-      }
-    ],
-    "name": "storeAnnotation",
-    "outputs": [
-      {
-        "name": "",
+        "indexed": false,
+        "name": "_cid",
         "type": "bytes"
       }
     ],
-    "payable": false,
-    "stateMutability": "nonpayable",
-    "type": "function"
+    "name": "AnnotationPropertyStored",
+    "type": "event"
   },
   {
-    "constant": true,
+    "anonymous": false,
     "inputs": [
       {
-        "name": "annCid",
+        "indexed": false,
+        "name": "_cid",
         "type": "bytes"
       }
     ],
-    "name": "retrieveAnnotation",
-    "outputs": [
-      {
-        "name": "",
-        "type": "bytes"
-      },
-      {
-        "name": "",
-        "type": "string"
-      }
-    ],
-    "payable": false,
-    "stateMutability": "view",
-    "type": "function"
+    "name": "ClassAssertionStored",
+    "type": "event"
   },
   {
-    "constant": true,
+    "anonymous": false,
     "inputs": [
       {
-        "name": "annCid",
+        "indexed": false,
+        "name": "_cid",
         "type": "bytes"
       }
     ],
-    "name": "isStoredAnnotation",
-    "outputs": [
-      {
-        "name": "exists",
-        "type": "bool"
-      }
-    ],
-    "payable": false,
-    "stateMutability": "view",
-    "type": "function"
+    "name": "NegativeClassAssertionStored",
+    "type": "event"
   },
   {
-    "constant": true,
+    "anonymous": false,
     "inputs": [
       {
-        "name": "property",
+        "indexed": false,
+        "name": "_cid",
         "type": "bytes"
-      },
-      {
-        "name": "value",
-        "type": "string"
       }
     ],
-    "name": "calculateHashAnnotation",
-    "outputs": [
-      {
-        "name": "",
-        "type": "bytes32"
-      }
-    ],
-    "payable": false,
-    "stateMutability": "view",
-    "type": "function"
+    "name": "ObjectPropertyAssertionStored",
+    "type": "event"
   },
   {
-    "constant": true,
+    "anonymous": false,
     "inputs": [
       {
-        "name": "property",
-        "type": "bytes"
-      },
-      {
-        "name": "value",
-        "type": "string"
-      }
-    ],
-    "name": "calculateCidAnnotation",
-    "outputs": [
-      {
-        "name": "",
+        "indexed": false,
+        "name": "_cid",
         "type": "bytes"
       }
     ],
-    "payable": false,
-    "stateMutability": "view",
-    "type": "function"
+    "name": "NegativeObjectPropertyAssertionStored",
+    "type": "event"
   },
   {
     "constant": false,
@@ -154,7 +720,7 @@
         "type": "bytes[]"
       },
       {
-        "name": "sub_class_of_class",
+        "name": "_superClassExpression",
         "type": "bytes[]"
       }
     ],
@@ -173,84 +739,19 @@
     "constant": true,
     "inputs": [
       {
-        "name": "classCid",
+        "name": "_cid",
         "type": "bytes"
       }
     ],
     "name": "retrieveClass",
     "outputs": [
       {
-        "name": "",
-        "type": "bytes[]"
-      },
-      {
-        "name": "",
-        "type": "bytes[]"
-      }
-    ],
-    "payable": false,
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "constant": true,
-    "inputs": [
-      {
-        "name": "classCid",
-        "type": "bytes"
-      }
-    ],
-    "name": "isStoredClass",
-    "outputs": [
-      {
-        "name": "exists",
-        "type": "bool"
-      }
-    ],
-    "payable": false,
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "constant": true,
-    "inputs": [
-      {
         "name": "_annotations",
         "type": "bytes[]"
       },
       {
-        "name": "sub_class_of_class",
+        "name": "_superClassExpression",
         "type": "bytes[]"
-      }
-    ],
-    "name": "calculateHashClass",
-    "outputs": [
-      {
-        "name": "",
-        "type": "bytes32"
-      }
-    ],
-    "payable": false,
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "constant": true,
-    "inputs": [
-      {
-        "name": "_annotations",
-        "type": "bytes[]"
-      },
-      {
-        "name": "sub_class_of_class",
-        "type": "bytes[]"
-      }
-    ],
-    "name": "calculateCidClass",
-    "outputs": [
-      {
-        "name": "_cid",
-        "type": "bytes"
       }
     ],
     "payable": false,
@@ -265,11 +766,939 @@
         "type": "bytes[]"
       },
       {
-        "name": "_class_assertions",
+        "name": "_superClassExpression",
+        "type": "bytes[]"
+      }
+    ],
+    "name": "storeObjectIntersectionOf",
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "name": "_cid",
+        "type": "bytes"
+      }
+    ],
+    "name": "retrieveObjectIntersectionOf",
+    "outputs": [
+      {
+        "name": "_annotations",
         "type": "bytes[]"
       },
       {
-        "name": "_negative_class_assertions",
+        "name": "_superClassExpression",
+        "type": "bytes[]"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "name": "_annotations",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_superClassExpression",
+        "type": "bytes[]"
+      }
+    ],
+    "name": "storeObjectUnionOf",
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "name": "_cid",
+        "type": "bytes"
+      }
+    ],
+    "name": "retrieveObjectUnionOf",
+    "outputs": [
+      {
+        "name": "_annotations",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_superClassExpression",
+        "type": "bytes[]"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "name": "_annotations",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_complementOf",
+        "type": "bytes"
+      },
+      {
+        "name": "_superClassExpression",
+        "type": "bytes[]"
+      }
+    ],
+    "name": "storeObjectComplementOf",
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "name": "_cid",
+        "type": "bytes"
+      }
+    ],
+    "name": "retrieveObjectComplementOf",
+    "outputs": [
+      {
+        "name": "_annotations",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_complementOf",
+        "type": "bytes"
+      },
+      {
+        "name": "_superClassExpression",
+        "type": "bytes[]"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "name": "_annotations",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_superClassExpression",
+        "type": "bytes[]"
+      }
+    ],
+    "name": "storeObjectOneOf",
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "name": "_cid",
+        "type": "bytes"
+      }
+    ],
+    "name": "retrieveObjectOneOf",
+    "outputs": [
+      {
+        "name": "_annotations",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_superClassExpression",
+        "type": "bytes[]"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "name": "_annotations",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_superClassExpression",
+        "type": "bytes[]"
+      }
+    ],
+    "name": "storeObjectSomeValuesFrom",
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "name": "_cid",
+        "type": "bytes"
+      }
+    ],
+    "name": "retrieveObjectSomeValuesFrom",
+    "outputs": [
+      {
+        "name": "_annotations",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_superClassExpression",
+        "type": "bytes[]"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "name": "_annotations",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_superClassExpression",
+        "type": "bytes[]"
+      }
+    ],
+    "name": "storeObjectAllValuesFrom",
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "name": "_cid",
+        "type": "bytes"
+      }
+    ],
+    "name": "retrieveObjectAllValuesFrom",
+    "outputs": [
+      {
+        "name": "_annotations",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_superClassExpression",
+        "type": "bytes[]"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "name": "_annotations",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_superClassExpression",
+        "type": "bytes[]"
+      }
+    ],
+    "name": "storeObjectHasValue",
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "name": "_cid",
+        "type": "bytes"
+      }
+    ],
+    "name": "retrieveObjectHasValue",
+    "outputs": [
+      {
+        "name": "_annotations",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_superClassExpression",
+        "type": "bytes[]"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "name": "_annotations",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_superClassExpression",
+        "type": "bytes[]"
+      }
+    ],
+    "name": "storeObjectHasSelf",
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "name": "_cid",
+        "type": "bytes"
+      }
+    ],
+    "name": "retrieveObjectHasSelf",
+    "outputs": [
+      {
+        "name": "_annotations",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_superClassExpression",
+        "type": "bytes[]"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "name": "_annotations",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_superClassExpression",
+        "type": "bytes[]"
+      }
+    ],
+    "name": "storeObjectMinCardinality",
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "name": "_cid",
+        "type": "bytes"
+      }
+    ],
+    "name": "retrieveObjectMinCardinality",
+    "outputs": [
+      {
+        "name": "_annotations",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_superClassExpression",
+        "type": "bytes[]"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "name": "_annotations",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_superClassExpression",
+        "type": "bytes[]"
+      }
+    ],
+    "name": "storeObjectMaxCardinality",
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "name": "_cid",
+        "type": "bytes"
+      }
+    ],
+    "name": "retrieveObjectMaxCardinality",
+    "outputs": [
+      {
+        "name": "_annotations",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_superClassExpression",
+        "type": "bytes[]"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "name": "_annotations",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_superClassExpression",
+        "type": "bytes[]"
+      }
+    ],
+    "name": "storeObjectExactCardinality",
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "name": "_cid",
+        "type": "bytes"
+      }
+    ],
+    "name": "retrieveObjectExactCardinality",
+    "outputs": [
+      {
+        "name": "_annotations",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_superClassExpression",
+        "type": "bytes[]"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "name": "_annotations",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_superClassExpression",
+        "type": "bytes[]"
+      }
+    ],
+    "name": "storeDataSomeValuesFrom",
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "name": "_cid",
+        "type": "bytes"
+      }
+    ],
+    "name": "retrieveDataSomeValuesFrom",
+    "outputs": [
+      {
+        "name": "_annotations",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_superClassExpression",
+        "type": "bytes[]"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "name": "_annotations",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_superClassExpression",
+        "type": "bytes[]"
+      }
+    ],
+    "name": "storeDataAllValuesFrom",
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "name": "_cid",
+        "type": "bytes"
+      }
+    ],
+    "name": "retrieveDataAllValuesFrom",
+    "outputs": [
+      {
+        "name": "_annotations",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_superClassExpression",
+        "type": "bytes[]"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "name": "_annotations",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_superClassExpression",
+        "type": "bytes[]"
+      }
+    ],
+    "name": "storeDataHasValue",
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "name": "_cid",
+        "type": "bytes"
+      }
+    ],
+    "name": "retrieveDataHasValue",
+    "outputs": [
+      {
+        "name": "_annotations",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_superClassExpression",
+        "type": "bytes[]"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "name": "_annotations",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_superClassExpression",
+        "type": "bytes[]"
+      }
+    ],
+    "name": "storeDataMinCardinality",
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "name": "_cid",
+        "type": "bytes"
+      }
+    ],
+    "name": "retrieveDataMinCardinality",
+    "outputs": [
+      {
+        "name": "_annotations",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_superClassExpression",
+        "type": "bytes[]"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "name": "_annotations",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_superClassExpression",
+        "type": "bytes[]"
+      }
+    ],
+    "name": "storeDataMaxCardinality",
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "name": "_cid",
+        "type": "bytes"
+      }
+    ],
+    "name": "retrieveDataMaxCardinality",
+    "outputs": [
+      {
+        "name": "_annotations",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_superClassExpression",
+        "type": "bytes[]"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "name": "_annotations",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_superClassExpression",
+        "type": "bytes[]"
+      }
+    ],
+    "name": "storeDataExactCardinality",
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "name": "_cid",
+        "type": "bytes"
+      }
+    ],
+    "name": "retrieveDataExactCardinality",
+    "outputs": [
+      {
+        "name": "_annotations",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_superClassExpression",
+        "type": "bytes[]"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "name": "_annotations",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_superObjectPropertyExpression",
+        "type": "bytes[]"
+      }
+    ],
+    "name": "storeObjectProperty",
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "name": "_cid",
+        "type": "bytes"
+      }
+    ],
+    "name": "retrieveObjectProperty",
+    "outputs": [
+      {
+        "name": "_annotations",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_superObjectPropertyExpression",
+        "type": "bytes[]"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "name": "_annotations",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_superObjectPropertyExpression",
+        "type": "bytes[]"
+      }
+    ],
+    "name": "storeInverseObjectProperty",
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "name": "_cid",
+        "type": "bytes"
+      }
+    ],
+    "name": "retrieveInverseObjectProperty",
+    "outputs": [
+      {
+        "name": "_annotations",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_superObjectPropertyExpression",
+        "type": "bytes[]"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "name": "_annotations",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_property",
+        "type": "bytes"
+      },
+      {
+        "name": "_value",
+        "type": "bytes"
+      }
+    ],
+    "name": "storeAnnotation",
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "name": "_cid",
+        "type": "bytes"
+      }
+    ],
+    "name": "retrieveAnnotation",
+    "outputs": [
+      {
+        "name": "_annotations",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_property",
+        "type": "bytes"
+      },
+      {
+        "name": "_value",
+        "type": "bytes"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "name": "_annotations",
         "type": "bytes[]"
       }
     ],
@@ -288,42 +1717,53 @@
     "constant": true,
     "inputs": [
       {
-        "name": "indCid",
+        "name": "_cid",
         "type": "bytes"
       }
     ],
     "name": "retrieveIndividual",
     "outputs": [
       {
-        "name": "",
-        "type": "bytes[]"
-      },
-      {
-        "name": "",
-        "type": "bytes[]"
-      },
-      {
-        "name": "",
+        "name": "_annotations",
         "type": "bytes[]"
       }
     ],
     "payable": false,
     "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "name": "_annotations",
+        "type": "bytes[]"
+      }
+    ],
+    "name": "storeAnnotationProperty",
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
     "constant": true,
     "inputs": [
       {
-        "name": "indCid",
+        "name": "_cid",
         "type": "bytes"
       }
     ],
-    "name": "isStoredIndividual",
+    "name": "retrieveAnnotationProperty",
     "outputs": [
       {
-        "name": "exists",
-        "type": "bool"
+        "name": "_annotations",
+        "type": "bytes[]"
       }
     ],
     "payable": false,
@@ -331,26 +1771,53 @@
     "type": "function"
   },
   {
-    "constant": true,
+    "constant": false,
     "inputs": [
       {
         "name": "_annotations",
         "type": "bytes[]"
       },
       {
-        "name": "_class_assertions",
-        "type": "bytes[]"
+        "name": "_class",
+        "type": "bytes"
       },
       {
-        "name": "_negative_class_assertions",
-        "type": "bytes[]"
+        "name": "_subject",
+        "type": "bytes"
       }
     ],
-    "name": "calculateHashIndividual",
+    "name": "storeClassAssertion",
     "outputs": [
       {
         "name": "",
-        "type": "bytes32"
+        "type": "bytes"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "name": "_cid",
+        "type": "bytes"
+      }
+    ],
+    "name": "retrieveClassAssertion",
+    "outputs": [
+      {
+        "name": "_annotations",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_class",
+        "type": "bytes"
+      },
+      {
+        "name": "_subject",
+        "type": "bytes"
       }
     ],
     "payable": false,
@@ -358,25 +1825,52 @@
     "type": "function"
   },
   {
-    "constant": true,
+    "constant": false,
     "inputs": [
       {
         "name": "_annotations",
         "type": "bytes[]"
       },
       {
-        "name": "_class_assertions",
-        "type": "bytes[]"
+        "name": "_class",
+        "type": "bytes"
       },
       {
-        "name": "_negative_class_assertions",
-        "type": "bytes[]"
+        "name": "_subject",
+        "type": "bytes"
       }
     ],
-    "name": "calculateCidIndividual",
+    "name": "storeNegativeClassAssertion",
     "outputs": [
       {
         "name": "",
+        "type": "bytes"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "name": "_cid",
+        "type": "bytes"
+      }
+    ],
+    "name": "retrieveNegativeClassAssertion",
+    "outputs": [
+      {
+        "name": "_annotations",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_class",
+        "type": "bytes"
+      },
+      {
+        "name": "_subject",
         "type": "bytes"
       }
     ],
@@ -385,18 +1879,123 @@
     "type": "function"
   },
   {
-    "constant": true,
+    "constant": false,
     "inputs": [
       {
-        "name": "proposition",
+        "name": "_annotations",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_property",
+        "type": "bytes"
+      },
+      {
+        "name": "_subject",
+        "type": "bytes"
+      },
+      {
+        "name": "_target",
         "type": "bytes"
       }
     ],
-    "name": "isPropositionStored",
+    "name": "storeObjectPropertyAssertion",
     "outputs": [
       {
-        "name": "stored",
-        "type": "bool"
+        "name": "",
+        "type": "bytes"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "name": "_cid",
+        "type": "bytes"
+      }
+    ],
+    "name": "retrieveObjectPropertyAssertion",
+    "outputs": [
+      {
+        "name": "_annotations",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_property",
+        "type": "bytes"
+      },
+      {
+        "name": "_subject",
+        "type": "bytes"
+      },
+      {
+        "name": "_target",
+        "type": "bytes"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "name": "_annotations",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_property",
+        "type": "bytes"
+      },
+      {
+        "name": "_subject",
+        "type": "bytes"
+      },
+      {
+        "name": "_target",
+        "type": "bytes"
+      }
+    ],
+    "name": "storeNegativeObjectPropertyAssertion",
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "name": "_cid",
+        "type": "bytes"
+      }
+    ],
+    "name": "retrieveNegativeObjectPropertyAssertion",
+    "outputs": [
+      {
+        "name": "_annotations",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_property",
+        "type": "bytes"
+      },
+      {
+        "name": "_subject",
+        "type": "bytes"
+      },
+      {
+        "name": "_target",
+        "type": "bytes"
       }
     ],
     "payable": false,
