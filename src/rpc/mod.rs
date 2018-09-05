@@ -34,7 +34,11 @@ pub fn start_rpc(full_config: &Config, sync_state: SyncState) {
     io.add_method("rlay_encodeForStore", rpc_rlay_encode_for_store());
     io.add_method(
         "rlay_experimentalKindForCid",
-        rpc_rlay_experimental_kind_for_cid(sync_state),
+        rpc_rlay_experimental_kind_for_cid(sync_state.clone()),
+    );
+    io.add_method(
+        "rlay_experimentalListCids",
+        rpc_rlay_experimental_list_cids(sync_state.clone()),
     );
 
     let _server = ServerBuilder::new(io)
@@ -174,5 +178,22 @@ fn rpc_rlay_experimental_kind_for_cid(sync_state: SyncState) -> impl RpcMethodSi
         } else {
             unimplemented!()
         }
+    }
+}
+
+/// `rlay_experimentalListCids` RPC call.
+///
+/// List all CIDs seen via "<Entity>Stored" events.
+fn rpc_rlay_experimental_list_cids(sync_state: SyncState) -> impl RpcMethodSimple {
+    move |_: Params| {
+        let cid_entity_kind_map = sync_state.cid_entity_kind_map();
+        let cid_entity_kind_map_lock = cid_entity_kind_map.lock().unwrap();
+
+        let cids: Vec<_> = cid_entity_kind_map_lock
+            .keys()
+            .map(|n| format!("0x{}", n.to_hex()))
+            .collect();
+
+        Ok(serde_json::to_value(cids).unwrap())
     }
 }
