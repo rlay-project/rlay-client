@@ -79,6 +79,7 @@ impl<M: Metadata> Middleware<M> for ProxyMiddleware {
     {
         let mut matches_custom_method = false;
         if let Request::Single(Call::MethodCall(call)) = &request {
+            debug!("RPC method: {}", &call.method);
             if self.methods.contains(&call.method) {
                 matches_custom_method = true;
             }

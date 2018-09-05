@@ -8,7 +8,7 @@ use web3::types::{Filter, Log, U256};
 use web3;
 use web3::DuplexTransport;
 use rustc_hex::ToHex;
-use rlay_ontology::ontology::EntityKind;
+use rlay_ontology::ontology::Entity;
 
 use config::Config;
 use sync_ontology::sync_ontology;
@@ -41,7 +41,7 @@ pub fn subscribe_with_history(
 
 #[derive(Clone)]
 pub struct SyncState {
-    pub entity_map: Arc<Mutex<BTreeMap<Vec<u8>, EntityKind>>>,
+    pub entity_map: Arc<Mutex<BTreeMap<Vec<u8>, Entity>>>,
     pub cid_entity_kind_map: Arc<Mutex<BTreeMap<Vec<u8>, String>>>,
     pub proposition_ledger: Arc<Mutex<PropositionLedger>>,
     pub proposition_ledger_block_highwatermark: Arc<Mutex<u64>>,
@@ -49,7 +49,7 @@ pub struct SyncState {
 
 impl SyncState {
     pub fn new() -> Self {
-        let entity_map: BTreeMap<Vec<u8>, EntityKind> = BTreeMap::new();
+        let entity_map: BTreeMap<Vec<u8>, Entity> = BTreeMap::new();
         let entity_map_mutex = Arc::new(Mutex::new(entity_map));
 
         let cid_entity_kind_map: BTreeMap<Vec<u8>, String> = BTreeMap::new();
@@ -66,7 +66,7 @@ impl SyncState {
         }
     }
 
-    pub fn entity_map(&self) -> Arc<Mutex<BTreeMap<Vec<u8>, EntityKind>>> {
+    pub fn entity_map(&self) -> Arc<Mutex<BTreeMap<Vec<u8>, Entity>>> {
         self.entity_map.clone()
     }
 
@@ -190,9 +190,9 @@ pub fn run_sync(config: &Config) {
             let mut individual_count = 0;
             for entity in entity_map_lock.values() {
                 match entity {
-                    EntityKind::Annotation(_) => annotation_count += 1,
-                    EntityKind::Class(_) => class_count += 1,
-                    EntityKind::Individual(_) => individual_count += 1,
+                    Entity::Annotation(_) => annotation_count += 1,
+                    Entity::Class(_) => class_count += 1,
+                    Entity::Individual(_) => individual_count += 1,
                     _ => {}
                 }
             }

@@ -76,7 +76,7 @@ pub type PropositionSubject = Vec<u8>;
 
 #[derive(Debug, Clone)]
 pub struct PropositionPool {
-    pub values: Vec<ontology::EntityKind>,
+    pub values: Vec<ontology::Entity>,
     pub propositions: Vec<Proposition>,
     cached_quantiles: Option<Option<Quantiles>>,
 }
@@ -123,7 +123,7 @@ impl ::serde::Serialize for PropositionPool {
 }
 
 impl PropositionPool {
-    pub fn from_values(mut values: Vec<ontology::EntityKind>) -> PropositionPool {
+    pub fn from_values(mut values: Vec<ontology::Entity>) -> PropositionPool {
         trace!("from_values: {:?}", values);
         values.sort_by_key(|n| n.to_cid().unwrap().to_bytes());
         PropositionPool {
@@ -138,7 +138,7 @@ impl PropositionPool {
         self.values.get(0).unwrap().get_subject().unwrap().clone()
     }
 
-    pub fn contains_value(&self, entity: &ontology::EntityKind) -> bool {
+    pub fn contains_value(&self, entity: &ontology::Entity) -> bool {
         self.values.contains(entity)
     }
 
@@ -186,7 +186,7 @@ impl PropositionPool {
     }
 
     /// Sum up the weights of all propositions for a single value.
-    fn weights_for_value(&self, value: &ontology::EntityKind) -> U256 {
+    fn weights_for_value(&self, value: &ontology::Entity) -> U256 {
         let cid = value.to_cid().unwrap().to_bytes();
         self.propositions
             .iter()
@@ -234,7 +234,7 @@ impl PropositionPool {
         }
     }
 
-    pub fn is_aggregated_value_entity(&self, val: &ontology::EntityKind) -> bool {
+    pub fn is_aggregated_value_entity(&self, val: &ontology::Entity) -> bool {
         let aggregated = match self.aggregated_value() {
             None => return false,
             Some(val) => val,
@@ -283,7 +283,7 @@ fn debug_unsupported_individual(individual: &ontology::Individual, msg: &str) {
     debug!("Can't use individual {} for pool building: {}", cid, msg);
 }
 
-fn debug_unsupported_assertion(entity: &ontology::EntityKind, msg: &str) {
+fn debug_unsupported_assertion(entity: &ontology::Entity, msg: &str) {
     let cid = entity.to_cid().unwrap();
     debug!("Can't use entity {} for pool building: {}", cid, msg);
 }
@@ -324,7 +324,7 @@ pub fn detect_pools(
             .map(|n| *n)
             .collect();
 
-    let mut used_assertions: Vec<ontology::EntityKind> = Vec::new();
+    let mut used_assertions: Vec<ontology::Entity> = Vec::new();
     used_assertions.append(&mut used_class_assertions
         .into_iter()
         .map(|n| n.to_owned().into())
@@ -342,7 +342,7 @@ pub fn detect_pools(
     // false => ontology_assertions.to_owned(),
     // };
 
-    let mut assertions_by_subject: HashMap<PropositionSubject, Vec<ontology::EntityKind>> =
+    let mut assertions_by_subject: HashMap<PropositionSubject, Vec<ontology::Entity>> =
         HashMap::new();
     for assertion in assertions {
         let mut entry = assertions_by_subject
@@ -355,14 +355,14 @@ pub fn detect_pools(
     for (_, assertions) in assertions_by_subject {
         let mut assertions_by_class_assertion_object: HashMap<
             ClassAssertionObject,
-            Vec<ontology::EntityKind>,
+            Vec<ontology::Entity>,
         > = HashMap::new();
 
         for assertion in assertions {
             trace!("assertion {:?}", assertion);
             let class_assertion_object = match assertion {
-                ontology::EntityKind::ClassAssertion(ref entity) => entity.class.clone(),
-                ontology::EntityKind::NegativeClassAssertion(ref entity) => entity.class.clone(),
+                ontology::Entity::ClassAssertion(ref entity) => entity.class.clone(),
+                ontology::Entity::NegativeClassAssertion(ref entity) => entity.class.clone(),
                 _ => {
                     debug_unsupported_assertion(
                         &assertion,
@@ -422,7 +422,7 @@ fn calculate_payouts(pools: &[PropositionPool]) -> Vec<Payout> {
             let reward: f64 = TOKENS_PER_BLOCK as f64 * pool_factor * factor * 2f64 * 0.999f64;
 
             let mut payout = Payout::empty_for_address(proposition.sender);
-            payout.amount = payout.amount + (reward as u64).into();
+            payout.amount = payout.amount + Into::<U256>::into(reward as u64);
             payouts.push(payout);
         }
     }

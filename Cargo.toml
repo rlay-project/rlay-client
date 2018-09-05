@@ -5,14 +5,14 @@ authors = ["Maximilian Goisser <goisser94@gmail.com>"]
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-web3 = { git = 'https://github.com/forrest-marshall/rust-web3', rev = '9387d9c06d04901bb98b75fd6f8b17f8ce852dea' }
+web3 = "0.4.0"
 cid = { git = 'https://github.com/hobofan/rust-cid', rev = '27798e5245c234dae1236470a5a5568cb067a216' }
-rlay_ontology = { git = 'https://github.com/rlay-project/rlay-ontology', rev = 'bcf07d65d1793bf18571b885cc36c4316753061a' }
+rlay_ontology = { git = 'https://github.com/rlay-project/rlay-ontology', rev = 'c608af44e544c901e6ed70a771f1807357c15405', features = ["web3_compat"] }
 merkle_light = { git = "https://github.com/hobofan/merkle_light", rev = 'f069616df909cb7a4426f6deb328bde6422a3510' }
 rquantiles = { git = "https://github.com/rlay-project/rquantiles", rev = "527587adda425b3765575e150cc9a8239bca3a83" }
 rustc-hex = "1.0.0"
 tokio-core = "0.1.17"
-ethabi = "5.1.1"
+ethabi = "6.0.1"
 multibase = "0.6.0"
 clap = "2.31"
 console = "0.6.1"

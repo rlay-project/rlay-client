@@ -2,7 +2,7 @@ use cid::ToCid;
 use rustc_hex::ToHex;
 use ethabi::{self, Event};
 use multibase::{encode as base_encode, Base};
-use rlay_ontology::ontology::{self, *};
+use rlay_ontology::ontology::{self, *, FromABIV2ResponseHinted};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
 use tokio_core;
@@ -13,16 +13,16 @@ use web3;
 
 use config::Config;
 use sync::subscribe_with_history;
-use web3_helpers::{raw_query, FromABIV2Response};
+use web3_helpers::raw_query;
 
-pub type EntityMap = BTreeMap<Vec<u8>, EntityKind>;
-pub type CidEntityKindMap = BTreeMap<Vec<u8>, String>;
+pub type EntityMap = BTreeMap<Vec<u8>, Entity>;
+pub type CidEntityMap = BTreeMap<Vec<u8>, String>;
 
 pub fn entity_map_individuals(entity_map: &EntityMap) -> Vec<&ontology::Individual> {
     entity_map
         .values()
         .filter_map(|entity| match entity {
-            EntityKind::Individual(val) => Some(val),
+            Entity::Individual(val) => Some(val),
             _ => None,
         })
         .collect()
@@ -32,7 +32,7 @@ pub fn entity_map_class_assertions(entity_map: &EntityMap) -> Vec<&ontology::Cla
     entity_map
         .values()
         .filter_map(|entity| match entity {
-            EntityKind::ClassAssertion(val) => Some(val),
+            Entity::ClassAssertion(val) => Some(val),
             _ => None,
         })
         .collect()
@@ -44,7 +44,7 @@ pub fn entity_map_negative_class_assertions(
     entity_map
         .values()
         .filter_map(|entity| match entity {
-            EntityKind::NegativeClassAssertion(val) => Some(val),
+            Entity::NegativeClassAssertion(val) => Some(val),
             _ => None,
         })
         .collect()
@@ -57,7 +57,7 @@ pub fn sync_ontology(
     eloop_handle: tokio_core::reactor::Handle,
     config: Config,
     entity_map_mutex: Arc<Mutex<EntityMap>>,
-    cid_entity_kind_map_mutex: Arc<Mutex<CidEntityKindMap>>,
+    cid_entity_kind_map_mutex: Arc<Mutex<CidEntityMap>>,
 ) -> impl Future<Item = (), Error = ()> {
     let web3 = config.web3_with_handle(&eloop_handle);
 
@@ -96,7 +96,7 @@ pub fn sync_ontology(
         })
         .filter(|res| res.is_some())
         .map(|res| res.unwrap())
-        .for_each(move |entity: EntityKind| {
+        .for_each(move |entity: Entity| {
             let mut entity_map_lock = entity_map_mutex.lock().unwrap();
             entity_map_lock.insert(entity.to_bytes(), entity);
 
@@ -126,7 +126,7 @@ fn process_ontology_storage_log(
     signature_map: &HashMap<web3::types::H256, Event>,
     config: &Config,
     web3: &web3::Web3<impl Transport>,
-) -> impl Future<Item = Option<(Vec<u8>, String, Option<EntityKind>)>, Error = ()> {
+) -> impl Future<Item = Option<(Vec<u8>, String, Option<Entity>)>, Error = ()> {
     debug!(
         "got OntologyStorage log: {:?} - {:?}",
         log.transaction_hash, log.log_index
@@ -157,45 +157,33 @@ fn process_ontology_storage_log(
     )
 }
 
-fn get_entity_kind_for_log<K>(
+fn get_entity_kind_for_log(
     web3: &web3::Web3<impl Transport>,
     abi: &ethabi::Contract,
     contract: &web3::contract::Contract<impl Transport>,
     cid: Vec<u8>,
-    event_name: &str,
-    kind_event_name: &str,
-    kind_retrieve_name: &str,
-) -> impl Future<Item = Option<K>, Error = ()>
-where
-    K: FromABIV2Response + ToCid + Into<EntityKind>,
-{
-    if event_name == kind_event_name {
-        Either::A(
-            raw_query(
-                web3.eth(),
-                abi,
-                contract.address(),
-                kind_retrieve_name,
-                (cid.to_owned(),),
-                None,
-                web3::contract::Options::default(),
-                None,
-            ).and_then(move |res| {
-                let ent = K::from_abiv2(&res.0);
-                let retrieved_cid = ent.to_cid().unwrap().to_bytes();
-                debug!("CID(retrieved) 0x{}", retrieved_cid.to_hex());
-                debug_assert!(
-                    retrieved_cid == cid,
-                    "CID of retrieved Entity was not correct"
-                );
-                Ok(ent)
-            })
-                .and_then(|res| Ok(Some(res)))
-                .map_err(|_| ()),
-        )
-    } else {
-        Either::B(Ok(None).into_future())
-    }
+    kind: EntityKind,
+) -> impl Future<Item = Entity, Error = ()> {
+    raw_query(
+        web3.eth(),
+        abi,
+        contract.address(),
+        &kind.retrieve_fn_name(),
+        (cid.to_owned(),),
+        None,
+        web3::contract::Options::default(),
+        None,
+    ).and_then(move |res| {
+        let ent: Entity = FromABIV2ResponseHinted::from_abiv2(&res.0, &kind);
+        let retrieved_cid = ent.to_cid().unwrap().to_bytes();
+        debug!("CID(retrieved) 0x{}", retrieved_cid.to_hex());
+        debug_assert!(
+            retrieved_cid == cid,
+            "CID of retrieved Entity was not correct"
+        );
+        Ok(ent)
+    })
+        .map_err(|_| ())
 }
 
 fn get_entity_for_log(
@@ -204,68 +192,12 @@ fn get_entity_for_log(
     contract: &web3::contract::Contract<impl Transport>,
     event_name: &str,
     cid: &[u8],
-) -> impl Future<Item = Option<EntityKind>, Error = ()> {
-    let annotation_fut = get_entity_kind_for_log(
-        web3,
-        abi,
-        contract,
-        cid.to_owned(),
-        event_name,
-        "AnnotationStored",
-        "retrieveAnnotation",
-    ).and_then(|n| Ok(n.map(<Annotation as Into<EntityKind>>::into)));
-    let class_fut = get_entity_kind_for_log(
-        web3,
-        abi,
-        contract,
-        cid.to_owned(),
-        event_name,
-        "ClassStored",
-        "retrieveClass",
-    ).and_then(|n| Ok(n.map(<Class as Into<EntityKind>>::into)));
-    let individual_fut = get_entity_kind_for_log(
-        web3,
-        abi,
-        contract,
-        cid.to_owned(),
-        event_name,
-        "IndividualStored",
-        "retrieveIndividual",
-    ).and_then(|n| Ok(n.map(<Individual as Into<EntityKind>>::into)));
-    let classassertion_fut = get_entity_kind_for_log(
-        web3,
-        abi,
-        contract,
-        cid.to_owned(),
-        event_name,
-        "ClassAssertionStored",
-        "retrieveClassAssertion",
-    ).and_then(|n| Ok(n.map(<ClassAssertion as Into<EntityKind>>::into)));
-    let negativeclassassertion_fut =
-        get_entity_kind_for_log(
-            web3,
-            abi,
-            contract,
-            cid.to_owned(),
-            event_name,
-            "NegativeClassAssertionStored",
-            "retrieveNegativeClassAssertion",
-        ).and_then(|n| Ok(n.map(<NegativeClassAssertion as Into<EntityKind>>::into)));
-
-    Future::join5(
-        annotation_fut,
-        class_fut,
-        individual_fut,
-        classassertion_fut,
-        negativeclassassertion_fut,
-    ).and_then(|results| {
-        Ok(match results {
-            (Some(entity), _, _, _, _) => Some(entity),
-            (_, Some(entity), _, _, _) => Some(entity),
-            (_, _, Some(entity), _, _) => Some(entity),
-            (_, _, _, Some(entity), _) => Some(entity),
-            (_, _, _, _, Some(entity)) => Some(entity),
-            (None, None, None, None, None) => None,
-        })
-    })
+) -> impl Future<Item = Option<Entity>, Error = ()> {
+    match EntityKind::from_event_name(event_name) {
+        Ok(kind) => Either::A(
+            get_entity_kind_for_log(web3, abi, contract, cid.to_owned(), kind)
+                .and_then(|entity| Ok(Some(entity))),
+        ),
+        Err(_) => Either::B(Ok(None).into_future()),
+    }
 }

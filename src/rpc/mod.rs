@@ -40,6 +40,14 @@ pub fn start_rpc(full_config: &Config, sync_state: SyncState) {
         "rlay_experimentalListCids",
         rpc_rlay_experimental_list_cids(sync_state.clone()),
     );
+    io.add_method(
+        "rlay_experimentalListCidsIndex",
+        rpc_rlay_experimental_list_cids_index(sync_state.clone()),
+    );
+    io.add_method(
+        "rlay_experimentalGetEntity",
+        rpc_rlay_experimental_get_entity(sync_state.clone()),
+    );
 
     let _server = ServerBuilder::new(io)
         .start_http(&config.network_address.parse().unwrap())
@@ -185,15 +193,97 @@ fn rpc_rlay_experimental_kind_for_cid(sync_state: SyncState) -> impl RpcMethodSi
 ///
 /// List all CIDs seen via "<Entity>Stored" events.
 fn rpc_rlay_experimental_list_cids(sync_state: SyncState) -> impl RpcMethodSimple {
-    move |_: Params| {
+    move |params: Params| {
         let cid_entity_kind_map = sync_state.cid_entity_kind_map();
         let cid_entity_kind_map_lock = cid_entity_kind_map.lock().unwrap();
 
-        let cids: Vec<_> = cid_entity_kind_map_lock
-            .keys()
-            .map(|n| format!("0x{}", n.to_hex()))
-            .collect();
+        let cids: Vec<_> = match params {
+            Params::Array(params_array) => match params_array.get(0) {
+                Some(first_param) => match first_param.as_str() {
+                    Some(entity_kind) => cid_entity_kind_map_lock
+                        .iter()
+                        .filter(|(&_, ref value)| value == &entity_kind)
+                        .map(|(key, _)| format!("0x{}", key.to_hex()))
+                        .collect(),
+                    None => cid_entity_kind_map_lock
+                        .keys()
+                        .map(|n| format!("0x{}", n.to_hex()))
+                        .collect(),
+                },
+                None => cid_entity_kind_map_lock
+                    .keys()
+                    .map(|n| format!("0x{}", n.to_hex()))
+                    .collect(),
+            },
+            _ => cid_entity_kind_map_lock
+                .keys()
+                .map(|n| format!("0x{}", n.to_hex()))
+                .collect(),
+        };
 
         Ok(serde_json::to_value(cids).unwrap())
+    }
+}
+
+fn rpc_rlay_experimental_list_cids_index(sync_state: SyncState) -> impl RpcMethodSimple {
+    move |params: Params| {
+        let entity_map = sync_state.entity_map();
+        let entity_map_lock = entity_map.lock().unwrap();
+
+        let cids: Vec<_> = match params {
+            Params::Array(params_array) => {
+                match (
+                    params_array.get(0),
+                    params_array.get(1),
+                    params_array.get(2),
+                ) {
+                    (Some(kind), Some(field), Some(value)) => {
+                        match (kind.as_str(), field.as_str(), value.as_str()) {
+                            (Some(kind), Some(field), Some(value)) => entity_map_lock
+                                .iter()
+                                .filter(|(_, entity)| &Into::<&str>::into(entity.kind()) == &kind)
+                                .filter(|(_, entity)| {
+                                    let entity_json = serde_json::to_value(entity).unwrap();
+                                    let field_val = &entity_json[field];
+                                    match field_val {
+                                        Value::Array(json_values) => {
+                                            let values: Vec<_> = json_values.iter().map(|n| n.as_str().unwrap()).collect();
+                                            return values.contains(&value);
+                                        }
+                                        Value::String(string_value) => return string_value == value,
+                                        _ => false,
+                                    }
+                                })
+                                .map(|(key, _)| format!("0x{}", key.to_hex()))
+                                .collect(),
+                            _ => Vec::new(),
+                        }
+                    }
+                    _ => Vec::new(),
+                }
+            }
+            _ => Vec::new(),
+        };
+
+        Ok(serde_json::to_value(cids).unwrap())
+    }
+}
+
+fn rpc_rlay_experimental_get_entity(sync_state: SyncState) -> impl RpcMethodSimple {
+    move |params: Params| {
+        if let Params::Array(params_array) = params {
+            let entity_map = sync_state.entity_map();
+            let entity_map_lock = entity_map.lock().unwrap();
+
+            let cid = params_array.get(0).unwrap().as_str().unwrap();
+            let cid_no_prefix = str::replace(cid, "0x", "");
+            let cid_bytes = cid_no_prefix.from_hex().unwrap();
+
+            let entity_kind = entity_map_lock.get(&cid_bytes);
+            debug!("retrieved {:?}", entity_kind.is_some());
+            Ok(serde_json::to_value(entity_kind).unwrap())
+        } else {
+            unimplemented!()
+        }
     }
 }
