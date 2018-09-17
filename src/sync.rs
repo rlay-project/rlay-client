@@ -11,7 +11,7 @@ use rustc_hex::ToHex;
 use rlay_ontology::ontology::Entity;
 
 use config::Config;
-use sync_ontology::sync_ontology;
+use sync_ontology::{EthOntologySyncer, OntologySyncer};
 use sync_proposition_ledger::{sync_ledger, PropositionLedger};
 use payout::{fill_epoch_payouts, fill_epoch_payouts_cumulative, load_epoch_payouts,
              retrieve_epoch_start_block, store_epoch_payouts, submit_epoch_payouts, Payout,
@@ -41,28 +41,64 @@ pub fn subscribe_with_history(
 
 #[derive(Clone)]
 pub struct SyncState {
-    pub entity_map: Arc<Mutex<BTreeMap<Vec<u8>, Entity>>>,
-    pub cid_entity_kind_map: Arc<Mutex<BTreeMap<Vec<u8>, String>>>,
+    pub ontology: OntologySyncState,
     pub proposition_ledger: Arc<Mutex<PropositionLedger>>,
     pub proposition_ledger_block_highwatermark: Arc<Mutex<u64>>,
 }
 
 impl SyncState {
     pub fn new() -> Self {
-        let entity_map: BTreeMap<Vec<u8>, Entity> = BTreeMap::new();
-        let entity_map_mutex = Arc::new(Mutex::new(entity_map));
-
-        let cid_entity_kind_map: BTreeMap<Vec<u8>, String> = BTreeMap::new();
-        let cid_entity_kind_map_mutex = Arc::new(Mutex::new(cid_entity_kind_map));
+        let ontology = OntologySyncState::new();
 
         let proposition_ledger: PropositionLedger = vec![];
         let proposition_ledger_mutex = Arc::new(Mutex::new(proposition_ledger));
 
         Self {
-            entity_map: entity_map_mutex,
-            cid_entity_kind_map: cid_entity_kind_map_mutex,
+            ontology,
             proposition_ledger: proposition_ledger_mutex,
             proposition_ledger_block_highwatermark: Arc::new(Mutex::new(0u64)),
+        }
+    }
+
+    pub fn entity_map(&self) -> Arc<Mutex<BTreeMap<Vec<u8>, Entity>>> {
+        self.ontology.entity_map()
+    }
+
+    pub fn cid_entity_kind_map(&self) -> Arc<Mutex<BTreeMap<Vec<u8>, String>>> {
+        self.ontology.cid_entity_kind_map()
+    }
+
+    pub fn proposition_ledger(&self) -> Arc<Mutex<PropositionLedger>> {
+        self.proposition_ledger.clone()
+    }
+
+    pub fn proposition_ledger_block_highwatermark(&self) -> Arc<Mutex<u64>> {
+        self.proposition_ledger_block_highwatermark.clone()
+    }
+
+    pub fn ontology_last_synced_block(&self) -> Arc<Mutex<Option<u64>>> {
+        self.ontology.last_synced_block()
+    }
+}
+
+#[derive(Clone)]
+pub struct OntologySyncState {
+    pub entity_map: Arc<Mutex<BTreeMap<Vec<u8>, Entity>>>,
+    pub cid_entity_kind_map: Arc<Mutex<BTreeMap<Vec<u8>, String>>>,
+    pub last_synced_block: Arc<Mutex<Option<u64>>>,
+}
+
+impl OntologySyncState {
+    pub fn new() -> Self {
+        let entity_map: BTreeMap<Vec<u8>, Entity> = BTreeMap::new();
+        let entity_map_mutex = Arc::new(Mutex::new(entity_map));
+
+        let cid_entity_kind_map: BTreeMap<Vec<u8>, String> = BTreeMap::new();
+        let cid_entity_kind_map_mutex = Arc::new(Mutex::new(cid_entity_kind_map));
+        Self {
+            entity_map: entity_map_mutex,
+            cid_entity_kind_map: cid_entity_kind_map_mutex,
+            last_synced_block: Arc::new(Mutex::new(None)),
         }
     }
 
@@ -74,12 +110,8 @@ impl SyncState {
         self.cid_entity_kind_map.clone()
     }
 
-    pub fn proposition_ledger(&self) -> Arc<Mutex<PropositionLedger>> {
-        self.proposition_ledger.clone()
-    }
-
-    pub fn proposition_ledger_block_highwatermark(&self) -> Arc<Mutex<u64>> {
-        self.proposition_ledger_block_highwatermark.clone()
+    pub fn last_synced_block(&self) -> Arc<Mutex<Option<u64>>> {
+        self.last_synced_block.clone()
     }
 }
 
@@ -131,15 +163,19 @@ pub fn run_sync(config: &Config) {
     let computed_state = ComputedState::load_from_files(config.clone());
 
     // Sync ontology concepts from smart contract to local state
-    let sync_ontology_fut = sync_ontology(
-        eloop.handle(),
-        config.clone(),
-        sync_state.entity_map(),
-        sync_state.cid_entity_kind_map(),
-    ).map_err(|err| {
-        error!("Sync ontology: {:?}", err);
-        ()
-    });
+    let mut syncer = EthOntologySyncer::new();
+    let sync_ontology_fut = syncer
+        .sync_ontology(
+            eloop.handle(),
+            config.clone(),
+            sync_state.entity_map(),
+            sync_state.cid_entity_kind_map(),
+            sync_state.ontology_last_synced_block(),
+        )
+        .map_err(|err| {
+            error!("Sync ontology: {:?}", err);
+            ()
+        });
     // Sync proposition ledger from smart contract to local state
     let sync_proposition_ledger_fut = sync_ledger(
         eloop.handle(),
@@ -181,7 +217,8 @@ pub fn run_sync(config: &Config) {
     // Print some statistics about the local state
     let counter_stream = Interval::new(Duration::from_secs(5))
         .for_each(|_| {
-            let entity_map_lock = sync_state_counter.entity_map.lock().unwrap();
+            let entity_map = sync_state_counter.entity_map();
+            let entity_map_lock = entity_map.lock().unwrap();
             let ledger_lock = sync_state_counter.proposition_ledger.lock().unwrap();
             let payout_epochs = computed_state_counter.payout_epochs_cum.lock().unwrap();
             debug!("Num entities: {}", entity_map_lock.len());

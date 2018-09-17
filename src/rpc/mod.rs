@@ -80,7 +80,8 @@ fn rpc_rlay_version(config: &Config) -> impl RpcMethodSimple {
 fn rpc_rlay_get_proposition_pools(sync_state: SyncState) -> impl RpcMethodSimple {
     move |_: Params| {
         let proposition_ledger = sync_state.proposition_ledger.lock().unwrap();
-        let entity_map = sync_state.entity_map.lock().unwrap();
+        let raw_entity_map = sync_state.entity_map();
+        let entity_map = raw_entity_map.lock().unwrap();
 
         let relevant_propositions: Vec<_> = proposition_ledger.iter().collect();
         let ontology_individuals = entity_map_individuals(&entity_map);
