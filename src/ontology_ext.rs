@@ -486,3 +486,90 @@ impl CanonicalOppositeAssertion for ontology::NegativeObjectPropertyAssertion {
         }
     }
 }
+
+pub trait GetSubjectProperty {
+    fn get_subject_property(&self) -> Vec<&[u8]>;
+}
+
+impl GetSubjectProperty for Assertion {
+    fn get_subject_property(&self) -> Vec<&[u8]> {
+        match self {
+            Assertion::ClassAssertion(val) => GetSubjectProperty::get_subject_property(val),
+            Assertion::NegativeClassAssertion(val) => GetSubjectProperty::get_subject_property(val),
+            Assertion::DataPropertyAssertion(val) => GetSubjectProperty::get_subject_property(val),
+            Assertion::NegativeDataPropertyAssertion(val) => {
+                GetSubjectProperty::get_subject_property(val)
+            }
+            Assertion::ObjectPropertyAssertion(val) => {
+                GetSubjectProperty::get_subject_property(val)
+            }
+            Assertion::NegativeObjectPropertyAssertion(val) => {
+                GetSubjectProperty::get_subject_property(val)
+            }
+        }
+    }
+}
+
+impl GetSubjectProperty for ontology::ClassAssertion {
+    fn get_subject_property(&self) -> Vec<&[u8]> {
+        vec![&self.subject]
+    }
+}
+
+impl GetSubjectProperty for ontology::NegativeClassAssertion {
+    fn get_subject_property(&self) -> Vec<&[u8]> {
+        vec![&self.subject]
+    }
+}
+
+impl GetSubjectProperty for ontology::DataPropertyAssertion {
+    fn get_subject_property(&self) -> Vec<&[u8]> {
+        let mut vals = Vec::new();
+        if let Some(ref val) = self.subject {
+            vals.push(val.as_slice());
+        }
+        if let Some(ref val) = self.property {
+            vals.push(val.as_slice());
+        }
+        vals
+    }
+}
+
+impl GetSubjectProperty for ontology::NegativeDataPropertyAssertion {
+    fn get_subject_property(&self) -> Vec<&[u8]> {
+        let mut vals = Vec::new();
+        if let Some(ref val) = self.subject {
+            vals.push(val.as_slice());
+        }
+        if let Some(ref val) = self.property {
+            vals.push(val.as_slice());
+        }
+        vals
+    }
+}
+
+impl GetSubjectProperty for ontology::ObjectPropertyAssertion {
+    fn get_subject_property(&self) -> Vec<&[u8]> {
+        let mut vals = Vec::new();
+        if let Some(ref val) = self.subject {
+            vals.push(val.as_slice());
+        }
+        if let Some(ref val) = self.property {
+            vals.push(val.as_slice());
+        }
+        vals
+    }
+}
+
+impl GetSubjectProperty for ontology::NegativeObjectPropertyAssertion {
+    fn get_subject_property(&self) -> Vec<&[u8]> {
+        let mut vals = Vec::new();
+        if let Some(ref val) = self.subject {
+            vals.push(val.as_slice());
+        }
+        if let Some(ref val) = self.property {
+            vals.push(val.as_slice());
+        }
+        vals
+    }
+}

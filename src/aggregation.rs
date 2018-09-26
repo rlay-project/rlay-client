@@ -9,6 +9,7 @@ use web3::types::U256;
 
 use ontology_ext::*;
 use sync_proposition_ledger::Proposition;
+use web3_helpers::HexString;
 
 pub type PropositionSubject<'a> = &'a [u8];
 
@@ -58,6 +59,10 @@ impl BooleanPropositionPool {
 
     pub fn subject(&self) -> PropositionSubject {
         self.values.get(0).unwrap().get_subject().unwrap().clone()
+    }
+
+    pub fn subject_property(&self) -> Vec<&[u8]> {
+        self.values.get(0).unwrap().get_subject_property()
     }
 
     pub fn canonical_positive_value(&self) -> Assertion {
@@ -343,7 +348,9 @@ impl ::serde::Serialize for ValuedBooleanPropositionPool {
 
         #[derive(Serialize)]
         #[allow(non_snake_case)]
-        struct PropositionPoolSerialize {
+        struct PropositionPoolSerialize<'a> {
+            pub subject: HexString<'a>,
+            pub subjectProperty: Vec<HexString<'a>>,
             pub values: Vec<AssertionWithWeight>,
             pub positiveValues: Vec<AssertionWithWeight>,
             pub negativeValues: Vec<AssertionWithWeight>,
@@ -382,7 +389,15 @@ impl ::serde::Serialize for ValuedBooleanPropositionPool {
             total_weight_aggregation_result = Some(self.negative_weights())
         }
 
+        let subjectProperty = self.pool
+            .subject_property()
+            .into_iter()
+            .map(|n| HexString::wrap(n))
+            .collect();
+
         let ext = PropositionPoolSerialize {
+            subject: HexString::wrap(self.pool.subject()),
+            subjectProperty,
             values: add_weights(self.values()),
             positiveValues: add_weights(&self.pool.positive_values()),
             negativeValues: add_weights(&self.pool.negative_values()),

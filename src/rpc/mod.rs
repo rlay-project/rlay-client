@@ -9,11 +9,12 @@ use ethabi;
 use rustc_hex::{FromHex, ToHex};
 
 use config::Config;
-use aggregation::{detect_pools, detect_valued_pools};
+use aggregation::{detect_pools, detect_valued_pools, ValuedBooleanPropositionPool};
 use self::proxy::ProxyHandler;
 use sync::SyncState;
 use sync_ontology::{entity_map_class_assertions, entity_map_individuals,
                     entity_map_negative_class_assertions};
+use web3_helpers::HexString;
 
 const NETWORK_VERSION: &'static str = "0.2.0";
 const CLIENT_VERSION: &'static str = env!("CARGO_PKG_VERSION");
@@ -78,7 +79,7 @@ fn rpc_rlay_version(config: &Config) -> impl RpcMethodSimple {
 ///
 /// Lists proposition pools.
 fn rpc_rlay_get_proposition_pools(sync_state: SyncState) -> impl RpcMethodSimple {
-    move |_: Params| {
+    move |params: Params| {
         let proposition_ledger = sync_state.proposition_ledger.lock().unwrap();
         let raw_entity_map = sync_state.entity_map();
         let entity_map = raw_entity_map.lock().unwrap();
@@ -86,7 +87,30 @@ fn rpc_rlay_get_proposition_pools(sync_state: SyncState) -> impl RpcMethodSimple
         let relevant_propositions: Vec<_> = proposition_ledger.iter().collect();
 
         let entities: Vec<_> = entity_map.values().collect();
-        let pools = detect_valued_pools(&entities, &relevant_propositions);
+        let mut pools = detect_valued_pools(&entities, &relevant_propositions);
+
+        if let Params::Array(params_array) = params {
+            if let Value::Object(ref params_map) = params_array[0] {
+                if let Some(param_subject) = params_map.get("subject") {
+                    let value = |n: &ValuedBooleanPropositionPool| {
+                        serde_json::to_value(HexString::fmt(n.pool.subject())).unwrap()
+                    };
+                    pools.retain(|n| &value(n) == param_subject);
+                }
+                if let Some(param_subject_property) = params_map.get("subjectProperty") {
+                    let value = |n: &ValuedBooleanPropositionPool| {
+                        let vals: Vec<_> = n.pool
+                            .subject_property()
+                            .into_iter()
+                            .map(HexString::fmt)
+                            .collect();
+                        serde_json::to_value(vals).unwrap()
+                    };
+                    pools.retain(|n| &value(n) == param_subject_property);
+                }
+            }
+        }
+
         Ok(serde_json::to_value(pools).unwrap())
     }
 }
