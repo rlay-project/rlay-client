@@ -9,7 +9,7 @@ use ethabi;
 use rustc_hex::{FromHex, ToHex};
 
 use config::Config;
-use payout_calculation::detect_pools;
+use aggregation::{detect_pools, detect_valued_pools};
 use self::proxy::ProxyHandler;
 use sync::SyncState;
 use sync_ontology::{entity_map_class_assertions, entity_map_individuals,
@@ -84,17 +84,9 @@ fn rpc_rlay_get_proposition_pools(sync_state: SyncState) -> impl RpcMethodSimple
         let entity_map = raw_entity_map.lock().unwrap();
 
         let relevant_propositions: Vec<_> = proposition_ledger.iter().collect();
-        let ontology_individuals = entity_map_individuals(&entity_map);
-        let ontology_class_assertions = entity_map_class_assertions(&entity_map);
-        let ontology_negative_class_assertions = entity_map_negative_class_assertions(&entity_map);
 
-        let pools = detect_pools(
-            &ontology_individuals,
-            &ontology_class_assertions,
-            &ontology_negative_class_assertions,
-            &relevant_propositions,
-            false,
-        );
+        let entities: Vec<_> = entity_map.values().collect();
+        let pools = detect_valued_pools(&entities, &relevant_propositions);
         Ok(serde_json::to_value(pools).unwrap())
     }
 }
@@ -107,8 +99,8 @@ fn annotation_from_params(params: &Params) -> ::std::result::Result<Annotation, 
             let mut annotation = Annotation::default();
 
             let param_annotations = params_map.get("annotations");
-            let param_property = params_map.get("property");
-            let param_value = params_map.get("value");
+            // let param_property = params_map.get("property");
+            // let param_value = params_map.get("value");
 
             if let Some(param_annotations) = param_annotations {
                 let param_annotations = param_annotations

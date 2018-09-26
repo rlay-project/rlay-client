@@ -1,15 +1,10 @@
 use cid::ToCid;
-use multibase::{encode as base_encode, Base};
-use rlay_ontology::ontology::Individual;
 use rlay_ontology::ontology;
-use rquantiles::*;
-use serde::Serializer;
-use serde::ser::SerializeSeq;
 use std::collections::{HashMap, HashSet};
 use std::sync::Mutex;
-use tiny_keccak::keccak256;
 use web3::types::U256;
 
+use aggregation::{detect_valued_pools, ValuedBooleanPropositionPool};
 use payout::Payout;
 use sync_proposition_ledger::{Proposition, PropositionLedger};
 use sync_ontology::{entity_map_class_assertions, entity_map_individuals,
@@ -48,16 +43,8 @@ pub fn payouts_for_epoch(
         relevant_propositions.len()
     );
 
-    let ontology_individuals = entity_map_individuals(&entity_map);
-    let ontology_class_assertions = entity_map_class_assertions(&entity_map);
-    let ontology_negative_class_assertions = entity_map_negative_class_assertions(&entity_map);
-    let pools = detect_pools(
-        &ontology_individuals,
-        &ontology_class_assertions,
-        &ontology_negative_class_assertions,
-        &relevant_propositions,
-        true,
-    );
+    let ontology_entities: Vec<_> = entity_map.values().collect();
+    let pools = detect_valued_pools(&ontology_entities, &relevant_propositions);
 
     for pool in &pools {
         trace!("-----POOL START-----");
@@ -72,342 +59,11 @@ pub fn payouts_for_epoch(
     payouts
 }
 
-pub type PropositionSubject = Vec<u8>;
-
-#[derive(Debug, Clone)]
-pub struct PropositionPool {
-    pub values: Vec<ontology::Entity>,
-    pub propositions: Vec<Proposition>,
-    cached_quantiles: Option<Option<Quantiles>>,
-}
-
-impl ::serde::Serialize for PropositionPool {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: ::serde::Serializer,
-    {
-        #[derive(Serialize)]
-        #[allow(non_snake_case)]
-        struct PropositionPoolSerialize {
-            pub values: Vec<PropositionPoolValuesSerialize>,
-            #[serde(serialize_with = "PropositionPool::serialize_subject")]
-            pub subject: Vec<u8>,
-            pub totalWeight: U256,
-        }
-
-        #[derive(Serialize)]
-        #[allow(non_snake_case)]
-        struct PropositionPoolValuesSerialize {
-            pub cid: String,
-            pub totalWeight: U256,
-            pub isAggregatedValue: bool,
-        }
-
-        let formatted_values = self.values
-            .iter()
-            .map(|entity| PropositionPoolValuesSerialize {
-                cid: entity.to_cid().unwrap().to_string(),
-                totalWeight: self.weights_for_value(entity),
-                isAggregatedValue: self.is_aggregated_value_entity(entity),
-            })
-            .collect();
-
-        let ext = PropositionPoolSerialize {
-            values: formatted_values,
-            subject: self.subject().to_owned(),
-            totalWeight: self.total_weight(),
-        };
-
-        Ok(try!(ext.serialize(serializer)))
-    }
-}
-
-impl PropositionPool {
-    pub fn from_values(mut values: Vec<ontology::Entity>) -> PropositionPool {
-        trace!("from_values: {:?}", values);
-        values.sort_by_key(|n| n.to_cid().unwrap().to_bytes());
-        PropositionPool {
-            values,
-            propositions: Vec::new(),
-
-            cached_quantiles: None,
-        }
-    }
-
-    pub fn subject(&self) -> PropositionSubject {
-        self.values.get(0).unwrap().get_subject().unwrap().clone()
-    }
-
-    pub fn contains_value(&self, entity: &ontology::Entity) -> bool {
-        self.values.contains(entity)
-    }
-
-    pub fn contains_value_cid(&self, cid: Vec<u8>) -> bool {
-        self.values
-            .iter()
-            .map(|n| n.to_cid().unwrap().to_bytes())
-            .collect::<Vec<Vec<u8>>>()
-            .contains(&cid)
-    }
-
-    /// Checks if the provided values are equal to all the possible values for this pool.
-    pub fn is_complete(&self) -> bool {
-        // for boolean pools (the only supported ones at the moment) the check is pretty simple
-        self.values.len() == 2
-    }
-
-    /// Helper for printing the values of a PropositionPool.
-    pub fn fmt_values(&self) -> Vec<String> {
-        self.values
-            .iter()
-            .map(|n| n.to_cid().unwrap().to_string())
-            .collect()
-    }
-
-    /// Sum of all the weights of the propositions in this pool
-    pub fn total_weight(&self) -> U256 {
-        self.propositions
-            .iter()
-            .map(|n| n.amount)
-            .fold(U256::zero(), |acc, val| acc + val)
-    }
-
-    // This only works if we have a complete pool; Might need another solution for the future
-    pub fn hash(&self) -> Vec<u8> {
-        debug_assert!(self.is_complete());
-        let hash_data = self.values
-            .iter()
-            .map(|n| n.to_cid().unwrap().to_bytes())
-            .fold(Vec::new(), |mut acc, mut val| {
-                acc.append(&mut val);
-                val
-            });
-        keccak256(&hash_data).to_vec()
-    }
-
-    /// Sum up the weights of all propositions for a single value.
-    fn weights_for_value(&self, value: &ontology::Entity) -> U256 {
-        let cid = value.to_cid().unwrap().to_bytes();
-        self.propositions
-            .iter()
-            .filter(|n| n.proposition_cid == cid)
-            .map(|n| n.amount)
-            .fold(U256::zero(), |acc, val| acc + val)
-    }
-
-    /// Calculate the weighted quantiles of the propositions in this pool.
-    // Currently a speced down version that works with boolean statements
-    fn calculate_quantiles(&self) -> Option<Quantiles> {
-        let false_weight = self.weights_for_value(&self.values[0]).as_u32();
-        let true_weight = self.weights_for_value(&self.values[1]).as_u32();
-
-        if false_weight == 0 && true_weight == 0 {
-            return None;
-        }
-
-        let values = vec![0, 1];
-        let weights = vec![false_weight, true_weight];
-        Some(calculate_quantiles(values, weights))
-    }
-
-    /// Returns the weighted quantiles of the propositions in this pool.
-    ///
-    /// Internally caches the computation result, as the current way we compute them by calling out
-    /// to a R program is very slow.
-    fn quantiles(&self) -> Option<Quantiles> {
-        if let Some(ref quantiles) = self.cached_quantiles {
-            return quantiles.clone();
-        }
-        self.calculate_quantiles()
-    }
-
-    /// Returns the weighted median of the propositions in this pool.
-    pub fn aggregated_value(&self) -> Option<bool> {
-        if self.quantiles().is_none() {
-            return None;
-        }
-
-        match self.quantiles().unwrap().median as i32 {
-            0 => Some(false),
-            1 => Some(true),
-            _ => None,
-        }
-    }
-
-    pub fn is_aggregated_value_entity(&self, val: &ontology::Entity) -> bool {
-        let aggregated = match self.aggregated_value() {
-            None => return false,
-            Some(val) => val,
-        };
-        let false_value_cid = self.values[0].to_cid().unwrap().to_bytes();
-        let true_value_cid = self.values[1].to_cid().unwrap().to_bytes();
-
-        let val_cid = val.to_cid().unwrap().to_bytes();
-
-        if val_cid == false_value_cid && aggregated == false {
-            return true;
-        }
-        if val_cid == true_value_cid && aggregated == true {
-            return true;
-        }
-        return false;
-    }
-
-    pub fn is_aggregated_value(&self, val: &Proposition) -> bool {
-        let aggregated = match self.aggregated_value() {
-            None => return false,
-            Some(val) => val,
-        };
-        let false_value_cid = self.values[0].to_cid().unwrap().to_bytes();
-        let true_value_cid = self.values[1].to_cid().unwrap().to_bytes();
-
-        if val.proposition_cid == false_value_cid && aggregated == false {
-            return true;
-        }
-        if val.proposition_cid == true_value_cid && aggregated == true {
-            return true;
-        }
-        return false;
-    }
-
-    pub fn serialize_subject<S>(val: &Vec<u8>, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        serializer.serialize_str(&base_encode(Base::Base58btc, val))
-    }
-}
-
-fn debug_unsupported_individual(individual: &ontology::Individual, msg: &str) {
-    let cid = individual.to_cid().unwrap();
-    debug!("Can't use individual {} for pool building: {}", cid, msg);
-}
-
-fn debug_unsupported_assertion(entity: &ontology::Entity, msg: &str) {
-    let cid = entity.to_cid().unwrap();
-    debug!("Can't use entity {} for pool building: {}", cid, msg);
-}
-
-type ClassAssertionObject = Vec<u8>;
-
-/// Constructs all the existent pools that arise from all used propositions.
-///
-/// Goes through all the individuals used in propositions and finds individuals that
-/// assert or negatively assert class memberships about the same subject.
-pub fn detect_pools(
-    ontology_individuals: &[&ontology::Individual],
-    ontology_classassert: &[&ontology::ClassAssertion],
-    ontology_negativeclassassert: &[&ontology::NegativeClassAssertion],
-    propositions: &[&Proposition],
-    only_used: bool,
-) -> Vec<PropositionPool> {
-    let used_cids: HashSet<Vec<u8>> = propositions
-        .iter()
-        .map(|n| n.proposition_cid.clone())
-        .collect();
-    trace!("classasserts {:?}", ontology_classassert);
-    let used_class_assertions: Vec<&ontology::ClassAssertion> = ontology_classassert
-        .into_iter()
-        .filter(|n| {
-            let cid = n.to_cid().unwrap().to_bytes();
-            used_cids.contains(&cid)
-        })
-        .map(|n| *n)
-        .collect();
-    let used_negative_class_assertions: Vec<&ontology::NegativeClassAssertion> =
-        ontology_negativeclassassert
-            .into_iter()
-            .filter(|n| {
-                let cid = n.to_cid().unwrap().to_bytes();
-                used_cids.contains(&cid)
-            })
-            .map(|n| *n)
-            .collect();
-
-    let mut used_assertions: Vec<ontology::Entity> = Vec::new();
-    used_assertions.append(&mut used_class_assertions
-        .into_iter()
-        .map(|n| n.to_owned().into())
-        .collect());
-    used_assertions.append(&mut used_negative_class_assertions
-        .into_iter()
-        .map(|n| n.to_owned().into())
-        .collect());
-
-    // TODO: ?
-    let assertions = used_assertions;
-    trace!("assertions {:?}", assertions);
-    // let assertions = match only_used {
-    // true => used_assertions,
-    // false => ontology_assertions.to_owned(),
-    // };
-
-    let mut assertions_by_subject: HashMap<PropositionSubject, Vec<ontology::Entity>> =
-        HashMap::new();
-    for assertion in assertions {
-        let mut entry = assertions_by_subject
-            .entry(assertion.get_subject().unwrap().clone())
-            .or_insert(Vec::new());
-        entry.push(assertion);
-    }
-
-    let mut pools = Vec::new();
-    for (_, assertions) in assertions_by_subject {
-        let mut assertions_by_class_assertion_object: HashMap<
-            ClassAssertionObject,
-            Vec<ontology::Entity>,
-        > = HashMap::new();
-
-        for assertion in assertions {
-            trace!("assertion {:?}", assertion);
-            let class_assertion_object = match assertion {
-                ontology::Entity::ClassAssertion(ref entity) => entity.class.clone(),
-                ontology::Entity::NegativeClassAssertion(ref entity) => entity.class.clone(),
-                _ => {
-                    debug_unsupported_assertion(
-                        &assertion,
-                        "only class_assertions and negative_class_assertions are are currently supported",
-                    );
-                    continue;
-                }
-            };
-            let entry = assertions_by_class_assertion_object
-                .entry(class_assertion_object)
-                .or_insert(Vec::new());
-            entry.push(assertion);
-        }
-
-        for (_, values) in assertions_by_class_assertion_object {
-            let pool = PropositionPool::from_values(values.iter().map(|n| (*n).clone()).collect());
-            // TODO: complete pool in case of only_used = false
-            if !pool.is_complete() {
-                debug!("Pool of values {:?} is incomplete", pool.fmt_values());
-                continue;
-            }
-            pools.push(pool);
-        }
-    }
-
-    pools = pools
-        .into_iter()
-        .map(|mut pool| {
-            for proposition in propositions {
-                if pool.contains_value_cid(proposition.proposition_cid.clone()) {
-                    pool.propositions.push((*proposition).clone());
-                }
-            }
-            pool
-        })
-        .collect();
-
-    pools
-}
-
 /// Calculate the payouts for the supplied propositions.
 ///
 /// Returns the payouts for each individual proposition,
 /// which means that there might be two payouts for the same address.
-fn calculate_payouts(pools: &[PropositionPool]) -> Vec<Payout> {
+fn calculate_payouts(pools: &[ValuedBooleanPropositionPool]) -> Vec<Payout> {
     let pool_rank_map = build_pool_rank_map(pools);
 
     let mut payouts: Vec<_> = Vec::new();
@@ -439,7 +95,7 @@ fn geometric_series_u64(rank: u64) -> f64 {
 }
 
 /// Part of payout calculation (see [calculate_payouts])
-fn build_pool_rank_map(pools: &[PropositionPool]) -> HashMap<Vec<u8>, u64> {
+fn build_pool_rank_map(pools: &[ValuedBooleanPropositionPool]) -> HashMap<Vec<u8>, u64> {
     let mut pool_sizes = HashMap::new();
     for pool in pools {
         let size = pool.total_weight();
@@ -464,7 +120,9 @@ fn build_pool_rank_map(pools: &[PropositionPool]) -> HashMap<Vec<u8>, u64> {
 /// Calculate the factors for all the propositions inside one pool.
 ///
 /// The sum of all factors should sum up to 1 (= the full reward paid out to the pool).
-fn calculate_proposition_in_pool_factors(pool: &PropositionPool) -> Vec<(&Proposition, f64)> {
+fn calculate_proposition_in_pool_factors(
+    pool: &ValuedBooleanPropositionPool,
+) -> Vec<(&Proposition, f64)> {
     let rewarded_propositions = build_rewarded_propositions(pool);
 
     let propositions_rank_age_map =
@@ -501,7 +159,7 @@ fn calculate_proposition_in_pool_factors(pool: &PropositionPool) -> Vec<(&Propos
 /// Build a list of stakes inside a pool that are elligable for rewards.
 ///
 /// This is a simplified version of the `Distance` factor for boolean statments.
-fn build_rewarded_propositions(pool: &PropositionPool) -> Vec<&Proposition> {
+fn build_rewarded_propositions(pool: &ValuedBooleanPropositionPool) -> Vec<&Proposition> {
     pool.propositions
         .iter()
         .filter(|n| pool.is_aggregated_value(n))

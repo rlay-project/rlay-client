@@ -31,9 +31,11 @@ extern crate toml;
 extern crate url;
 extern crate web3;
 
+pub mod aggregation;
 pub mod config;
 pub mod doctor;
 pub mod merkle;
+pub mod ontology_ext;
 pub mod payout;
 pub mod payout_calculation;
 pub mod payout_cli;
