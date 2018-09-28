@@ -573,3 +573,56 @@ impl GetSubjectProperty for ontology::NegativeObjectPropertyAssertion {
         vals
     }
 }
+
+pub trait GetTarget {
+    fn get_target(&self) -> Option<&[u8]>;
+}
+
+impl GetTarget for Assertion {
+    fn get_target(&self) -> Option<&[u8]> {
+        match self {
+            Assertion::ClassAssertion(val) => GetTarget::get_target(val),
+            Assertion::NegativeClassAssertion(val) => GetTarget::get_target(val),
+            Assertion::DataPropertyAssertion(val) => GetTarget::get_target(val),
+            Assertion::NegativeDataPropertyAssertion(val) => GetTarget::get_target(val),
+            Assertion::ObjectPropertyAssertion(val) => GetTarget::get_target(val),
+            Assertion::NegativeObjectPropertyAssertion(val) => GetTarget::get_target(val),
+        }
+    }
+}
+
+impl GetTarget for ontology::ClassAssertion {
+    fn get_target(&self) -> Option<&[u8]> {
+        Some(&self.class)
+    }
+}
+
+impl GetTarget for ontology::NegativeClassAssertion {
+    fn get_target(&self) -> Option<&[u8]> {
+        Some(&self.class)
+    }
+}
+
+impl GetTarget for ontology::DataPropertyAssertion {
+    fn get_target(&self) -> Option<&[u8]> {
+        self.target.as_ref().map(|n| n.as_slice())
+    }
+}
+
+impl GetTarget for ontology::NegativeDataPropertyAssertion {
+    fn get_target(&self) -> Option<&[u8]> {
+        self.target.as_ref().map(|n| n.as_slice())
+    }
+}
+
+impl GetTarget for ontology::ObjectPropertyAssertion {
+    fn get_target(&self) -> Option<&[u8]> {
+        self.target.as_ref().map(|n| n.as_slice())
+    }
+}
+
+impl GetTarget for ontology::NegativeObjectPropertyAssertion {
+    fn get_target(&self) -> Option<&[u8]> {
+        self.target.as_ref().map(|n| n.as_slice())
+    }
+}

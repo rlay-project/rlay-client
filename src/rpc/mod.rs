@@ -108,6 +108,15 @@ fn rpc_rlay_get_proposition_pools(sync_state: SyncState) -> impl RpcMethodSimple
                     };
                     pools.retain(|n| &value(n) == param_subject_property);
                 }
+                if let Some(param_target) = params_map.get("target") {
+                    let value = |n: &ValuedBooleanPropositionPool| {
+                        if n.pool.target().is_none() {
+                            return serde_json::to_value(()).unwrap();
+                        }
+                        serde_json::to_value(HexString::fmt(n.pool.target().unwrap())).unwrap()
+                    };
+                    pools.retain(|n| &value(n) == param_target);
+                }
             }
         }
 

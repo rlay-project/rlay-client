@@ -65,6 +65,10 @@ impl BooleanPropositionPool {
         self.values.get(0).unwrap().get_subject_property()
     }
 
+    pub fn target(&self) -> Option<&[u8]> {
+        self.values.get(0).unwrap().get_target()
+    }
+
     pub fn canonical_positive_value(&self) -> Assertion {
         let first_val = self.values.get(0).unwrap().clone();
 
