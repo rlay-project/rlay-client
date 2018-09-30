@@ -11,7 +11,7 @@ use rustc_hex::ToHex;
 use rlay_ontology::ontology::Entity;
 
 use config::Config;
-use sync_ontology::{EthOntologySyncer, OntologySyncer};
+use sync_ontology::{EntityMap, EthOntologySyncer, OntologySyncer};
 use sync_proposition_ledger::{sync_ledger, PropositionLedger};
 use payout::{fill_epoch_payouts, fill_epoch_payouts_cumulative, load_epoch_payouts,
              retrieve_epoch_start_block, store_epoch_payouts, submit_epoch_payouts, Payout,
@@ -60,7 +60,7 @@ impl SyncState {
         }
     }
 
-    pub fn entity_map(&self) -> Arc<Mutex<BTreeMap<Vec<u8>, Entity>>> {
+    pub fn entity_map(&self) -> Arc<Mutex<EntityMap>> {
         self.ontology.entity_map()
     }
 
@@ -83,14 +83,14 @@ impl SyncState {
 
 #[derive(Clone)]
 pub struct OntologySyncState {
-    pub entity_map: Arc<Mutex<BTreeMap<Vec<u8>, Entity>>>,
+    pub entity_map: Arc<Mutex<EntityMap>>,
     pub cid_entity_kind_map: Arc<Mutex<BTreeMap<Vec<u8>, String>>>,
     pub last_synced_block: Arc<Mutex<Option<u64>>>,
 }
 
 impl OntologySyncState {
     pub fn new() -> Self {
-        let entity_map: BTreeMap<Vec<u8>, Entity> = BTreeMap::new();
+        let entity_map = EntityMap::new();
         let entity_map_mutex = Arc::new(Mutex::new(entity_map));
 
         let cid_entity_kind_map: BTreeMap<Vec<u8>, String> = BTreeMap::new();
@@ -102,7 +102,7 @@ impl OntologySyncState {
         }
     }
 
-    pub fn entity_map(&self) -> Arc<Mutex<BTreeMap<Vec<u8>, Entity>>> {
+    pub fn entity_map(&self) -> Arc<Mutex<EntityMap>> {
         self.entity_map.clone()
     }
 

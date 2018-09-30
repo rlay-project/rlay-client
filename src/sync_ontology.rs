@@ -3,7 +3,7 @@ use rustc_hex::ToHex;
 use ethabi::{self, Event};
 use multibase::{encode as base_encode, Base};
 use rlay_ontology::ontology::{self, *, FromABIV2ResponseHinted};
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, VecDeque};
 use std::sync::{Arc, Mutex};
 use tokio_core;
 use web3::futures::{future::Either, prelude::*};
@@ -15,8 +15,79 @@ use config::Config;
 use sync::subscribe_with_history;
 use web3_helpers::raw_query;
 
-pub type EntityMap = BTreeMap<Vec<u8>, Entity>;
+pub type InnerEntityMap = BTreeMap<Vec<u8>, Entity>;
 pub type CidEntityMap = BTreeMap<Vec<u8>, String>;
+
+#[derive(Debug, Clone)]
+pub struct EntityMap {
+    inner: InnerEntityMap,
+
+    insert_subscriber_buffers: Vec<Arc<Mutex<VecDeque<Entity>>>>,
+}
+
+impl EntityMap {
+    pub fn new() -> Self {
+        Self {
+            inner: BTreeMap::new(),
+            insert_subscriber_buffers: Vec::new(),
+        }
+    }
+
+    pub fn insert(&mut self, key: Vec<u8>, value: Entity) -> Option<Entity> {
+        let res = self.inner.insert(key, value.clone());
+        for buffer in self.insert_subscriber_buffers.iter() {
+            let mut buffer_lock = buffer.lock().unwrap();
+            buffer_lock.push_back(value.clone());
+        }
+
+        res
+    }
+
+    pub fn on_insert_entity(&mut self) -> EntityMapInsertSubscription {
+        let buffer = Arc::new(Mutex::new(VecDeque::new()));
+        self.insert_subscriber_buffers.push(buffer.clone());
+        EntityMapInsertSubscription::from_buffer(buffer)
+    }
+}
+
+impl ::std::ops::Deref for EntityMap {
+    type Target = InnerEntityMap;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+
+impl ::std::ops::DerefMut for EntityMap {
+    fn deref_mut(&mut self) -> &mut InnerEntityMap {
+        &mut self.inner
+    }
+}
+
+#[derive(Clone)]
+pub struct EntityMapInsertSubscription {
+    buffer: Arc<Mutex<VecDeque<Entity>>>,
+}
+
+impl EntityMapInsertSubscription {
+    pub fn from_buffer(buffer: Arc<Mutex<VecDeque<Entity>>>) -> Self {
+        Self { buffer }
+    }
+}
+
+impl Stream for EntityMapInsertSubscription {
+    type Item = Entity;
+    type Error = ();
+
+    fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
+        let mut buffer = self.buffer.lock().unwrap();
+
+        match buffer.pop_front() {
+            Some(entity) => Ok(Async::Ready(Some(entity))),
+            None => Ok(Async::NotReady),
+        }
+    }
+}
 
 pub fn entity_map_individuals(entity_map: &EntityMap) -> Vec<&ontology::Individual> {
     entity_map
