@@ -1,7 +1,6 @@
 use cid::ToCid;
 use multibase::{encode as base_encode, Base};
 use rlay_ontology::ontology;
-use rquantiles::*;
 use serde::Serializer;
 use std::collections::HashMap;
 use tiny_keccak::keccak256;
@@ -196,7 +195,6 @@ impl CanonicalParts for BooleanPropositionPool {
 pub struct ValuedBooleanPropositionPool {
     pub pool: BooleanPropositionPool,
     pub propositions: Vec<Proposition>,
-    cached_quantiles: Option<Option<Quantiles>>,
 }
 
 impl ValuedBooleanPropositionPool {
@@ -205,7 +203,6 @@ impl ValuedBooleanPropositionPool {
             pool: pool.to_complete_pool(),
 
             propositions: Vec::new(),
-            cached_quantiles: None,
         }
     }
 
@@ -263,42 +260,19 @@ impl ValuedBooleanPropositionPool {
             .fold(U256::zero(), |acc, val| acc + val)
     }
 
-    /// Calculate the weighted quantiles of the propositions in this pool.
-    // Currently a speced down version that works with boolean statements
-    fn calculate_quantiles(&self) -> Option<Quantiles> {
+    /// Returns the weighted median of the propositions in this pool.
+    pub fn aggregated_value(&self) -> Option<bool> {
         let false_weight = self.negative_weights().as_u32();
         let true_weight = self.positive_weights().as_u32();
 
-        if false_weight == 0 && true_weight == 0 {
+        if false_weight == true_weight {
             return None;
         }
 
-        let values = vec![0, 1];
-        let weights = vec![false_weight, true_weight];
-        Some(calculate_quantiles(values, weights))
-    }
-
-    /// Returns the weighted quantiles of the propositions in this pool.
-    ///
-    /// Internally caches the computation result, as the current way we compute them by calling out
-    /// to a R program is very slow.
-    fn quantiles(&self) -> Option<Quantiles> {
-        if let Some(ref quantiles) = self.cached_quantiles {
-            return quantiles.clone();
-        }
-        self.calculate_quantiles()
-    }
-
-    /// Returns the weighted median of the propositions in this pool.
-    pub fn aggregated_value(&self) -> Option<bool> {
-        if self.quantiles().is_none() {
-            return None;
-        }
-
-        match self.quantiles().unwrap().median as i32 {
-            0 => Some(false),
-            1 => Some(true),
-            _ => None,
+        if false_weight > true_weight {
+            return Some(false);
+        } else {
+            return Some(true);
         }
     }
 
