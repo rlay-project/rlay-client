@@ -13,6 +13,8 @@ extern crate futures_timer;
 extern crate hyper;
 extern crate jsonrpc_core;
 extern crate jsonrpc_http_server;
+extern crate jsonrpc_pubsub;
+extern crate jsonrpc_ws_server;
 #[macro_use]
 extern crate log;
 extern crate merkle_light;
