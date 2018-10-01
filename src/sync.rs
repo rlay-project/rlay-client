@@ -9,6 +9,7 @@ use web3;
 use web3::DuplexTransport;
 use rustc_hex::ToHex;
 use rlay_ontology::ontology::Entity;
+use log::Level::Debug;
 
 use config::Config;
 use sync_ontology::{EntityMap, EthOntologySyncer, OntologySyncer};
@@ -215,53 +216,61 @@ pub fn run_sync(config: &Config) {
     let sync_state_counter = sync_state.clone();
     let computed_state_counter = computed_state.clone();
     // Print some statistics about the local state
-    let counter_stream = Interval::new(Duration::from_secs(5))
-        .for_each(|_| {
-            let entity_map = sync_state_counter.entity_map();
-            let entity_map_lock = entity_map.lock().unwrap();
-            let ledger_lock = sync_state_counter.proposition_ledger.lock().unwrap();
-            let payout_epochs = computed_state_counter.payout_epochs_cum.lock().unwrap();
-            debug!("Num entities: {}", entity_map_lock.len());
-            let mut annotation_count = 0;
-            let mut class_count = 0;
-            let mut individual_count = 0;
-            for entity in entity_map_lock.values() {
-                match entity {
-                    Entity::Annotation(_) => annotation_count += 1,
-                    Entity::Class(_) => class_count += 1,
-                    Entity::Individual(_) => individual_count += 1,
-                    _ => {}
-                }
-            }
-            debug!("--- Num annotation: {}", annotation_count);
-            debug!("--- Num class: {}", class_count);
-            debug!("--- Num individual: {}", individual_count);
-            debug!("Num propositions: {}", ledger_lock.len());
+    let counter_stream = match log_enabled!(Debug) {
+        true => {
+            let counter_stream = Interval::new(Duration::from_secs(5))
+                .for_each(|_| {
+                    let entity_map = sync_state_counter.entity_map();
+                    let entity_map_lock = entity_map.lock().unwrap();
+                    let ledger_lock = sync_state_counter.proposition_ledger.lock().unwrap();
+                    let payout_epochs = computed_state_counter.payout_epochs_cum.lock().unwrap();
+                    debug!("Num entities: {}", entity_map_lock.len());
+                    let mut annotation_count = 0;
+                    let mut class_count = 0;
+                    let mut individual_count = 0;
+                    for entity in entity_map_lock.values() {
+                        match entity {
+                            Entity::Annotation(_) => annotation_count += 1,
+                            Entity::Class(_) => class_count += 1,
+                            Entity::Individual(_) => individual_count += 1,
+                            _ => {}
+                        }
+                    }
+                    debug!("--- Num annotation: {}", annotation_count);
+                    debug!("--- Num class: {}", class_count);
+                    debug!("--- Num individual: {}", individual_count);
+                    debug!("Num propositions: {}", ledger_lock.len());
 
-            for (epoch, payouts) in payout_epochs.iter() {
-                trace!("Payouts for epoch {}: {:?}", epoch, payouts);
-                if payouts.len() <= 0 {
-                    trace!("Not enough payouts to build payout tree");
-                    continue;
-                }
-                let tree = Payout::build_merkle_tree(payouts);
-                debug!(
-                    "submitPayoutRoot({}, \"0x{}\")",
-                    epoch,
-                    tree.root().to_hex()
-                );
-                for payout in payouts {
-                    let proof_str = ::payout::format_redeem_payout_call(*epoch, &tree, payout);
-                    debug!("Payout for 0x{}: {}", payout.address.to_hex(), proof_str);
-                }
-            }
+                    for (epoch, payouts) in payout_epochs.iter() {
+                        trace!("Payouts for epoch {}: {:?}", epoch, payouts);
+                        if payouts.len() <= 0 {
+                            trace!("Not enough payouts to build payout tree");
+                            continue;
+                        }
+                        let tree = Payout::build_merkle_tree(payouts);
+                        debug!(
+                            "submitPayoutRoot({}, \"0x{}\")",
+                            epoch,
+                            tree.root().to_hex()
+                        );
+                        for payout in payouts {
+                            let proof_str =
+                                ::payout::format_redeem_payout_call(*epoch, &tree, payout);
+                            debug!("Payout for 0x{}: {}", payout.address.to_hex(), proof_str);
+                        }
+                    }
 
-            Ok(())
-        })
-        .map_err(|err| {
-            error!("{:?}", err);
-            ()
-        });
+                    Ok(())
+                })
+                .map_err(|err| {
+                    error!("{:?}", err);
+                    ()
+                });
+            trace!("Payout root submission disabled in config.");
+            futures::future::Either::A(counter_stream)
+        }
+        false => futures::future::Either::B(futures::future::empty()),
+    };
 
     // Store calculated payouts on disk
     let computed_state_store = computed_state.clone();
