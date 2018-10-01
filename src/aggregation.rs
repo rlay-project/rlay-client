@@ -3,6 +3,7 @@ use multibase::{encode as base_encode, Base};
 use rlay_ontology::ontology;
 use serde::Serializer;
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 use tiny_keccak::keccak256;
 use web3::types::U256;
 
@@ -92,12 +93,15 @@ impl BooleanPropositionPool {
         self.values.contains(entity)
     }
 
-    pub fn contains_value_cid(&self, cid: Vec<u8>) -> bool {
+    pub fn value_cids(&self) -> Vec<Vec<u8>> {
         self.values
             .iter()
             .map(|n| n.to_cid().unwrap().to_bytes())
             .collect::<Vec<Vec<u8>>>()
-            .contains(&cid)
+    }
+
+    pub fn contains_value_cid(&self, cid: Vec<u8>) -> bool {
+        self.value_cids().contains(&cid)
     }
 
     pub fn positive_values(&self) -> Vec<Assertion> {
@@ -417,25 +421,44 @@ pub fn detect_valued_pools(
     propositions: &[&Proposition],
 ) -> Vec<ValuedBooleanPropositionPool> {
     let pools = detect_pools(ontology_entities);
+    trace!("Built pools");
     let mut valued_pools: Vec<ValuedBooleanPropositionPool> = pools
         .into_iter()
         .map(ValuedBooleanPropositionPool::from_pool)
         .collect();
+    trace!("Built valued pools");
 
-    valued_pools = valued_pools
+    let original_valued_pool_arcs: Vec<_> = valued_pools
         .into_iter()
-        .map(|mut pool| {
-            for proposition in propositions {
-                if pool.pool
-                    .contains_value_cid(proposition.proposition_cid.clone())
-                {
-                    pool.propositions.push((*proposition).to_owned());
-                    continue;
-                }
+        .map(|n| Arc::new(Mutex::new(n)))
+        .collect();
+    let valued_pool_arcs = original_valued_pool_arcs.clone();
+    {
+        let mut pool_cids_map: HashMap<Vec<u8>, Arc<Mutex<ValuedBooleanPropositionPool>>> =
+            HashMap::new();
+        for pool_arc in valued_pool_arcs {
+            let pool_cids = pool_arc.lock().unwrap().pool.value_cids();
+            for pool_cid in pool_cids {
+                pool_cids_map.insert(pool_cid, pool_arc.clone());
             }
-            pool
-        })
+        }
+
+        for proposition in propositions {
+            let mut pool_opt = pool_cids_map.get_mut(&proposition.proposition_cid);
+            if let Some(ref mut pool) = pool_opt {
+                pool.lock()
+                    .unwrap()
+                    .propositions
+                    .push((*proposition).to_owned());
+                continue;
+            }
+        }
+    }
+    valued_pools = original_valued_pool_arcs
+        .into_iter()
+        .map(|n| Arc::try_unwrap(n).unwrap().into_inner().unwrap())
         .collect();
 
+    trace!("Added proposition to pools");
     valued_pools
 }
