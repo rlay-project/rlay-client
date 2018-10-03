@@ -1,12 +1,14 @@
 mod proxy;
 
-use jsonrpc_core::*;
-use jsonrpc_http_server::*;
-use serde_json;
-use rlay_ontology::ontology::Annotation;
+use std::error::Error;
+use cid::ToCid;
 use ethabi::token::{StrictTokenizer, Token, Tokenizer};
 use ethabi;
+use jsonrpc_core::{self, *};
+use jsonrpc_http_server::*;
+use rlay_ontology::ontology::{Annotation, Class, Entity};
 use rustc_hex::{FromHex, ToHex};
+use serde_json;
 
 use config::Config;
 use aggregation::{detect_pools, detect_valued_pools, ValuedBooleanPropositionPool};
@@ -48,6 +50,10 @@ pub fn start_rpc(full_config: &Config, sync_state: SyncState) {
     io.add_method(
         "rlay_experimentalGetEntity",
         rpc_rlay_experimental_get_entity(sync_state.clone()),
+    );
+    io.add_method(
+        "rlay_experimentalGetEntityCid",
+        rpc_rlay_experimental_get_entity_cid(),
     );
 
     let _server = ServerBuilder::new(io)
@@ -308,6 +314,21 @@ fn rpc_rlay_experimental_get_entity(sync_state: SyncState) -> impl RpcMethodSimp
             let entity_kind = entity_map_lock.get(&cid_bytes);
             debug!("retrieved {:?}", entity_kind.is_some());
             Ok(serde_json::to_value(entity_kind).unwrap())
+        } else {
+            unimplemented!()
+        }
+    }
+}
+
+fn rpc_rlay_experimental_get_entity_cid() -> impl RpcMethodSimple {
+    move |params: Params| {
+        if let Params::Array(params_array) = params {
+            let entity_object = params_array.get(0).unwrap();
+            let entity: Entity = serde_json::from_value(entity_object.clone())
+                .map_err(|err| jsonrpc_core::Error::invalid_params(err.description()))?;
+            let cid: String = format!("0x{}", entity.to_cid().unwrap().to_bytes().to_hex());
+
+            Ok(serde_json::to_value(cid).unwrap())
         } else {
             unimplemented!()
         }
