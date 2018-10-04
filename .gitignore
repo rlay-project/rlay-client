@@ -1,4 +1,6 @@
 rlay_data
 
+website/node_modules
+
 /target
 **/*.rs.bk
