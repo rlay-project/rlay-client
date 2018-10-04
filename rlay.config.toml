@@ -10,3 +10,5 @@ PropositionLedger = "0x1cc19ac16ca274152a5e57179bd2051c9ad89876"
 
 [rpc]
 disabled = false
+network_address = "http://127.0.0.1:8546"
+ws_network_address = "ws://127.0.0.1:8547"

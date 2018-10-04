@@ -1,21 +1,28 @@
 mod proxy;
 
+use tokio_core;
 use std::error::Error;
+use jsonrpc_core::futures::sync::mpsc::SendError;
 use cid::ToCid;
+use jsonrpc_core::{self, *};
+use jsonrpc_http_server::ServerBuilder as HttpServerBuilder;
+use jsonrpc_ws_server::{RequestContext, ServerBuilder as WsServerBuilder};
+use jsonrpc_pubsub::{PubSubHandler, Session, Subscriber, SubscriptionId};
+use serde_json;
 use ethabi::token::{StrictTokenizer, Token, Tokenizer};
 use ethabi;
-use jsonrpc_core::{self, *};
-use jsonrpc_http_server::*;
-use rlay_ontology::ontology::{Annotation, Class, Entity};
+use rlay_ontology::ontology::{Annotation, Entity};
 use rustc_hex::{FromHex, ToHex};
-use serde_json;
+use url::Url;
+use jsonrpc_core::futures::Future;
+use std::{thread, time};
+use std::sync::Arc;
+use web3::futures::prelude::*;
 
 use config::Config;
 use aggregation::{detect_pools, detect_valued_pools, ValuedBooleanPropositionPool};
 use self::proxy::ProxyHandler;
 use sync::SyncState;
-use sync_ontology::{entity_map_class_assertions, entity_map_individuals,
-                    entity_map_negative_class_assertions};
 use web3_helpers::HexString;
 
 const NETWORK_VERSION: &'static str = "0.2.0";
@@ -28,7 +35,106 @@ pub fn start_rpc(full_config: &Config, sync_state: SyncState) {
         return;
     }
 
-    let mut io = ProxyHandler::new(config.proxy_target_network_address.as_ref().unwrap());
+    let http_proxy_config = full_config.clone();
+    let http_proxy_sync_state = sync_state.clone();
+    // HTTP RPC
+    thread::spawn(move || {
+        let io = proxy_handler_with_methods(&http_proxy_config, http_proxy_sync_state);
+
+        let address: Url = http_proxy_config.rpc.network_address.parse().unwrap();
+        let server = HttpServerBuilder::new(io)
+            .start_http(&format!(
+                "{}:{}",
+                address.host_str().unwrap(),
+                address.port().unwrap()
+            ).parse()
+                .unwrap())
+            .expect("Unable to start RPC server");
+        server.wait();
+    });
+
+    let sub_sync_state = sync_state.clone();
+    let io = proxy_handler_with_methods(&full_config, sync_state);
+    let mut handler: PubSubHandler<proxy::WebsocketMetadata, proxy::ProxyMiddleware> =
+        From::from(io);
+    handler.add_subscription(
+        "rlay_subscribeEntities",
+        (
+            "rlay_subscribeEntities",
+            move |params: Params, meta: proxy::WebsocketMetadata, subscriber: Subscriber| {
+                if params != Params::None {
+                    subscriber
+                        .reject(jsonrpc_core::Error {
+                            code: ErrorCode::ParseError,
+                            message: "Invalid parameters. Subscription rejected.".into(),
+                            data: None,
+                        })
+                        .unwrap();
+                    return;
+                }
+
+                // TODO: use correct ids - currently ony one subscription per sesssion (= websocket
+                // connection)
+                let sink = subscriber
+                    .assign_id(SubscriptionId::Number(meta.session_id))
+                    .unwrap();
+                let entity_map = sub_sync_state.entity_map();
+                let mut entity_map_lock = entity_map.lock().unwrap();
+                let entity_stream = entity_map_lock.on_insert_entity();
+                let mut mapped_stream = entity_stream
+                    .and_then(|entity| {
+                        Ok(Params::Array(vec![serde_json::to_value(entity).unwrap()]))
+                    })
+                    .map_err(|_| panic!());
+
+                // TODO: handling this with sleep still doesn't seem like the right way
+                thread::spawn(move || loop {
+                    match mapped_stream.poll() {
+                        Ok(Async::Ready(value)) => {
+                            sink.notify(value.unwrap()).wait().unwrap();
+                        }
+                        Ok(Async::NotReady) => thread::sleep(time::Duration::from_millis(100)),
+                        _ => {}
+                    }
+                });
+            },
+        ),
+        ("rlay_unsubscribeEntities", |_id: SubscriptionId| {
+            println!("Closing subscription");
+            futures::future::ok(Value::Bool(true))
+        }),
+    );
+
+    let address: Url = config.ws_network_address.unwrap().parse().unwrap();
+    let server = WsServerBuilder::new(handler)
+        .session_meta_extractor(|context: &RequestContext| {
+            proxy::WebsocketMetadata::new(
+                Some(Arc::new(Session::new(context.sender()))),
+                context.session_id,
+                context.remote.clone(),
+            )
+        })
+        .start(&format!(
+            "{}:{}",
+            address.host_str().unwrap(),
+            address.port().unwrap()
+        ).parse()
+            .unwrap())
+        .expect("Unable to start RPC server");
+    server.wait().unwrap();
+}
+
+pub fn proxy_handler_with_methods(
+    full_config: &Config,
+    sync_state: SyncState,
+) -> ProxyHandler<proxy::NoopPubSubMetadata> {
+    let mut io = ProxyHandler::new_with_noop(
+        full_config
+            .rpc
+            .proxy_target_network_address
+            .as_ref()
+            .unwrap(),
+    );
     io.add_method("rlay_version", rpc_rlay_version(full_config));
     io.add_method(
         "rlay_getPropositionPools",
@@ -56,11 +162,7 @@ pub fn start_rpc(full_config: &Config, sync_state: SyncState) {
         rpc_rlay_experimental_get_entity_cid(),
     );
 
-    let _server = ServerBuilder::new(io)
-        .start_http(&config.network_address.parse().unwrap())
-        .expect("Unable to start RPC server");
-
-    _server.wait();
+    io
 }
 
 /// `rlay_version` RPC call.

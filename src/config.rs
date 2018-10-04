@@ -137,6 +137,9 @@ pub mod rpc {
         #[serde(default = "default_network_address")]
         /// Network address to serve the RPC on.
         pub network_address: String,
+        #[serde(default = "default_ws_network_address")]
+        /// Network address to serve the Websocket RPC on.
+        pub ws_network_address: Option<String>,
     }
 
     fn default_rpc_disabled() -> bool {
@@ -148,6 +151,10 @@ pub mod rpc {
     }
 
     fn default_network_address() -> String {
-        "127.0.0.1:8546".to_owned()
+        "http://127.0.0.1:8546".to_owned()
+    }
+
+    fn default_ws_network_address() -> Option<String> {
+        Some("ws://127.0.0.1:8547".to_owned())
     }
 }
