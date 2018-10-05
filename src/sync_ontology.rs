@@ -17,6 +17,7 @@ use web3_helpers::raw_query;
 
 pub type InnerEntityMap = BTreeMap<Vec<u8>, Entity>;
 pub type CidEntityMap = BTreeMap<Vec<u8>, String>;
+pub type BlockEntityMap = BTreeMap<u64, Vec<Entity>>;
 
 #[derive(Debug, Clone)]
 pub struct EntityMap {
@@ -45,6 +46,31 @@ impl EntityMap {
 
     pub fn on_insert_entity(&mut self) -> EntityMapInsertSubscription {
         let buffer = Arc::new(Mutex::new(VecDeque::new()));
+        self.insert_subscriber_buffers.push(buffer.clone());
+        EntityMapInsertSubscription::from_buffer(buffer)
+    }
+
+    pub fn on_insert_entity_with_replay(
+        &mut self,
+        from_block: Option<u64>,
+        block_entity_map: &BlockEntityMap,
+    ) -> EntityMapInsertSubscription {
+        let mut inner_buffer = VecDeque::new();
+
+        if let Some(from_block) = from_block {
+            let mut blocknumbers: Vec<_> = block_entity_map
+                .keys()
+                .filter(|block| block >= &&from_block)
+                .collect();
+            blocknumbers.sort();
+            for blocknumber in blocknumbers {
+                for entity in block_entity_map.get(blocknumber).unwrap() {
+                    inner_buffer.push_back(entity.clone());
+                }
+            }
+        }
+
+        let buffer = Arc::new(Mutex::new(inner_buffer));
         self.insert_subscriber_buffers.push(buffer.clone());
         EntityMapInsertSubscription::from_buffer(buffer)
     }
@@ -109,18 +135,6 @@ pub fn entity_map_class_assertions(entity_map: &EntityMap) -> Vec<&ontology::Cla
         .collect()
 }
 
-pub fn entity_map_negative_class_assertions(
-    entity_map: &EntityMap,
-) -> Vec<&ontology::NegativeClassAssertion> {
-    entity_map
-        .values()
-        .filter_map(|entity| match entity {
-            Entity::NegativeClassAssertion(val) => Some(val),
-            _ => None,
-        })
-        .collect()
-}
-
 pub trait OntologySyncer<P: Future<Item = (), Error = ()>> {
     type Config;
 
@@ -133,8 +147,21 @@ pub trait OntologySyncer<P: Future<Item = (), Error = ()>> {
         config: Self::Config,
         entity_map_mutex: Arc<Mutex<EntityMap>>,
         cid_entity_kind_map_mutex: Arc<Mutex<CidEntityMap>>,
+        block_entity_map_mutex: Arc<Mutex<BlockEntityMap>>,
         last_synced_block_mutex: Arc<Mutex<Option<u64>>>,
     ) -> P;
+}
+
+pub fn entity_map_negative_class_assertions(
+    entity_map: &EntityMap,
+) -> Vec<&ontology::NegativeClassAssertion> {
+    entity_map
+        .values()
+        .filter_map(|entity| match entity {
+            Entity::NegativeClassAssertion(val) => Some(val),
+            _ => None,
+        })
+        .collect()
 }
 
 pub struct EthOntologySyncer;
@@ -251,6 +278,7 @@ impl OntologySyncer<Box<Future<Item = (), Error = ()>>> for EthOntologySyncer {
         config: Self::Config,
         entity_map_mutex: Arc<Mutex<EntityMap>>,
         cid_entity_kind_map_mutex: Arc<Mutex<CidEntityMap>>,
+        block_entity_map_mutex: Arc<Mutex<BlockEntityMap>>,
         last_synced_block_mutex: Arc<Mutex<Option<u64>>>,
     ) -> Box<Future<Item = (), Error = ()>> {
         let web3 = config.web3_with_handle(&eloop_handle);
@@ -283,22 +311,34 @@ impl OntologySyncer<Box<Future<Item = (), Error = ()>>> for EthOntologySyncer {
                     trace!("Ontology sync block {:?}", &log.block_number);
                     Self::process_ontology_storage_log(&log, &signature_map, &config, &web3)
                         .into_future()
+                        .and_then(|process_res| Ok((process_res, log)))
                 })
-                .filter(|res| res.is_some())
-                .map(|res| res.unwrap())
-                .and_then(move |(cid, event_name, entity): (Vec<u8>, String, _)| {
-                    let mut cid_entity_kind_map_lock = cid_entity_kind_map_mutex.lock().unwrap();
-                    let kind_name = str::replace(&event_name, "Stored", "").to_owned();
-                    cid_entity_kind_map_lock.insert(cid, kind_name);
+                .filter(|(res, _)| res.is_some())
+                .map(|(res, log)| (res.unwrap(), log))
+                .and_then(
+                    move |((cid, event_name, entity), log): ((Vec<u8>, String, _), _)| {
+                        let mut cid_entity_kind_map_lock =
+                            cid_entity_kind_map_mutex.lock().unwrap();
+                        let kind_name = str::replace(&event_name, "Stored", "").to_owned();
+                        cid_entity_kind_map_lock.insert(cid, kind_name);
 
-                    Ok(entity)
-                })
-                .filter(|res| res.is_some())
-                .map(|res| res.unwrap())
-                .for_each(move |entity: Entity| {
+                        Ok((entity, log))
+                    },
+                )
+                .filter(|(res, _)| res.is_some())
+                .map(|(res, log)| (res.unwrap(), log))
+                .for_each(move |(entity, log): (Entity, _)| {
+                    let entity_bytes = entity.to_bytes();
                     let mut entity_map_lock = entity_map_mutex.lock().unwrap();
-                    entity_map_lock.insert(entity.to_bytes(), entity);
+                    entity_map_lock.insert(entity_bytes.clone(), entity.clone());
 
+                    if let Some(blocknumber) = log.block_number {
+                        let mut block_entity_map_lock = block_entity_map_mutex.lock().unwrap();
+                        let mut added_this_block = block_entity_map_lock
+                            .entry(blocknumber.as_u64())
+                            .or_insert(Vec::new());
+                        added_this_block.push(entity);
+                    }
                     Ok(())
                 })
                 .map_err(|_| ()),

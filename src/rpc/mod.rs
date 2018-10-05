@@ -35,6 +35,7 @@ pub fn start_rpc(full_config: &Config, sync_state: SyncState) {
         return;
     }
 
+    let mut io = ProxyHandler::new(config.proxy_target_network_address.as_ref().unwrap());
     let http_proxy_config = full_config.clone();
     let http_proxy_sync_state = sync_state.clone();
     // HTTP RPC
@@ -62,15 +63,13 @@ pub fn start_rpc(full_config: &Config, sync_state: SyncState) {
         (
             "rlay_subscribeEntities",
             move |params: Params, meta: proxy::WebsocketMetadata, subscriber: Subscriber| {
-                if params != Params::None {
-                    subscriber
-                        .reject(jsonrpc_core::Error {
-                            code: ErrorCode::ParseError,
-                            message: "Invalid parameters. Subscription rejected.".into(),
-                            data: None,
-                        })
-                        .unwrap();
-                    return;
+                let mut param_from_block: Option<u64> = None;
+                if let Params::Array(params_array) = params {
+                    if let Value::Object(ref params_map) = params_array[0] {
+                        if let Some(raw_param_from_block) = params_map.get("fromBlock") {
+                            param_from_block = Some(raw_param_from_block.as_u64().unwrap());
+                        }
+                    }
                 }
 
                 // TODO: use correct ids - currently ony one subscription per sesssion (= websocket
@@ -80,7 +79,10 @@ pub fn start_rpc(full_config: &Config, sync_state: SyncState) {
                     .unwrap();
                 let entity_map = sub_sync_state.entity_map();
                 let mut entity_map_lock = entity_map.lock().unwrap();
-                let entity_stream = entity_map_lock.on_insert_entity();
+                let block_entity_map = sub_sync_state.block_entity_map();
+                let block_entity_map_lock = block_entity_map.lock().unwrap();
+                let entity_stream = entity_map_lock
+                    .on_insert_entity_with_replay(param_from_block, &block_entity_map_lock);
                 let mut mapped_stream = entity_stream
                     .and_then(|entity| {
                         Ok(Params::Array(vec![serde_json::to_value(entity).unwrap()]))

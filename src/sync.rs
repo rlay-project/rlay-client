@@ -12,7 +12,7 @@ use rlay_ontology::ontology::Entity;
 use log::Level::Debug;
 
 use config::Config;
-use sync_ontology::{EntityMap, EthOntologySyncer, OntologySyncer};
+use sync_ontology::{BlockEntityMap, EntityMap, EthOntologySyncer, OntologySyncer};
 use sync_proposition_ledger::{sync_ledger, PropositionLedger};
 use payout::{fill_epoch_payouts, fill_epoch_payouts_cumulative, load_epoch_payouts,
              retrieve_epoch_start_block, store_epoch_payouts, submit_epoch_payouts, Payout,
@@ -65,6 +65,10 @@ impl SyncState {
         self.ontology.entity_map()
     }
 
+    pub fn block_entity_map(&self) -> Arc<Mutex<BlockEntityMap>> {
+        self.ontology.block_entity_map()
+    }
+
     pub fn cid_entity_kind_map(&self) -> Arc<Mutex<BTreeMap<Vec<u8>, String>>> {
         self.ontology.cid_entity_kind_map()
     }
@@ -85,6 +89,7 @@ impl SyncState {
 #[derive(Clone)]
 pub struct OntologySyncState {
     pub entity_map: Arc<Mutex<EntityMap>>,
+    pub block_entity_map: Arc<Mutex<BlockEntityMap>>,
     pub cid_entity_kind_map: Arc<Mutex<BTreeMap<Vec<u8>, String>>>,
     pub last_synced_block: Arc<Mutex<Option<u64>>>,
 }
@@ -94,10 +99,14 @@ impl OntologySyncState {
         let entity_map = EntityMap::new();
         let entity_map_mutex = Arc::new(Mutex::new(entity_map));
 
+        let block_entity_map = BlockEntityMap::new();
+        let block_entity_map_mutex = Arc::new(Mutex::new(block_entity_map));
+
         let cid_entity_kind_map: BTreeMap<Vec<u8>, String> = BTreeMap::new();
         let cid_entity_kind_map_mutex = Arc::new(Mutex::new(cid_entity_kind_map));
         Self {
             entity_map: entity_map_mutex,
+            block_entity_map: block_entity_map_mutex,
             cid_entity_kind_map: cid_entity_kind_map_mutex,
             last_synced_block: Arc::new(Mutex::new(None)),
         }
@@ -105,6 +114,10 @@ impl OntologySyncState {
 
     pub fn entity_map(&self) -> Arc<Mutex<EntityMap>> {
         self.entity_map.clone()
+    }
+
+    pub fn block_entity_map(&self) -> Arc<Mutex<BlockEntityMap>> {
+        self.block_entity_map.clone()
     }
 
     pub fn cid_entity_kind_map(&self) -> Arc<Mutex<BTreeMap<Vec<u8>, String>>> {
@@ -171,6 +184,7 @@ pub fn run_sync(config: &Config) {
             config.clone(),
             sync_state.entity_map(),
             sync_state.cid_entity_kind_map(),
+            sync_state.block_entity_map(),
             sync_state.ontology_last_synced_block(),
         )
         .map_err(|err| {
