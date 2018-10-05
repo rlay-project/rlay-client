@@ -331,6 +331,7 @@ impl ::serde::Serialize for ValuedBooleanPropositionPool {
         #[derive(Serialize)]
         #[allow(non_snake_case)]
         struct PropositionPoolSerialize<'a> {
+            pub poolType: String,
             pub subject: HexString<'a>,
             pub subjectProperty: Vec<HexString<'a>>,
             pub values: Vec<AssertionWithWeight>,
@@ -344,6 +345,10 @@ impl ::serde::Serialize for ValuedBooleanPropositionPool {
             pub totalWeightNegative: U256,
             pub totalWeightAggregationResult: Option<U256>,
         }
+
+        let pool_type_entity: ontology::Entity = self.values().get(0).unwrap().clone().into();
+        let pool_type_entity_kind: &str = pool_type_entity.kind().into();
+        let pool_type: String = pool_type_entity_kind.replace("Assertion", "").to_owned();
 
         let add_weight = |assertion: Assertion| AssertionWithWeight {
             totalWeight: self.weights_for_value(&assertion),
@@ -371,15 +376,16 @@ impl ::serde::Serialize for ValuedBooleanPropositionPool {
             total_weight_aggregation_result = Some(self.negative_weights())
         }
 
-        let subjectProperty = self.pool
+        let subject_property = self.pool
             .subject_property()
             .into_iter()
             .map(|n| HexString::wrap(n))
             .collect();
 
         let ext = PropositionPoolSerialize {
+            poolType: pool_type,
             subject: HexString::wrap(self.pool.subject()),
-            subjectProperty,
+            subjectProperty: subject_property,
             values: add_weights(self.values()),
             positiveValues: add_weights(&self.pool.positive_values()),
             negativeValues: add_weights(&self.pool.negative_values()),

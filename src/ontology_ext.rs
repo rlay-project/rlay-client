@@ -25,6 +25,25 @@ impl ToCid for Assertion {
     }
 }
 
+impl Into<ontology::Entity> for Assertion {
+    fn into(self) -> ontology::Entity {
+        match self {
+            Assertion::ClassAssertion(val) => ontology::Entity::ClassAssertion(val),
+            Assertion::NegativeClassAssertion(val) => ontology::Entity::NegativeClassAssertion(val),
+            Assertion::DataPropertyAssertion(val) => ontology::Entity::DataPropertyAssertion(val),
+            Assertion::NegativeDataPropertyAssertion(val) => {
+                ontology::Entity::NegativeDataPropertyAssertion(val)
+            }
+            Assertion::ObjectPropertyAssertion(val) => {
+                ontology::Entity::ObjectPropertyAssertion(val)
+            }
+            Assertion::NegativeObjectPropertyAssertion(val) => {
+                ontology::Entity::NegativeObjectPropertyAssertion(val)
+            }
+        }
+    }
+}
+
 pub trait AsAssertion {
     fn as_assertion(&self) -> Option<Assertion>;
 }

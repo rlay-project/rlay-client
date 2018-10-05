@@ -35,7 +35,6 @@ pub fn start_rpc(full_config: &Config, sync_state: SyncState) {
         return;
     }
 
-    let mut io = ProxyHandler::new(config.proxy_target_network_address.as_ref().unwrap());
     let http_proxy_config = full_config.clone();
     let http_proxy_sync_state = sync_state.clone();
     // HTTP RPC
