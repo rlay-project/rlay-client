@@ -1,8 +1,6 @@
 mod proxy;
 
-use tokio_core;
 use std::error::Error;
-use jsonrpc_core::futures::sync::mpsc::SendError;
 use cid::ToCid;
 use jsonrpc_core::{self, *};
 use jsonrpc_http_server::ServerBuilder as HttpServerBuilder;
@@ -20,7 +18,7 @@ use std::sync::Arc;
 use web3::futures::prelude::*;
 
 use config::Config;
-use aggregation::{detect_pools, detect_valued_pools, ValuedBooleanPropositionPool};
+use aggregation::{detect_valued_pools, ValuedBooleanPropositionPool};
 use self::proxy::ProxyHandler;
 use sync::SyncState;
 use web3_helpers::HexString;

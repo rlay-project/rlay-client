@@ -4,7 +4,7 @@ use hyper::header::HeaderValue;
 use hyper::rt::Stream;
 use hyper::{self, Body, Method, Request as HyperRequest};
 use jsonrpc_core::*;
-use jsonrpc_pubsub::{PubSubHandler, PubSubMetadata, Session, Subscriber, SubscriptionId};
+use jsonrpc_pubsub::{PubSubHandler, PubSubMetadata, Session};
 use std::collections::{HashMap, HashSet};
 use std::default::Default;
 use std::sync::Arc;

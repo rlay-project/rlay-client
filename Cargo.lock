@@ -1170,7 +1170,7 @@ dependencies = [
  "log 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "merkle_light 0.3.1 (git+https://github.com/hobofan/merkle_light?rev=f069616df909cb7a4426f6deb328bde6422a3510)",
  "multibase 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "rlay_ontology 0.1.0 (git+https://github.com/rlay-project/rlay-ontology?rev=c9801cbbdb2a25db776740a425c6b16335f1bea6)",
+ "rlay_ontology 0.2.0 (git+https://github.com/rlay-project/rlay-ontology?tag=0.2.0)",
  "rquantiles 0.1.0 (git+https://github.com/rlay-project/rquantiles?rev=527587adda425b3765575e150cc9a8239bca3a83)",
  "rustc-hex 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.66 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1185,8 +1185,8 @@ dependencies = [
 
 [[package]]
 name = "rlay_ontology"
-version = "0.1.0"
-source = "git+https://github.com/rlay-project/rlay-ontology?rev=c9801cbbdb2a25db776740a425c6b16335f1bea6#c9801cbbdb2a25db776740a425c6b16335f1bea6"
+version = "0.2.0"
+source = "git+https://github.com/rlay-project/rlay-ontology?tag=0.2.0#181744b5d58348ab954bdb5b1e96a0c9c89c0777"
 dependencies = [
  "bytes 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "cid 0.2.3 (git+https://github.com/hobofan/rust-cid?rev=27798e5245c234dae1236470a5a5568cb067a216)",
@@ -2076,7 +2076,7 @@ dependencies = [
 "checksum regex-syntax 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)" = "05b06a75f5217880fc5e905952a42750bf44787e56a6c6d6852ed0992f5e1d54"
 "checksum relay 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "1576e382688d7e9deecea24417e350d3062d97e32e45d70b1cde65994ff1489a"
 "checksum remove_dir_all 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)" = "3488ba1b9a2084d38645c4c08276a1752dcbf2c7130d74f1569681ad5d2799c5"
-"checksum rlay_ontology 0.1.0 (git+https://github.com/rlay-project/rlay-ontology?rev=c9801cbbdb2a25db776740a425c6b16335f1bea6)" = "<none>"
+"checksum rlay_ontology 0.2.0 (git+https://github.com/rlay-project/rlay-ontology?tag=0.2.0)" = "<none>"
 "checksum rquantiles 0.1.0 (git+https://github.com/rlay-project/rquantiles?rev=527587adda425b3765575e150cc9a8239bca3a83)" = "<none>"
 "checksum rustc-demangle 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)" = "76d7ba1feafada44f2d38eed812bd2489a03c0f5abb975799251518b68848649"
 "checksum rustc-hex 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "0ceb8ce7a5e520de349e1fa172baeba4a9e8d5ef06c47471863530bc4972ee1e"

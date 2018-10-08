@@ -1,14 +1,11 @@
-use cid::ToCid;
-use rlay_ontology::ontology;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::sync::Mutex;
 use web3::types::U256;
 
 use aggregation::{detect_valued_pools, ValuedBooleanPropositionPool};
 use payout::Payout;
 use sync_proposition_ledger::{Proposition, PropositionLedger};
-use sync_ontology::{entity_map_class_assertions, entity_map_individuals,
-                    entity_map_negative_class_assertions, EntityMap};
+use sync_ontology::EntityMap;
 
 // TODO: U256 and get from RlayToken contract
 const TOKENS_PER_BLOCK: f64 = 25000000000000000000f64;
