@@ -96,7 +96,6 @@ pub fn sync_ledger(
         .filter(|res| res.is_some())
         .map(|res| res.unwrap())
         .for_each(move |proposition: Proposition| {
-            println!("HERE");
             let mut proposition_ledger_lock = proposition_ledger_mutex
                 .lock()
                 .expect("Unable to get lock for proposition ledger");

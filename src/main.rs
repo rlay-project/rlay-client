@@ -13,6 +13,8 @@ extern crate futures_timer;
 extern crate hyper;
 extern crate jsonrpc_core;
 extern crate jsonrpc_http_server;
+extern crate jsonrpc_pubsub;
+extern crate jsonrpc_ws_server;
 #[macro_use]
 extern crate log;
 extern crate merkle_light;
@@ -31,9 +33,11 @@ extern crate toml;
 extern crate url;
 extern crate web3;
 
+pub mod aggregation;
 pub mod config;
 pub mod doctor;
 pub mod merkle;
+pub mod ontology_ext;
 pub mod payout;
 pub mod payout_calculation;
 pub mod payout_cli;

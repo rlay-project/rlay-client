@@ -8,9 +8,11 @@ use web3::types::{Filter, Log, U256};
 use web3;
 use web3::DuplexTransport;
 use rustc_hex::ToHex;
+use rlay_ontology::ontology::Entity;
+use log::Level::Debug;
 
 use config::Config;
-use sync_ontology::{sync_ontology, Entity};
+use sync_ontology::{BlockEntityMap, EntityMap, EthOntologySyncer, OntologySyncer};
 use sync_proposition_ledger::{sync_ledger, PropositionLedger};
 use payout::{fill_epoch_payouts, fill_epoch_payouts_cumulative, load_epoch_payouts,
              retrieve_epoch_start_block, store_epoch_payouts, submit_epoch_payouts, Payout,
@@ -40,28 +42,35 @@ pub fn subscribe_with_history(
 
 #[derive(Clone)]
 pub struct SyncState {
-    pub entity_map: Arc<Mutex<BTreeMap<Vec<u8>, Entity>>>,
+    pub ontology: OntologySyncState,
     pub proposition_ledger: Arc<Mutex<PropositionLedger>>,
     pub proposition_ledger_block_highwatermark: Arc<Mutex<u64>>,
 }
 
 impl SyncState {
     pub fn new() -> Self {
-        let entity_map: BTreeMap<Vec<u8>, Entity> = BTreeMap::new();
-        let entity_map_mutex = Arc::new(Mutex::new(entity_map));
+        let ontology = OntologySyncState::new();
 
         let proposition_ledger: PropositionLedger = vec![];
         let proposition_ledger_mutex = Arc::new(Mutex::new(proposition_ledger));
 
         Self {
-            entity_map: entity_map_mutex,
+            ontology,
             proposition_ledger: proposition_ledger_mutex,
             proposition_ledger_block_highwatermark: Arc::new(Mutex::new(0u64)),
         }
     }
 
-    pub fn entity_map(&self) -> Arc<Mutex<BTreeMap<Vec<u8>, Entity>>> {
-        self.entity_map.clone()
+    pub fn entity_map(&self) -> Arc<Mutex<EntityMap>> {
+        self.ontology.entity_map()
+    }
+
+    pub fn block_entity_map(&self) -> Arc<Mutex<BlockEntityMap>> {
+        self.ontology.block_entity_map()
+    }
+
+    pub fn cid_entity_kind_map(&self) -> Arc<Mutex<BTreeMap<Vec<u8>, String>>> {
+        self.ontology.cid_entity_kind_map()
     }
 
     pub fn proposition_ledger(&self) -> Arc<Mutex<PropositionLedger>> {
@@ -70,6 +79,53 @@ impl SyncState {
 
     pub fn proposition_ledger_block_highwatermark(&self) -> Arc<Mutex<u64>> {
         self.proposition_ledger_block_highwatermark.clone()
+    }
+
+    pub fn ontology_last_synced_block(&self) -> Arc<Mutex<Option<u64>>> {
+        self.ontology.last_synced_block()
+    }
+}
+
+#[derive(Clone)]
+pub struct OntologySyncState {
+    pub entity_map: Arc<Mutex<EntityMap>>,
+    pub block_entity_map: Arc<Mutex<BlockEntityMap>>,
+    pub cid_entity_kind_map: Arc<Mutex<BTreeMap<Vec<u8>, String>>>,
+    pub last_synced_block: Arc<Mutex<Option<u64>>>,
+}
+
+impl OntologySyncState {
+    pub fn new() -> Self {
+        let entity_map = EntityMap::new();
+        let entity_map_mutex = Arc::new(Mutex::new(entity_map));
+
+        let block_entity_map = BlockEntityMap::new();
+        let block_entity_map_mutex = Arc::new(Mutex::new(block_entity_map));
+
+        let cid_entity_kind_map: BTreeMap<Vec<u8>, String> = BTreeMap::new();
+        let cid_entity_kind_map_mutex = Arc::new(Mutex::new(cid_entity_kind_map));
+        Self {
+            entity_map: entity_map_mutex,
+            block_entity_map: block_entity_map_mutex,
+            cid_entity_kind_map: cid_entity_kind_map_mutex,
+            last_synced_block: Arc::new(Mutex::new(None)),
+        }
+    }
+
+    pub fn entity_map(&self) -> Arc<Mutex<EntityMap>> {
+        self.entity_map.clone()
+    }
+
+    pub fn block_entity_map(&self) -> Arc<Mutex<BlockEntityMap>> {
+        self.block_entity_map.clone()
+    }
+
+    pub fn cid_entity_kind_map(&self) -> Arc<Mutex<BTreeMap<Vec<u8>, String>>> {
+        self.cid_entity_kind_map.clone()
+    }
+
+    pub fn last_synced_block(&self) -> Arc<Mutex<Option<u64>>> {
+        self.last_synced_block.clone()
     }
 }
 
@@ -121,7 +177,16 @@ pub fn run_sync(config: &Config) {
     let computed_state = ComputedState::load_from_files(config.clone());
 
     // Sync ontology concepts from smart contract to local state
-    let sync_ontology_fut = sync_ontology(eloop.handle(), config.clone(), sync_state.entity_map())
+    let mut syncer = EthOntologySyncer::new();
+    let sync_ontology_fut = syncer
+        .sync_ontology(
+            eloop.handle(),
+            config.clone(),
+            sync_state.entity_map(),
+            sync_state.cid_entity_kind_map(),
+            sync_state.block_entity_map(),
+            sync_state.ontology_last_synced_block(),
+        )
         .map_err(|err| {
             error!("Sync ontology: {:?}", err);
             ()
@@ -165,51 +230,61 @@ pub fn run_sync(config: &Config) {
     let sync_state_counter = sync_state.clone();
     let computed_state_counter = computed_state.clone();
     // Print some statistics about the local state
-    let counter_stream = Interval::new(Duration::from_secs(5))
-        .for_each(|_| {
-            let entity_map_lock = sync_state_counter.entity_map.lock().unwrap();
-            let ledger_lock = sync_state_counter.proposition_ledger.lock().unwrap();
-            let payout_epochs = computed_state_counter.payout_epochs_cum.lock().unwrap();
-            debug!("Num entities: {}", entity_map_lock.len());
-            let mut annotation_count = 0;
-            let mut class_count = 0;
-            let mut individual_count = 0;
-            for entity in entity_map_lock.values() {
-                match entity {
-                    Entity::Annotation(_) => annotation_count += 1,
-                    Entity::Class(_) => class_count += 1,
-                    Entity::Individual(_) => individual_count += 1,
-                }
-            }
-            debug!("--- Num annotation: {}", annotation_count);
-            debug!("--- Num class: {}", class_count);
-            debug!("--- Num individual: {}", individual_count);
-            debug!("Num propositions: {}", ledger_lock.len());
+    let counter_stream = match log_enabled!(Debug) {
+        true => {
+            let counter_stream = Interval::new(Duration::from_secs(5))
+                .for_each(|_| {
+                    let entity_map = sync_state_counter.entity_map();
+                    let entity_map_lock = entity_map.lock().unwrap();
+                    let ledger_lock = sync_state_counter.proposition_ledger.lock().unwrap();
+                    let payout_epochs = computed_state_counter.payout_epochs_cum.lock().unwrap();
+                    debug!("Num entities: {}", entity_map_lock.len());
+                    let mut annotation_count = 0;
+                    let mut class_count = 0;
+                    let mut individual_count = 0;
+                    for entity in entity_map_lock.values() {
+                        match entity {
+                            Entity::Annotation(_) => annotation_count += 1,
+                            Entity::Class(_) => class_count += 1,
+                            Entity::Individual(_) => individual_count += 1,
+                            _ => {}
+                        }
+                    }
+                    debug!("--- Num annotation: {}", annotation_count);
+                    debug!("--- Num class: {}", class_count);
+                    debug!("--- Num individual: {}", individual_count);
+                    debug!("Num propositions: {}", ledger_lock.len());
 
-            for (epoch, payouts) in payout_epochs.iter() {
-                trace!("Payouts for epoch {}: {:?}", epoch, payouts);
-                if payouts.len() <= 0 {
-                    trace!("Not enough payouts to build payout tree");
-                    continue;
-                }
-                let tree = Payout::build_merkle_tree(payouts);
-                debug!(
-                    "submitPayoutRoot({}, \"0x{}\")",
-                    epoch,
-                    tree.root().to_hex()
-                );
-                for payout in payouts {
-                    let proof_str = ::payout::format_redeem_payout_call(*epoch, &tree, payout);
-                    debug!("Payout for 0x{}: {}", payout.address.to_hex(), proof_str);
-                }
-            }
+                    for (epoch, payouts) in payout_epochs.iter() {
+                        trace!("Payouts for epoch {}: {:?}", epoch, payouts);
+                        if payouts.len() <= 0 {
+                            trace!("Not enough payouts to build payout tree");
+                            continue;
+                        }
+                        let tree = Payout::build_merkle_tree(payouts);
+                        debug!(
+                            "submitPayoutRoot({}, \"0x{}\")",
+                            epoch,
+                            tree.root().to_hex()
+                        );
+                        for payout in payouts {
+                            let proof_str =
+                                ::payout::format_redeem_payout_call(*epoch, &tree, payout);
+                            debug!("Payout for 0x{}: {}", payout.address.to_hex(), proof_str);
+                        }
+                    }
 
-            Ok(())
-        })
-        .map_err(|err| {
-            error!("{:?}", err);
-            ()
-        });
+                    Ok(())
+                })
+                .map_err(|err| {
+                    error!("{:?}", err);
+                    ()
+                });
+            trace!("Payout root submission disabled in config.");
+            futures::future::Either::A(counter_stream)
+        }
+        false => futures::future::Either::B(futures::future::empty()),
+    };
 
     // Store calculated payouts on disk
     let computed_state_store = computed_state.clone();
