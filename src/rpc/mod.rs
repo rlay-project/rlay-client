@@ -23,7 +23,7 @@ use self::proxy::ProxyHandler;
 use sync::SyncState;
 use web3_helpers::HexString;
 
-const NETWORK_VERSION: &'static str = "0.2.0";
+const NETWORK_VERSION: &'static str = "0.3.0";
 const CLIENT_VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
 pub fn start_rpc(full_config: &Config, sync_state: SyncState) {
