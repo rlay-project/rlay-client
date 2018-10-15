@@ -8,8 +8,8 @@
       "doc2": {
         "title": "document number 2"
       },
-      "docs": {
-        "title": "Documentation"
+      "docs_intro": {
+        "title": "Intro"
       },
       "doc4": {
         "title": "Other Document"
@@ -21,13 +21,17 @@
         "title": "Guides",
         "sidebar_label": "Overview"
       },
+      "rlayclient-jsonrpc": {
+        "title": "Rlay Client JSONRPC methods",
+        "sidebar_label": "JSONRPC methods"
+      },
       "rlayclient": {
-        "title": "Rlay Client",
-        "sidebar_label": "Overview"
+        "title": "Rlay Client Getting Started",
+        "sidebar_label": "Getting Started"
       },
       "rlayprotocol": {
-        "title": "Rlay Protocol",
-        "sidebar_label": "Overview"
+        "title": "Rlay Protocol Getting Started",
+        "sidebar_label": "Getting Started"
       }
     },
     "links": {
@@ -37,7 +41,9 @@
     },
     "categories": {
       "Guides": "Guides",
-      "Overview": "Overview"
+      "Overview": "Overview",
+      "Rlay Protocol": "Rlay Protocol",
+      "Rlay Client": "Rlay Client"
     }
   },
   "pages-strings": {

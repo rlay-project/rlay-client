@@ -39,7 +39,7 @@ const siteConfig = {
   // For no header links in the top nav bar -> headerLinks: [],
   headerLinks: [
     {doc: 'guides', label: 'Guides'},
-    {doc: 'docs', label: 'Docs'},
+    {doc: 'docs_intro', label: 'Docs'},
     { href: "https://github.com/rlay-project/rlay-client", label: "GitHub" },
     // {page: 'help', label: 'Help'},
     // {blog: true, label: 'Blog'},

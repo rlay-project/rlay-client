@@ -80,7 +80,7 @@ class HomeSplash extends React.Component {
         <div className="inner">
           <ProjectTitle />
           <PromoSection>
-            <Button href="#try">Getting Started</Button>
+            <Button href={docUrl('docs_intro')}>Getting Started</Button>
             <Button href={`https://github.com/rlay-project/rlay-client`}>Github repo</Button>
           </PromoSection>
         </div>
@@ -102,18 +102,20 @@ const RelatedProjects = () => (
   <div style={{ padding: '0 20px 0', textAlign: "center" }}>
     <h2>Related projects</h2>
     <div>
-      <Button
-        href="https://github.com/rlay-project/web3-rlay.js"
-        style={{ textTransform: 'initial' }}
-      >
-        web3-rlay.js
-      </Button>
-      <Button
-        href="https://github.com/rlay-project/rlay-protocol"
-        style={{ textTransform: 'initial' }}
-      >
-        rlay-protocol
-      </Button>
+      <div style={{ display: 'flex', justifyContent: 'center' }}>
+        <Button
+          href="https://github.com/rlay-project/web3-rlay.js"
+          style={{ textTransform: 'initial', margin: '8px' }}
+        >
+          web3-rlay.js
+        </Button>
+        <Button
+          href="https://github.com/rlay-project/rlay-protocol"
+          style={{ textTransform: 'initial', margin: '8px' }}
+        >
+          rlay-protocol
+        </Button>
+      </div>
     </div>
   </div>
 );

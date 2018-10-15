@@ -3,6 +3,8 @@
     "Guides": ["guides"]
   },
   "docs": {
-    "Overview": ["docs"]
+    "Overview": ["docs_intro"],
+    "Rlay Protocol": ["rlayprotocol"],
+    "Rlay Client": ["rlayclient", "rlayclient-jsonrpc"]
   }
 }
