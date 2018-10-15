@@ -20,7 +20,7 @@ extern crate log;
 extern crate merkle_light;
 extern crate multibase;
 extern crate rlay_ontology;
-extern crate rquantiles;
+// extern crate rquantiles;
 extern crate rustc_hex;
 extern crate serde;
 #[macro_use]

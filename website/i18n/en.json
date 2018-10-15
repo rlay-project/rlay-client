@@ -20,6 +20,14 @@
       "guides": {
         "title": "Guides",
         "sidebar_label": "Overview"
+      },
+      "rlayclient": {
+        "title": "Rlay Client",
+        "sidebar_label": "Overview"
+      },
+      "rlayprotocol": {
+        "title": "Rlay Protocol",
+        "sidebar_label": "Overview"
       }
     },
     "links": {
