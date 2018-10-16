@@ -9,6 +9,6 @@ network_address = "http://127.0.0.1:8546"
 ws_network_address = "ws://127.0.0.1:8547"
 
 [contract_addresses]
-OntologyStorage = "0x977112862bab8d12f73ab3fb6c30d715fcc489a3"
-RlayToken = "0x50a5ed5c21c1241e1f0c449b81020d3e206de6d1"
-PropositionLedger = "0x72628e4e6ad3816056bec173a5cfde9376791a92"
+OntologyStorage = "0xXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+RlayToken = "0xXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+PropositionLedger = "0xXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"

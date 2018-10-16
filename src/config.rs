@@ -1,7 +1,7 @@
 use failure::Error;
 use rustc_hex::FromHex;
 use std::collections::HashMap;
-use std::fs::File;
+use std::fs::{self, File};
 use std::io::Read;
 use std::path::Path;
 use tokio_core;
@@ -36,7 +36,7 @@ fn default_network_address() -> Option<String> {
 }
 
 fn default_data_path() -> Option<String> {
-    Some("./data".to_owned())
+    Some("./rlay_data".to_owned())
 }
 
 fn default_epoch_length() -> u64 {
@@ -123,6 +123,14 @@ impl Config {
         };
 
         web3::Web3::new(transport)
+    }
+
+    pub fn init_data_dir(&self) -> ::std::io::Result<()> {
+        let data_path = self.data_path.as_ref().unwrap();
+
+        fs::create_dir_all(data_path)?;
+        fs::create_dir_all(Path::new(data_path).join("epoch_payouts"))?;
+        Ok(())
     }
 }
 

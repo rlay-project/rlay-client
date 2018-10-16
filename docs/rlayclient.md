@@ -21,8 +21,6 @@ Before continuing with the installation, make sure you have at following depende
 
 ```bash
 git clone git@github.com:rlay-project/rlay-client.git && cd rlay-client
-mkdir rlay_data
-mkdir rlay_data/epoch_payouts
 cargo install --git https://github.com/rlay-project/rlay-client.git --tag 0.2.2
 ```
 
