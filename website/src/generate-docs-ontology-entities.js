@@ -23,7 +23,16 @@ const addEntities = (output) => {
   intermediate.kinds.forEach((kind) => {
     output.file += `### \`${kind.name}\`\n`;
     output.file += '\n';
-    output.file += 'TODO\n\n';
+    output.file += `**CID prefix:** \`0x01${kind.cidPrefixHex}\`\n\n`;
+    output.file += `#### Fields\n`;
+    kind.fields.forEach((field) => {
+      const requiredPart = field.required ? ' **(required)**' : '';
+      let kind = field.kind;
+      if (kind === 'IRI') {
+        kind = 'CID';
+      }
+      output.file += `- ${field.name}: ${kind}${requiredPart}\n`;
+    })
   })
 }
 

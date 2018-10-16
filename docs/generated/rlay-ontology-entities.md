@@ -9,121 +9,221 @@ sidebar_label: Entity Kinds
 
 ### `Class`
 
-TODO
+**CID prefix:** `0x01808003`
 
+#### Fields
+- annotations: Annotation[]
+- superClassExpression: ClassExpression[]
 ### `ObjectIntersectionOf`
 
-TODO
+**CID prefix:** `0x01818003`
 
+#### Fields
+- annotations: Annotation[]
+- superClassExpression: ClassExpression[]
 ### `ObjectUnionOf`
 
-TODO
+**CID prefix:** `0x01828003`
 
+#### Fields
+- annotations: Annotation[]
+- superClassExpression: ClassExpression[]
 ### `ObjectComplementOf`
 
-TODO
+**CID prefix:** `0x01838003`
 
+#### Fields
+- annotations: Annotation[]
+- complementOf: ClassExpression **(required)**
+- superClassExpression: ClassExpression[]
 ### `ObjectOneOf`
 
-TODO
+**CID prefix:** `0x01848003`
 
+#### Fields
+- annotations: Annotation[]
+- superClassExpression: ClassExpression[]
 ### `ObjectSomeValuesFrom`
 
-TODO
+**CID prefix:** `0x01858003`
 
+#### Fields
+- annotations: Annotation[]
+- superClassExpression: ClassExpression[]
 ### `ObjectAllValuesFrom`
 
-TODO
+**CID prefix:** `0x01868003`
 
+#### Fields
+- annotations: Annotation[]
+- superClassExpression: ClassExpression[]
 ### `ObjectHasValue`
 
-TODO
+**CID prefix:** `0x01878003`
 
+#### Fields
+- annotations: Annotation[]
+- superClassExpression: ClassExpression[]
 ### `ObjectHasSelf`
 
-TODO
+**CID prefix:** `0x01888003`
 
+#### Fields
+- annotations: Annotation[]
+- superClassExpression: ClassExpression[]
 ### `ObjectMinCardinality`
 
-TODO
+**CID prefix:** `0x01898003`
 
+#### Fields
+- annotations: Annotation[]
+- superClassExpression: ClassExpression[]
 ### `ObjectMaxCardinality`
 
-TODO
+**CID prefix:** `0x018a8003`
 
+#### Fields
+- annotations: Annotation[]
+- superClassExpression: ClassExpression[]
 ### `ObjectExactCardinality`
 
-TODO
+**CID prefix:** `0x018b8003`
 
+#### Fields
+- annotations: Annotation[]
+- superClassExpression: ClassExpression[]
 ### `DataSomeValuesFrom`
 
-TODO
+**CID prefix:** `0x018c8003`
 
+#### Fields
+- annotations: Annotation[]
+- superClassExpression: ClassExpression[]
 ### `DataAllValuesFrom`
 
-TODO
+**CID prefix:** `0x018d8003`
 
+#### Fields
+- annotations: Annotation[]
+- superClassExpression: ClassExpression[]
 ### `DataHasValue`
 
-TODO
+**CID prefix:** `0x018e8003`
 
+#### Fields
+- annotations: Annotation[]
+- superClassExpression: ClassExpression[]
 ### `DataMinCardinality`
 
-TODO
+**CID prefix:** `0x018f8003`
 
+#### Fields
+- annotations: Annotation[]
+- superClassExpression: ClassExpression[]
 ### `DataMaxCardinality`
 
-TODO
+**CID prefix:** `0x01908003`
 
+#### Fields
+- annotations: Annotation[]
+- superClassExpression: ClassExpression[]
 ### `DataExactCardinality`
 
-TODO
+**CID prefix:** `0x01918003`
 
+#### Fields
+- annotations: Annotation[]
+- superClassExpression: ClassExpression[]
 ### `ObjectProperty`
 
-TODO
+**CID prefix:** `0x01928003`
 
+#### Fields
+- annotations: Annotation[]
+- superObjectPropertyExpression: ObjectProperyExpression[]
 ### `InverseObjectProperty`
 
-TODO
+**CID prefix:** `0x01938003`
 
+#### Fields
+- annotations: Annotation[]
+- superObjectPropertyExpression: ObjectProperyExpression[]
 ### `DataProperty`
 
-TODO
+**CID prefix:** `0x01948003`
 
+#### Fields
+- annotations: Annotation[]
+- superDataPropertyExpression: DataProperyExpression[]
 ### `Annotation`
 
-TODO
+**CID prefix:** `0x01958003`
 
+#### Fields
+- annotations: Annotation[]
+- property: CID **(required)**
+- value: CID **(required)**
 ### `Individual`
 
-TODO
+**CID prefix:** `0x01968003`
 
+#### Fields
+- annotations: Annotation[]
 ### `AnnotationProperty`
 
-TODO
+**CID prefix:** `0x01978003`
 
+#### Fields
+- annotations: Annotation[]
 ### `ClassAssertion`
 
-TODO
+**CID prefix:** `0x01988003`
 
+#### Fields
+- annotations: Annotation[]
+- class: CID **(required)**
+- subject: CID **(required)**
 ### `NegativeClassAssertion`
 
-TODO
+**CID prefix:** `0x01998003`
 
+#### Fields
+- annotations: Annotation[]
+- class: CID **(required)**
+- subject: CID **(required)**
 ### `ObjectPropertyAssertion`
 
-TODO
+**CID prefix:** `0x019a8003`
 
+#### Fields
+- annotations: Annotation[]
+- property: CID
+- subject: CID
+- target: CID
 ### `NegativeObjectPropertyAssertion`
 
-TODO
+**CID prefix:** `0x019b8003`
 
+#### Fields
+- annotations: Annotation[]
+- property: CID
+- subject: CID
+- target: CID
 ### `DataPropertyAssertion`
 
-TODO
+**CID prefix:** `0x019c8003`
 
+#### Fields
+- annotations: Annotation[]
+- property: CID
+- subject: CID
+- target: CID
 ### `NegativeDataPropertyAssertion`
 
-TODO
+**CID prefix:** `0x019d8003`
 
+#### Fields
+- annotations: Annotation[]
+- property: CID
+- subject: CID
+- target: CID
