@@ -17,18 +17,13 @@ Before continuing with the installation, make sure you have at following depende
 
 - **Rust 1.29.0 or newer** (Install via [rustup](https://rustup.rs/))
 
-### Download
+### Download & Install
 
 ```bash
 git clone git@github.com:rlay-project/rlay-client.git && cd rlay-client
-```
-
-### Compile
-
-```bash
 mkdir rlay_data
 mkdir rlay_data/epoch_payouts
-cargo build --release
+cargo install --git https://github.com/rlay-project/rlay-client.git --tag 0.2.2
 ```
 
 ### Run
@@ -38,17 +33,13 @@ You can run a Rlay testnet locally, by following the instructions at [Rlay Proto
 To check if the `Rlay Client` can correctly connect to the testnet run:
 
 ```bash
-cargo run --release -- doctor
+rlay-client doctor
 ```
 
-You can change addresses and pointers in `rlay.config.toml`. After any changes in the config communicate the changes by running
+You can change the addresses that point to the Rlay smart contracts in `rlay.config.toml`.
+
+Once you confirmed that the client can connect properly `Rlay Client` can connect properly, you can run it by executing
 
 ```bash
-sh update_data.sh ~/rlay-protocol/build/contracts/
-```
-
-Once the `Rlay Client` can connect properly, you can run it by executing
-
-```bash
-cargo run --release -- client
+rlay-client client
 ```
