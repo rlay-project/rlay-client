@@ -64,23 +64,122 @@ If a RPC method does not match with any of the ones listed here, the RPC request
 }
 </code></pre>
 <h3><a class="anchor" aria-hidden="true" id="getpropositionpools"></a><a href="#getpropositionpools" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>getPropositionPools</code></h3>
-<p>Returns all Proposition Pools found</p>
-<p>Example Usage:</p>
-<pre><code class="hljs"></code></pre>
+<p>Method name: <code>rlay_getPropositionPools</code></p>
+<p>Returns all found Proposition Pools and their aggregation results.</p>
+<h4><a class="anchor" aria-hidden="true" id="example-request-1"></a><a href="#example-request-1" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Example request</h4>
+<pre><code class="hljs css language-bash">curl --data <span class="hljs-string">'{"method":"rlay_getPropositionPools","params":[],"id":1,"jsonrpc":"2.0"}'</span> -H <span class="hljs-string">"Content-Type: application/json"</span> -X POST localhost:8546
+</code></pre>
+<h4><a class="anchor" aria-hidden="true" id="example-response-1"></a><a href="#example-response-1" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Example response</h4>
+<pre><code class="hljs css language-json">{
+  <span class="hljs-attr">"jsonrpc"</span>: <span class="hljs-string">"2.0"</span>,
+  <span class="hljs-attr">"result"</span>: [
+    {
+      <span class="hljs-attr">"aggregatedValue"</span>: <span class="hljs-literal">null</span>,
+      <span class="hljs-attr">"canonicalNegativeValue"</span>: {
+        <span class="hljs-attr">"annotations"</span>: [],
+        <span class="hljs-attr">"cid"</span>: <span class="hljs-string">"0x019980031b2087f3a0d308bbd8b4c8de783db334bfee4841e85ba88ac495cb0f96aa2ced94cd"</span>,
+        <span class="hljs-attr">"class"</span>: <span class="hljs-string">"0x018080031b201751ffb01316ca5f9ad416f097e092fe660805a468c5dcc3d470c4d6b99cf3ad"</span>,
+        <span class="hljs-attr">"isAggregatedValue"</span>: <span class="hljs-literal">false</span>,
+        <span class="hljs-attr">"subject"</span>: <span class="hljs-string">"0x019680031b20fee449c4e82b7c29595c2e5fb7a72e1cf8d6dd041ec737c778489c3e9963a0c1"</span>,
+        <span class="hljs-attr">"totalWeight"</span>: <span class="hljs-string">"0x0"</span>,
+        <span class="hljs-attr">"type"</span>: <span class="hljs-string">"NegativeClassAssertion"</span>
+      },
+      <span class="hljs-attr">"canonicalPositiveValue"</span>: {
+        <span class="hljs-attr">"annotations"</span>: [],
+        <span class="hljs-attr">"cid"</span>: <span class="hljs-string">"0x019880031b2087f3a0d308bbd8b4c8de783db334bfee4841e85ba88ac495cb0f96aa2ced94cd"</span>,
+        <span class="hljs-attr">"class"</span>: <span class="hljs-string">"0x018080031b201751ffb01316ca5f9ad416f097e092fe660805a468c5dcc3d470c4d6b99cf3ad"</span>,
+        <span class="hljs-attr">"isAggregatedValue"</span>: <span class="hljs-literal">false</span>,
+        <span class="hljs-attr">"subject"</span>: <span class="hljs-string">"0x019680031b20fee449c4e82b7c29595c2e5fb7a72e1cf8d6dd041ec737c778489c3e9963a0c1"</span>,
+        <span class="hljs-attr">"totalWeight"</span>: <span class="hljs-string">"0x0"</span>,
+        <span class="hljs-attr">"type"</span>: <span class="hljs-string">"ClassAssertion"</span>
+      },
+      <span class="hljs-attr">"negativeValues"</span>: [
+        {
+          <span class="hljs-attr">"annotations"</span>: [],
+          <span class="hljs-attr">"cid"</span>: <span class="hljs-string">"0x019980031b2087f3a0d308bbd8b4c8de783db334bfee4841e85ba88ac495cb0f96aa2ced94cd"</span>,
+          <span class="hljs-attr">"class"</span>: <span class="hljs-string">"0x018080031b201751ffb01316ca5f9ad416f097e092fe660805a468c5dcc3d470c4d6b99cf3ad"</span>,
+          <span class="hljs-attr">"isAggregatedValue"</span>: <span class="hljs-literal">false</span>,
+          <span class="hljs-attr">"subject"</span>: <span class="hljs-string">"0x019680031b20fee449c4e82b7c29595c2e5fb7a72e1cf8d6dd041ec737c778489c3e9963a0c1"</span>,
+          <span class="hljs-attr">"totalWeight"</span>: <span class="hljs-string">"0x0"</span>,
+          <span class="hljs-attr">"type"</span>: <span class="hljs-string">"NegativeClassAssertion"</span>
+        }
+      ],
+      <span class="hljs-attr">"poolType"</span>: <span class="hljs-string">"Class"</span>,
+      <span class="hljs-attr">"positiveValues"</span>: [
+        {
+          <span class="hljs-attr">"annotations"</span>: [],
+          <span class="hljs-attr">"cid"</span>: <span class="hljs-string">"0x019880031b2087f3a0d308bbd8b4c8de783db334bfee4841e85ba88ac495cb0f96aa2ced94cd"</span>,
+          <span class="hljs-attr">"class"</span>: <span class="hljs-string">"0x018080031b201751ffb01316ca5f9ad416f097e092fe660805a468c5dcc3d470c4d6b99cf3ad"</span>,
+          <span class="hljs-attr">"isAggregatedValue"</span>: <span class="hljs-literal">false</span>,
+          <span class="hljs-attr">"subject"</span>: <span class="hljs-string">"0x019680031b20fee449c4e82b7c29595c2e5fb7a72e1cf8d6dd041ec737c778489c3e9963a0c1"</span>,
+          <span class="hljs-attr">"totalWeight"</span>: <span class="hljs-string">"0x0"</span>,
+          <span class="hljs-attr">"type"</span>: <span class="hljs-string">"ClassAssertion"</span>
+        }
+      ],
+      <span class="hljs-attr">"subject"</span>: <span class="hljs-string">"0x019680031b20fee449c4e82b7c29595c2e5fb7a72e1cf8d6dd041ec737c778489c3e9963a0c1"</span>,
+      <span class="hljs-attr">"subjectProperty"</span>: [
+        <span class="hljs-string">"0x019680031b20fee449c4e82b7c29595c2e5fb7a72e1cf8d6dd041ec737c778489c3e9963a0c1"</span>
+      ],
+      <span class="hljs-attr">"totalWeight"</span>: <span class="hljs-string">"0x0"</span>,
+      <span class="hljs-attr">"totalWeightAggregationResult"</span>: <span class="hljs-literal">null</span>,
+      <span class="hljs-attr">"totalWeightNegative"</span>: <span class="hljs-string">"0x0"</span>,
+      <span class="hljs-attr">"totalWeightPositive"</span>: <span class="hljs-string">"0x0"</span>,
+      <span class="hljs-attr">"values"</span>: [
+        {
+          <span class="hljs-attr">"annotations"</span>: [],
+          <span class="hljs-attr">"cid"</span>: <span class="hljs-string">"0x019880031b2087f3a0d308bbd8b4c8de783db334bfee4841e85ba88ac495cb0f96aa2ced94cd"</span>,
+          <span class="hljs-attr">"class"</span>: <span class="hljs-string">"0x018080031b201751ffb01316ca5f9ad416f097e092fe660805a468c5dcc3d470c4d6b99cf3ad"</span>,
+          <span class="hljs-attr">"isAggregatedValue"</span>: <span class="hljs-literal">false</span>,
+          <span class="hljs-attr">"subject"</span>: <span class="hljs-string">"0x019680031b20fee449c4e82b7c29595c2e5fb7a72e1cf8d6dd041ec737c778489c3e9963a0c1"</span>,
+          <span class="hljs-attr">"totalWeight"</span>: <span class="hljs-string">"0x0"</span>,
+          <span class="hljs-attr">"type"</span>: <span class="hljs-string">"ClassAssertion"</span>
+        },
+        {
+          <span class="hljs-attr">"annotations"</span>: [],
+          <span class="hljs-attr">"cid"</span>: <span class="hljs-string">"0x019980031b2087f3a0d308bbd8b4c8de783db334bfee4841e85ba88ac495cb0f96aa2ced94cd"</span>,
+          <span class="hljs-attr">"class"</span>: <span class="hljs-string">"0x018080031b201751ffb01316ca5f9ad416f097e092fe660805a468c5dcc3d470c4d6b99cf3ad"</span>,
+          <span class="hljs-attr">"isAggregatedValue"</span>: <span class="hljs-literal">false</span>,
+          <span class="hljs-attr">"subject"</span>: <span class="hljs-string">"0x019680031b20fee449c4e82b7c29595c2e5fb7a72e1cf8d6dd041ec737c778489c3e9963a0c1"</span>,
+          <span class="hljs-attr">"totalWeight"</span>: <span class="hljs-string">"0x0"</span>,
+          <span class="hljs-attr">"type"</span>: <span class="hljs-string">"NegativeClassAssertion"</span>
+        }
+      ]
+    }
+  ],
+  <span class="hljs-attr">"id"</span>: <span class="hljs-number">1</span>
+}
+</code></pre>
 <h3><a class="anchor" aria-hidden="true" id="experimentalgetentity"></a><a href="#experimentalgetentity" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>experimentalGetEntity</code></h3>
-<p>? @TODO</p>
-<p>Example Usage:</p>
-<pre><code class="hljs"></code></pre>
+<p>Method name: <code>rlay_experimentalGetEntity</code></p>
+<p>Retrieves a single entity via its CID.</p>
+<h4><a class="anchor" aria-hidden="true" id="params"></a><a href="#params" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Params</h4>
+<p>Expects a single hex formated CID of the entity to be retrieved.</p>
+<h4><a class="anchor" aria-hidden="true" id="example-request-2"></a><a href="#example-request-2" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Example request</h4>
+<pre><code class="hljs css language-bash">curl --data <span class="hljs-string">'{"method":"rlay_experimentalGetEntity","params":["0x019580031b209f3c8eca54a8e3d79945050fd88daf62b9c99bfe0b579af8a0391c0b21a9fbef"],"id":1,"jsonrpc":"2.0"}'</span> -H <span class="hljs-string">"Content-Type: application/json"</span> -X POST localhost:8546
+</code></pre>
+<h4><a class="anchor" aria-hidden="true" id="example-response-2"></a><a href="#example-response-2" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Example response</h4>
+<pre><code class="hljs css language-json">{
+  <span class="hljs-attr">"jsonrpc"</span>: <span class="hljs-string">"2.0"</span>,
+  <span class="hljs-attr">"result"</span>: {
+    <span class="hljs-attr">"annotations"</span>: [],
+    <span class="hljs-attr">"cid"</span>: <span class="hljs-string">"0x019580031b209f3c8eca54a8e3d79945050fd88daf62b9c99bfe0b579af8a0391c0b21a9fbef"</span>,
+    <span class="hljs-attr">"property"</span>: <span class="hljs-string">"0x019780031b20b3179194677268c88cfd1644c6a1e100729465b42846a2bf7f0bddcd07e300a9"</span>,
+    <span class="hljs-attr">"type"</span>: <span class="hljs-string">"Annotation"</span>,
+    <span class="hljs-attr">"value"</span>: <span class="hljs-string">"0x67636f6d6d656e74"</span>
+  },
+  <span class="hljs-attr">"id"</span>: <span class="hljs-number">1</span>
+}
+</code></pre>
 <h3><a class="anchor" aria-hidden="true" id="experimentalgetentitycid"></a><a href="#experimentalgetentitycid" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>experimentalGetEntityCid</code></h3>
 <p>Method name: <code>rlay_experimentalGetEntityCid</code></p>
 <p>Calculates the CID for a Rlay Ontology entity.
 This can be used together with <a href="#experimentalGetEntity">experimentalGetEntity</a> to check if an entity is already stored on the network.</p>
-<h4><a class="anchor" aria-hidden="true" id="params"></a><a href="#params" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Params</h4>
+<h4><a class="anchor" aria-hidden="true" id="params-1"></a><a href="#params-1" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Params</h4>
 <p>Expects a single JSON object as a parameter. The object needs to be deserializable into a Rlay Ontology entity.</p>
-<h4><a class="anchor" aria-hidden="true" id="example-request-1"></a><a href="#example-request-1" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Example request</h4>
+<h4><a class="anchor" aria-hidden="true" id="example-request-3"></a><a href="#example-request-3" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Example request</h4>
 <pre><code class="hljs css language-bash">curl --data <span class="hljs-string">'{"method":"rlay_experimentalGetEntityCid","params":[{"type": "Class", "annotations": ["0x121212"]}],"id":1,"jsonrpc":"2.0"}'</span> -H <span class="hljs-string">"Content-Type: application/json"</span> -X POST localhost:8546
 </code></pre>
-<h4><a class="anchor" aria-hidden="true" id="example-response-1"></a><a href="#example-response-1" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Example response</h4>
+<h4><a class="anchor" aria-hidden="true" id="example-response-3"></a><a href="#example-response-3" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Example response</h4>
 <pre><code class="hljs css language-json">{
   <span class="hljs-attr">"jsonrpc"</span>: <span class="hljs-string">"2.0"</span>,
   <span class="hljs-attr">"result"</span>: <span class="hljs-string">"0x018080031b20f324c606bc5ea63f747790d24da82d51fc50fca6a01091d4e4b80a9890821bf4"</span>,
@@ -93,12 +192,12 @@ This can be used together with <a href="#experimentalGetEntity">experimentalGetE
 <blockquote>
 <p>Caveat: Currently only works if the provided CID is stored on the network.</p>
 </blockquote>
-<h4><a class="anchor" aria-hidden="true" id="params-1"></a><a href="#params-1" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Params</h4>
+<h4><a class="anchor" aria-hidden="true" id="params-2"></a><a href="#params-2" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Params</h4>
 <p>Expects a single hex formated CID as a parameter.</p>
-<h4><a class="anchor" aria-hidden="true" id="example-request-2"></a><a href="#example-request-2" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Example request</h4>
+<h4><a class="anchor" aria-hidden="true" id="example-request-4"></a><a href="#example-request-4" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Example request</h4>
 <pre><code class="hljs css language-bash">curl --data <span class="hljs-string">'{"method":"rlay_experimentalKindForCid","params":["0x019780031b20b3179194677268c88cfd1644c6a1e100729465b42846a2bf7f0bddcd07e300a9"],"id":1,"jsonrpc":"2.0"}'</span> -H <span class="hljs-string">"Content-Type: application/json"</span> -X POST localhost:8546
 </code></pre>
-<h4><a class="anchor" aria-hidden="true" id="example-response-2"></a><a href="#example-response-2" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Example response</h4>
+<h4><a class="anchor" aria-hidden="true" id="example-response-4"></a><a href="#example-response-4" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Example response</h4>
 <pre><code class="hljs css language-json">{
   <span class="hljs-attr">"jsonrpc"</span>: <span class="hljs-string">"2.0"</span>,
   <span class="hljs-attr">"result"</span>: {
@@ -111,12 +210,12 @@ This can be used together with <a href="#experimentalGetEntity">experimentalGetE
 <h3><a class="anchor" aria-hidden="true" id="experimentallistcids"></a><a href="#experimentallistcids" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>experimentalListCids</code></h3>
 <p>Method name: <code>rlay_experimentalListCids</code></p>
 <p>Returns all stored CIDs (of a certain entity kind).</p>
-<h4><a class="anchor" aria-hidden="true" id="params-2"></a><a href="#params-2" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Params</h4>
+<h4><a class="anchor" aria-hidden="true" id="params-3"></a><a href="#params-3" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Params</h4>
 <p>Expects one <em>optional</em> parameter, a entity kind. If the parameter is provided, only CIDs where the entity is of that entity kind will be returned.</p>
-<h4><a class="anchor" aria-hidden="true" id="example-request-3"></a><a href="#example-request-3" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Example request</h4>
+<h4><a class="anchor" aria-hidden="true" id="example-request-5"></a><a href="#example-request-5" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Example request</h4>
 <pre><code class="hljs css language-bash">curl --data <span class="hljs-string">'{"method":"rlay_experimentalListCids","params":["Annotation"],"id":1,"jsonrpc":"2.0"}'</span> -H <span class="hljs-string">"Content-Type: application/json"</span> -X POST localhost:8546
 </code></pre>
-<h4><a class="anchor" aria-hidden="true" id="example-response-3"></a><a href="#example-response-3" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Example response</h4>
+<h4><a class="anchor" aria-hidden="true" id="example-response-5"></a><a href="#example-response-5" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Example response</h4>
 <pre><code class="hljs css language-json">{
   <span class="hljs-attr">"jsonrpc"</span>: <span class="hljs-string">"2.0"</span>,
   <span class="hljs-attr">"result"</span>: [
