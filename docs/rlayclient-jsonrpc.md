@@ -50,20 +50,129 @@ curl --data '{"method":"rlay_version","params":[],"id":1,"jsonrpc":"2.0"}' -H "C
 
 ### `getPropositionPools`
 
-Returns all Proposition Pools found
+Method name: `rlay_getPropositionPools`
 
-Example Usage:
+Returns all found Proposition Pools and their aggregation results.
 
+#### Example request
+
+```bash
+curl --data '{"method":"rlay_getPropositionPools","params":[],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8546
 ```
+
+#### Example response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": [
+    {
+      "aggregatedValue": null,
+      "canonicalNegativeValue": {
+        "annotations": [],
+        "cid": "0x019980031b2087f3a0d308bbd8b4c8de783db334bfee4841e85ba88ac495cb0f96aa2ced94cd",
+        "class": "0x018080031b201751ffb01316ca5f9ad416f097e092fe660805a468c5dcc3d470c4d6b99cf3ad",
+        "isAggregatedValue": false,
+        "subject": "0x019680031b20fee449c4e82b7c29595c2e5fb7a72e1cf8d6dd041ec737c778489c3e9963a0c1",
+        "totalWeight": "0x0",
+        "type": "NegativeClassAssertion"
+      },
+      "canonicalPositiveValue": {
+        "annotations": [],
+        "cid": "0x019880031b2087f3a0d308bbd8b4c8de783db334bfee4841e85ba88ac495cb0f96aa2ced94cd",
+        "class": "0x018080031b201751ffb01316ca5f9ad416f097e092fe660805a468c5dcc3d470c4d6b99cf3ad",
+        "isAggregatedValue": false,
+        "subject": "0x019680031b20fee449c4e82b7c29595c2e5fb7a72e1cf8d6dd041ec737c778489c3e9963a0c1",
+        "totalWeight": "0x0",
+        "type": "ClassAssertion"
+      },
+      "negativeValues": [
+        {
+          "annotations": [],
+          "cid": "0x019980031b2087f3a0d308bbd8b4c8de783db334bfee4841e85ba88ac495cb0f96aa2ced94cd",
+          "class": "0x018080031b201751ffb01316ca5f9ad416f097e092fe660805a468c5dcc3d470c4d6b99cf3ad",
+          "isAggregatedValue": false,
+          "subject": "0x019680031b20fee449c4e82b7c29595c2e5fb7a72e1cf8d6dd041ec737c778489c3e9963a0c1",
+          "totalWeight": "0x0",
+          "type": "NegativeClassAssertion"
+        }
+      ],
+      "poolType": "Class",
+      "positiveValues": [
+        {
+          "annotations": [],
+          "cid": "0x019880031b2087f3a0d308bbd8b4c8de783db334bfee4841e85ba88ac495cb0f96aa2ced94cd",
+          "class": "0x018080031b201751ffb01316ca5f9ad416f097e092fe660805a468c5dcc3d470c4d6b99cf3ad",
+          "isAggregatedValue": false,
+          "subject": "0x019680031b20fee449c4e82b7c29595c2e5fb7a72e1cf8d6dd041ec737c778489c3e9963a0c1",
+          "totalWeight": "0x0",
+          "type": "ClassAssertion"
+        }
+      ],
+      "subject": "0x019680031b20fee449c4e82b7c29595c2e5fb7a72e1cf8d6dd041ec737c778489c3e9963a0c1",
+      "subjectProperty": [
+        "0x019680031b20fee449c4e82b7c29595c2e5fb7a72e1cf8d6dd041ec737c778489c3e9963a0c1"
+      ],
+      "totalWeight": "0x0",
+      "totalWeightAggregationResult": null,
+      "totalWeightNegative": "0x0",
+      "totalWeightPositive": "0x0",
+      "values": [
+        {
+          "annotations": [],
+          "cid": "0x019880031b2087f3a0d308bbd8b4c8de783db334bfee4841e85ba88ac495cb0f96aa2ced94cd",
+          "class": "0x018080031b201751ffb01316ca5f9ad416f097e092fe660805a468c5dcc3d470c4d6b99cf3ad",
+          "isAggregatedValue": false,
+          "subject": "0x019680031b20fee449c4e82b7c29595c2e5fb7a72e1cf8d6dd041ec737c778489c3e9963a0c1",
+          "totalWeight": "0x0",
+          "type": "ClassAssertion"
+        },
+        {
+          "annotations": [],
+          "cid": "0x019980031b2087f3a0d308bbd8b4c8de783db334bfee4841e85ba88ac495cb0f96aa2ced94cd",
+          "class": "0x018080031b201751ffb01316ca5f9ad416f097e092fe660805a468c5dcc3d470c4d6b99cf3ad",
+          "isAggregatedValue": false,
+          "subject": "0x019680031b20fee449c4e82b7c29595c2e5fb7a72e1cf8d6dd041ec737c778489c3e9963a0c1",
+          "totalWeight": "0x0",
+          "type": "NegativeClassAssertion"
+        }
+      ]
+    }
+  ],
+  "id": 1
+}
 ```
 
 ### `experimentalGetEntity`
 
-? @TODO
+Method name: `rlay_experimentalGetEntity`
 
-Example Usage:
+Retrieves a single entity via its CID.
 
+#### Params
+
+Expects a single hex formated CID of the entity to be retrieved.
+
+#### Example request
+
+```bash
+curl --data '{"method":"rlay_experimentalGetEntity","params":["0x019580031b209f3c8eca54a8e3d79945050fd88daf62b9c99bfe0b579af8a0391c0b21a9fbef"],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8546
 ```
+
+#### Example response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "annotations": [],
+    "cid": "0x019580031b209f3c8eca54a8e3d79945050fd88daf62b9c99bfe0b579af8a0391c0b21a9fbef",
+    "property": "0x019780031b20b3179194677268c88cfd1644c6a1e100729465b42846a2bf7f0bddcd07e300a9",
+    "type": "Annotation",
+    "value": "0x67636f6d6d656e74"
+  },
+  "id": 1
+}
 ```
 
 ### `experimentalGetEntityCid`
