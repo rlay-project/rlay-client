@@ -8,6 +8,6 @@
     "Rlay Client": ["rlayclient", "rlayclient-jsonrpc"],
     "web3-rlay.js": ["web3-rlay-js"],
     "Rlay Utils": ["rlay-utils"],
-    "Rlay Ontology": ["rlay-ontology"]
+    "Rlay Ontology": ["rlay-ontology", "generated/rlay-ontology-entities"]
   }
 }

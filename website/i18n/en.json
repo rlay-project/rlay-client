@@ -17,6 +17,10 @@
       "doc5": {
         "title": "Fifth Document"
       },
+      "generated/rlay-ontology-entities": {
+        "title": "Entity Kinds",
+        "sidebar_label": "Entity Kinds"
+      },
       "guides": {
         "title": "Guides",
         "sidebar_label": "Overview"
