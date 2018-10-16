@@ -21,16 +21,28 @@
         "title": "Guides",
         "sidebar_label": "Overview"
       },
+      "rlay-ontology": {
+        "title": "Rlay Ontology - Getting Started",
+        "sidebar_label": "Getting Started"
+      },
+      "rlay-utils": {
+        "title": "Rlay Utils - Getting Started",
+        "sidebar_label": "Getting Started"
+      },
       "rlayclient-jsonrpc": {
         "title": "Rlay Client JSONRPC methods",
         "sidebar_label": "JSONRPC methods"
       },
       "rlayclient": {
-        "title": "Rlay Client Getting Started",
+        "title": "Rlay Client - Getting Started",
         "sidebar_label": "Getting Started"
       },
       "rlayprotocol": {
-        "title": "Rlay Protocol Getting Started",
+        "title": "Rlay Protocol - Getting Started",
+        "sidebar_label": "Getting Started"
+      },
+      "web3-rlay-js": {
+        "title": "web3-rlay.js - Getting Started",
         "sidebar_label": "Getting Started"
       }
     },
@@ -43,7 +55,10 @@
       "Guides": "Guides",
       "Overview": "Overview",
       "Rlay Protocol": "Rlay Protocol",
-      "Rlay Client": "Rlay Client"
+      "Rlay Client": "Rlay Client",
+      "web3-rlay.js": "web3-rlay.js",
+      "Rlay Utils": "Rlay Utils",
+      "Rlay Ontology": "Rlay Ontology"
     }
   },
   "pages-strings": {

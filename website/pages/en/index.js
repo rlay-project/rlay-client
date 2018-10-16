@@ -115,6 +115,12 @@ const RelatedProjects = () => (
         >
           rlay-protocol
         </Button>
+        <Button
+          href="https://github.com/rlay-project/rlay-utils"
+          style={{ textTransform: 'initial', margin: '8px' }}
+        >
+          rlay-utils
+        </Button>
       </div>
     </div>
   </div>

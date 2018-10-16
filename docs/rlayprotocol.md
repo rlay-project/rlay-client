@@ -1,6 +1,6 @@
 ---
 id: rlayprotocol
-title: Rlay Protocol Getting Started
+title: Rlay Protocol - Getting Started
 sidebar_label: Getting Started
 ---
 

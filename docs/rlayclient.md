@@ -1,6 +1,6 @@
 ---
 id: rlayclient
-title: Rlay Client Getting Started
+title: Rlay Client - Getting Started
 sidebar_label: Getting Started
 ---
 
