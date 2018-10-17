@@ -21,7 +21,7 @@ Before continuing with the installation, make sure you have at following depende
 
 ```bash
 git clone git@github.com:rlay-project/rlay-client.git && cd rlay-client
-cargo install --git https://github.com/rlay-project/rlay-client.git --tag 0.2.2
+cargo install --git https://github.com/rlay-project/rlay-client.git --tag 0.2.3
 ```
 
 ### Run
