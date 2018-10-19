@@ -36,6 +36,8 @@ url = "1.7.1"
 failure_derive = "=0.1.1"
 dialoguer = "0.1.0"
 
+rusted_cypher = { version = "1.1.0", optional = true }
+
 [patch.crates-io]
 # see https://github.com/ipld/rust-cid/pull/9
 cid = { git = 'https://github.com/hobofan/rust-cid', rev = '27798e5245c234dae1236470a5a5568cb067a216' }
@@ -44,3 +46,4 @@ cid = { git = 'https://github.com/hobofan/rust-cid', rev = '27798e5245c234dae123
 default = ["transport_ws"]
 transport_ipc = []
 transport_ws = []
+backend_neo4j = ["rusted_cypher"]
