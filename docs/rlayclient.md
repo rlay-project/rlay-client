@@ -21,9 +21,10 @@ Before continuing with the installation, make sure you have at following depende
 
 ```bash
 git clone git@github.com:rlay-project/rlay-client.git && cd rlay-client
-cargo install --git https://github.com/rlay-project/rlay-client.git --tag 0.2.3
+cargo install --git https://github.com/rlay-project/rlay-client.git --tag 0.2.4
 ```
 
+> If you want to enable the `Neo4J` backend you need to pass `--features backend_neo4j` to `cargo install`, like so: `cargo install --git https://github.com/rlay-project/rlay-client.git --tag 0.2.4 --features backend_neo4j`
 ### Run
 
 Before running the `Rlay Client` make sure that the client connects to the specified Rlay testnet correctly.

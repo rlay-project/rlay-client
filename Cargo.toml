@@ -1,6 +1,6 @@
 [package]
 name = "rlay-client"
-version = "0.2.3"
+version = "0.2.4"
 authors = ["Maximilian Goisser <goisser94@gmail.com>"]
 license = "MIT OR Apache-2.0"
 
