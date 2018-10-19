@@ -12,6 +12,7 @@ use web3::types::H160;
 use web3;
 
 pub use self::rpc::RpcConfig;
+pub use self::backend::{BackendConfig, Neo4jBackendConfig};
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Config {
@@ -29,6 +30,8 @@ pub struct Config {
     pub epoch_length: u64,
     #[serde(default = "default_payout_root_submission_disabled")]
     pub payout_root_submission_disabled: bool,
+    #[serde(default)]
+    pub backends: HashMap<String, BackendConfig>,
 }
 
 fn default_network_address() -> Option<String> {
@@ -164,5 +167,28 @@ pub mod rpc {
 
     fn default_ws_network_address() -> Option<String> {
         Some("ws://127.0.0.1:8547".to_owned())
+    }
+}
+
+pub mod backend {
+    #[cfg(feature = "backend_neo4j")]
+    use rusted_cypher::GraphClient;
+
+    #[derive(Debug, Deserialize, Clone)]
+    #[serde(tag = "type")]
+    pub enum BackendConfig {
+        #[serde(rename = "neo4j")] Neo4j(Neo4jBackendConfig),
+    }
+
+    #[derive(Debug, Deserialize, Clone)]
+    pub struct Neo4jBackendConfig {
+        pub uri: String,
+    }
+
+    impl Neo4jBackendConfig {
+        #[cfg(feature = "backend_neo4j")]
+        pub fn client(&self) -> Result<GraphClient, ::rusted_cypher::error::GraphError> {
+            GraphClient::connect(&self.uri)
+        }
     }
 }

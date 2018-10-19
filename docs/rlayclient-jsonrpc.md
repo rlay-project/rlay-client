@@ -184,7 +184,7 @@ This can be used together with [experimentalGetEntity](#experimentalGetEntity) t
 
 #### Params
 
-Expects a single JSON object as a parameter. The object needs to be deserializable into a Rlay Ontology entity.
+Expects a single JSON object as a parameter. The object needs to be deserializable into a [Rlay Ontology entity](generated/rlay-ontology-entities.md).
 
 #### Example request
 
@@ -274,3 +274,26 @@ Example Usage:
 ```
 ```
 
+### `experimentalStoreEntity`
+
+Method name: `rlay_experimentalStoreEntity`
+
+Store a entity in the backend. Returns the CID of the stored entity.
+
+#### Params
+
+- First parameter: A object deserializable into a [Rlay Ontology entity](generated/rlay-ontology-entities.md)
+- Second parameter: A options object.
+  - "backend": The backend to use for storing
+
+#### Example request
+
+```bash
+curl --data '{"method":"rlay_experimentalStoreEntity","params":[{ "type": "Annotation", "property": "0x019780031b20b3179194677268c88cfd1644c6a1e100729465b42846a2bf7f0bddcd07e300a9", "value": "0x656c6162656c" }, {"backend": "myneo4j"}],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8546
+```
+
+#### Example response
+
+```json
+{"jsonrpc":"2.0","result":"0x019580031b20567c6c54ad4525f1529268a90c0633377596697338a48d36624f180f73b46959","id":1}
+```

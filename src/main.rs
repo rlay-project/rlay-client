@@ -34,6 +34,9 @@ extern crate toml;
 extern crate url;
 extern crate web3;
 
+#[cfg(feature = "backend_neo4j")]
+extern crate rusted_cypher;
+
 pub mod aggregation;
 pub mod config;
 pub mod doctor;

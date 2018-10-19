@@ -17,7 +17,7 @@ use std::{thread, time};
 use std::sync::Arc;
 use web3::futures::prelude::*;
 
-use config::Config;
+use config::{self, Config};
 use aggregation::{detect_valued_pools, ValuedBooleanPropositionPool};
 use self::proxy::ProxyHandler;
 use sync::SyncState;
@@ -159,6 +159,10 @@ pub fn proxy_handler_with_methods(
     io.add_method(
         "rlay_experimentalGetEntityCid",
         rpc_rlay_experimental_get_entity_cid(),
+    );
+    io.add_method(
+        "rlay_experimentalStoreEntity",
+        rpc_rlay_experimental_store_entity(full_config),
     );
 
     io
@@ -428,6 +432,72 @@ fn rpc_rlay_experimental_get_entity_cid() -> impl RpcMethodSimple {
             let entity: Entity = serde_json::from_value(entity_object.clone())
                 .map_err(|err| jsonrpc_core::Error::invalid_params(err.description()))?;
             let cid: String = format!("0x{}", entity.to_cid().unwrap().to_bytes().to_hex());
+
+            Ok(serde_json::to_value(cid).unwrap())
+        } else {
+            unimplemented!()
+        }
+    }
+}
+
+fn rpc_rlay_experimental_store_entity(config: &Config) -> impl RpcMethodSimple {
+    let config = config.clone();
+    move |params: Params| {
+        if let Params::Array(params_array) = params {
+            let entity_object = params_array.get(0).unwrap();
+            let entity: Entity = serde_json::from_value(entity_object.clone())
+                .map_err(|err| jsonrpc_core::Error::invalid_params(err.description()))?;
+            let cid: String = format!("0x{}", entity.to_cid().unwrap().to_bytes().to_hex());
+
+            let options_object = params_array.get(1).unwrap();
+            let backend_name = options_object
+                .as_object()
+                .unwrap()
+                .get("backend")
+                .unwrap()
+                .as_str()
+                .unwrap();
+            let backend_config: &config::BackendConfig = config.backends.get(backend_name).unwrap();
+            match backend_config {
+                #[cfg(feature = "backend_neo4j")]
+                config::BackendConfig::Neo4j(backend) => {
+                    let client = backend.client().unwrap();
+                    let kind_name: &str = entity.kind().into();
+                    let entity_val = serde_json::to_value(entity).unwrap();
+                    let val = entity_val.as_object().unwrap();
+                    let mut values = Vec::new();
+                    let mut relationships = Vec::new();
+                    // TODO: support non-array relationships
+                    for (key, value) in val {
+                        if let Value::Array(array_val) = value {
+                            for relationship_value in array_val {
+                                let rel_query = format!(
+                                    "MATCH (n {{ cid: \"{0}\"}}) MERGE (m {{ cid: {2} }}) MERGE (n)-[r:{1}]->(m)",
+                                    cid, key, relationship_value
+                                );
+                                relationships.push(rel_query);
+                            }
+                            continue;
+                        }
+                        values.push(format!("n.{0} = {1}", key, value));
+                    }
+
+                    let mut query = format!("MERGE (n {{cid: \"{1}\"}}) SET n:{0}", kind_name, cid);
+                    if !values.is_empty() {
+                        query.push_str(", ");
+                        query.push_str(&values.join(", "));
+                    }
+
+                    trace!("NEO4J QUERY: {}", query);
+                    client.exec(query).unwrap();
+                    for relationship in relationships {
+                        trace!("NEO4J QUERY: {}", relationship);
+                        client.exec(relationship).unwrap();
+                    }
+                }
+                #[cfg(not(feature = "backend_neo4j"))]
+                config::BackendConfig::Neo4j(_) => {}
+            }
 
             Ok(serde_json::to_value(cid).unwrap())
         } else {
