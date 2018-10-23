@@ -7,6 +7,7 @@ extern crate console;
 extern crate dialoguer;
 extern crate env_logger;
 extern crate ethabi;
+#[macro_use]
 extern crate failure;
 #[macro_use]
 extern crate failure_derive;
@@ -38,6 +39,7 @@ extern crate web3;
 extern crate rusted_cypher;
 
 pub mod aggregation;
+pub mod backend;
 pub mod config;
 pub mod doctor;
 pub mod init;

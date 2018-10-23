@@ -18,6 +18,7 @@ use std::sync::Arc;
 use web3::futures::prelude::*;
 
 use config::{self, Config};
+use backend::{Backend, BackendFromConfig};
 use aggregation::{detect_valued_pools, ValuedBooleanPropositionPool};
 use self::proxy::ProxyHandler;
 use sync::{MultiBackendSyncState, SyncState};
@@ -453,18 +454,21 @@ fn rpc_rlay_experimental_store_entity(config: &Config) -> impl RpcMethodSimple {
             let cid: String = format!("0x{}", entity.to_cid().unwrap().to_bytes().to_hex());
 
             let options_object = params_array.get(1).unwrap();
-            let backend_name = options_object
+            let backend_name: Option<&str> = options_object
                 .as_object()
                 .unwrap()
                 .get("backend")
-                .unwrap()
-                .as_str()
-                .unwrap();
-            let backend_config: &config::BackendConfig = config.backends.get(backend_name).unwrap();
-            match backend_config {
+                .map(|n| n.as_str().unwrap());
+
+            let backend_res = config.get_backend(backend_name);
+            if let Err(err) = backend_res {
+                return Err(jsonrpc_core::Error::invalid_params(format!("{}", err)));
+            }
+            let backend = backend_res.unwrap();
+            match backend {
                 #[cfg(feature = "backend_neo4j")]
-                config::BackendConfig::Neo4j(backend) => {
-                    let client = backend.client().unwrap();
+                Backend::Neo4j(backend) => {
+                    let client = backend.config.client().unwrap();
                     let kind_name: &str = entity.kind().into();
                     let entity_val = serde_json::to_value(entity).unwrap();
                     let val = entity_val.as_object().unwrap();
@@ -498,8 +502,7 @@ fn rpc_rlay_experimental_store_entity(config: &Config) -> impl RpcMethodSimple {
                         client.exec(relationship).unwrap();
                     }
                 }
-                #[cfg(not(feature = "backend_neo4j"))]
-                config::BackendConfig::Neo4j(_) => {}
+                _ => unimplemented!(),
             }
 
             Ok(serde_json::to_value(cid).unwrap())
