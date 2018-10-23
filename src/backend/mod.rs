@@ -1,10 +1,16 @@
-#[allow(unused_imports)]
+#![allow(unused_imports)]
 use failure::{err_msg, Error};
+use serde_json::Value;
+use cid::Cid;
+use rlay_ontology::ontology::Entity;
+
 use config::backend::BackendConfig;
 
+mod ethereum;
 #[cfg(feature = "backend_neo4j")]
 mod neo4j;
 
+use self::ethereum::EthereumBackend;
 #[cfg(feature = "backend_neo4j")]
 use self::neo4j::Neo4jBackend;
 
@@ -34,4 +40,22 @@ impl BackendFromConfig for Backend {
     }
 }
 
-pub struct EthereumBackend {}
+pub trait BackendRpcMethods {
+    #[allow(unused_variables)]
+    fn store_entity(&mut self, entity: &Entity, options_object: &Value) -> Result<Cid, Error> {
+        Err(err_msg(
+            "The requested endpoint does not support this RPC method.",
+        ))
+    }
+}
+
+impl BackendRpcMethods for Backend {
+    #[allow(unused_variables)]
+    fn store_entity(&mut self, entity: &Entity, options_object: &Value) -> Result<Cid, Error> {
+        match self {
+            #[cfg(feature = "backend_neo4j")]
+            Backend::Neo4j(backend) => backend.store_entity(entity, options_object),
+            Backend::Ethereum(_) => unimplemented!(),
+        }
+    }
+}
