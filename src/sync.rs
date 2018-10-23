@@ -41,6 +41,32 @@ pub fn subscribe_with_history(
 }
 
 #[derive(Clone)]
+pub struct MultiBackendSyncState {
+    backends: HashMap<String, SyncState>,
+}
+
+impl MultiBackendSyncState {
+    pub fn new() -> Self {
+        Self {
+            backends: HashMap::new(),
+        }
+    }
+
+    pub fn add_backend(&mut self, name: String) {
+        self.backends.insert(name, SyncState::new());
+    }
+
+    pub fn backend(&self, name: &str) -> Option<SyncState> {
+        self.backends.get(name).map(|n| n.to_owned())
+    }
+
+    // #[cfg_attr(debug_assertions, deprecated(note = "Refactoring to swappable backends"))]
+    pub fn default_eth_backend(&self) -> SyncState {
+        self.backend("default_eth").unwrap()
+    }
+}
+
+#[derive(Clone)]
 pub struct SyncState {
     pub ontology: OntologySyncState,
     pub proposition_ledger: Arc<Mutex<PropositionLedger>>,
@@ -173,7 +199,12 @@ impl ComputedState {
 pub fn run_sync(config: &Config) {
     let mut eloop = tokio_core::reactor::Core::new().unwrap();
 
-    let sync_state = SyncState::new();
+    let sync_state = {
+        let mut sync_state = MultiBackendSyncState::new();
+        sync_state.add_backend("default_eth".to_owned());
+
+        sync_state
+    };
     let computed_state = ComputedState::load_from_files(config.clone());
 
     // Sync ontology concepts from smart contract to local state
@@ -182,10 +213,12 @@ pub fn run_sync(config: &Config) {
         .sync_ontology(
             eloop.handle(),
             config.clone(),
-            sync_state.entity_map(),
-            sync_state.cid_entity_kind_map(),
-            sync_state.block_entity_map(),
-            sync_state.ontology_last_synced_block(),
+            sync_state.default_eth_backend().entity_map(),
+            sync_state.default_eth_backend().cid_entity_kind_map(),
+            sync_state.default_eth_backend().block_entity_map(),
+            sync_state
+                .default_eth_backend()
+                .ontology_last_synced_block(),
         )
         .map_err(|err| {
             error!("Sync ontology: {:?}", err);
@@ -195,8 +228,10 @@ pub fn run_sync(config: &Config) {
     let sync_proposition_ledger_fut = sync_ledger(
         eloop.handle(),
         config.clone(),
-        sync_state.proposition_ledger(),
-        sync_state.proposition_ledger_block_highwatermark(),
+        sync_state.default_eth_backend().proposition_ledger(),
+        sync_state
+            .default_eth_backend()
+            .proposition_ledger_block_highwatermark(),
     ).map_err(|err| {
         error!("Sync ledger: {:?}", err);
         ()
@@ -211,10 +246,12 @@ pub fn run_sync(config: &Config) {
                     fill_epoch_payouts(
                         epoch_start_block,
                         epoch_length,
-                        &sync_state.proposition_ledger_block_highwatermark(),
-                        &sync_state.proposition_ledger(),
+                        &sync_state
+                            .default_eth_backend()
+                            .proposition_ledger_block_highwatermark(),
+                        &sync_state.default_eth_backend().proposition_ledger(),
                         &computed_state.payout_epochs(),
-                        &sync_state.entity_map(),
+                        &sync_state.default_eth_backend().entity_map(),
                     );
                     fill_epoch_payouts_cumulative(
                         &computed_state.payout_epochs(),
@@ -227,7 +264,7 @@ pub fn run_sync(config: &Config) {
                     ()
                 })
         });
-    let sync_state_counter = sync_state.clone();
+    let sync_state_counter = sync_state.default_eth_backend().clone();
     let computed_state_counter = computed_state.clone();
     // Print some statistics about the local state
     let counter_stream = match log_enabled!(Debug) {

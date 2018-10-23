@@ -20,13 +20,13 @@ use web3::futures::prelude::*;
 use config::{self, Config};
 use aggregation::{detect_valued_pools, ValuedBooleanPropositionPool};
 use self::proxy::ProxyHandler;
-use sync::SyncState;
+use sync::{MultiBackendSyncState, SyncState};
 use web3_helpers::HexString;
 
 const NETWORK_VERSION: &'static str = "0.3.0";
 const CLIENT_VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
-pub fn start_rpc(full_config: &Config, sync_state: SyncState) {
+pub fn start_rpc(full_config: &Config, sync_state: MultiBackendSyncState) {
     let config = full_config.rpc.clone();
     if config.disabled {
         debug!("RPC disabled. Not starting RPC server.");
@@ -74,9 +74,12 @@ pub fn start_rpc(full_config: &Config, sync_state: SyncState) {
                 let sink = subscriber
                     .assign_id(SubscriptionId::Number(meta.session_id))
                     .unwrap();
-                let entity_map = sub_sync_state.entity_map();
+                let entity_map = sub_sync_state.backend("default_eth").unwrap().entity_map();
                 let mut entity_map_lock = entity_map.lock().unwrap();
-                let block_entity_map = sub_sync_state.block_entity_map();
+                let block_entity_map = sub_sync_state
+                    .backend("default_eth")
+                    .unwrap()
+                    .block_entity_map();
                 let block_entity_map_lock = block_entity_map.lock().unwrap();
                 let entity_stream = entity_map_lock
                     .on_insert_entity_with_replay(param_from_block, &block_entity_map_lock);
@@ -125,7 +128,7 @@ pub fn start_rpc(full_config: &Config, sync_state: SyncState) {
 
 pub fn proxy_handler_with_methods(
     full_config: &Config,
-    sync_state: SyncState,
+    sync_state: MultiBackendSyncState,
 ) -> ProxyHandler<proxy::NoopPubSubMetadata> {
     let mut io = ProxyHandler::new_with_noop(
         full_config
@@ -137,24 +140,24 @@ pub fn proxy_handler_with_methods(
     io.add_method("rlay_version", rpc_rlay_version(full_config));
     io.add_method(
         "rlay_getPropositionPools",
-        rpc_rlay_get_proposition_pools(sync_state.clone()),
+        rpc_rlay_get_proposition_pools(sync_state.default_eth_backend()),
     );
     io.add_method("rlay_encodeForStore", rpc_rlay_encode_for_store());
     io.add_method(
         "rlay_experimentalKindForCid",
-        rpc_rlay_experimental_kind_for_cid(sync_state.clone()),
+        rpc_rlay_experimental_kind_for_cid(sync_state.default_eth_backend()),
     );
     io.add_method(
         "rlay_experimentalListCids",
-        rpc_rlay_experimental_list_cids(sync_state.clone()),
+        rpc_rlay_experimental_list_cids(sync_state.default_eth_backend()),
     );
     io.add_method(
         "rlay_experimentalListCidsIndex",
-        rpc_rlay_experimental_list_cids_index(sync_state.clone()),
+        rpc_rlay_experimental_list_cids_index(sync_state.default_eth_backend()),
     );
     io.add_method(
         "rlay_experimentalGetEntity",
-        rpc_rlay_experimental_get_entity(sync_state.clone()),
+        rpc_rlay_experimental_get_entity(sync_state.default_eth_backend()),
     );
     io.add_method(
         "rlay_experimentalGetEntityCid",
