@@ -31,19 +31,40 @@ impl BackendRpcMethods for Neo4jBackend {
         let val = entity_val.as_object().unwrap();
         let mut values = Vec::new();
         let mut relationships = Vec::new();
-        // TODO: support non-array relationships
-        for (key, value) in val {
-            if let Value::Array(array_val) = value {
-                for relationship_value in array_val {
-                    let rel_query = format!(
-                                    "MATCH (n {{ cid: \"{0}\"}}) MERGE (m {{ cid: {2} }}) MERGE (n)-[r:{1}]->(m)",
-                                    cid, key, relationship_value
-                                );
-                    relationships.push(rel_query);
+        {
+            let mut add_relationship_value = |cid, key, value| {
+                let rel_query = format!(
+                    "MATCH (n {{ cid: \"{0}\"}}) MERGE (m {{ cid: {2} }}) MERGE (n)-[r:{1}]->(m)",
+                    cid, key, value
+                );
+                relationships.push(rel_query);
+            };
+
+            for (key, value) in val {
+                if key == "cid" || key == "type" {
+                    continue;
                 }
-                continue;
+                if (kind_name == "DataPropertyAssertion"
+                    || kind_name == "NegativeDataPropertyAssertion")
+                    && key == "target"
+                {
+                    values.push(format!("n.{0} = {1}", key, value));
+                    continue;
+                }
+                if kind_name == "Annotation" && key == "value" {
+                    values.push(format!("n.{0} = {1}", key, value));
+                    continue;
+                }
+                if let Value::Array(array_val) = value {
+                    for relationship_value in array_val {
+                        add_relationship_value(cid.clone(), key, relationship_value);
+                    }
+                    continue;
+                }
+                if let Value::String(_) = value {
+                    add_relationship_value(cid.clone(), key, value);
+                }
             }
-            values.push(format!("n.{0} = {1}", key, value));
         }
 
         let mut query = format!("MERGE (n {{cid: \"{1}\"}}) SET n:{0}", kind_name, cid);
