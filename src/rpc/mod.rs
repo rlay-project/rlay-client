@@ -452,22 +452,20 @@ fn rpc_rlay_experimental_store_entity(config: &Config) -> impl RpcMethodSimple {
             let entity: Entity = serde_json::from_value(entity_object.clone())
                 .map_err(|err| jsonrpc_core::Error::invalid_params(err.description()))?;
 
-            let options_object = params_array.get(1).unwrap();
+            let default_options = json!({});
+            let options_object = params_array.get(1).or(Some(&default_options));
             let backend_name: Option<&str> = options_object
-                .as_object()
-                .unwrap()
-                .get("backend")
-                .map(|n| n.as_str().unwrap());
+                .and_then(|n| n.as_object())
+                .and_then(|n| n.get("backend"))
+                .and_then(|n| n.as_str());
 
-            let backend_res = config.get_backend(backend_name);
-            if let Err(err) = backend_res {
-                return Err(jsonrpc_core::Error::invalid_params(format!("{}", err)));
-            }
-            let mut backend = backend_res.unwrap();
+            let mut backend = config
+                .get_backend(backend_name)
+                .map_err(failure_into_jsonrpc_err)?;
 
             let raw_cid = backend
-                .store_entity(&entity, &options_object)
-                .map_err(|err| jsonrpc_core::Error::invalid_params(format!("{}", err)))?;
+                .store_entity(&entity, &options_object.unwrap())
+                .map_err(failure_into_jsonrpc_err)?;
 
             let cid: String = format!("0x{}", raw_cid.to_bytes().to_hex());
             Ok(serde_json::to_value(cid).unwrap())
@@ -475,4 +473,8 @@ fn rpc_rlay_experimental_store_entity(config: &Config) -> impl RpcMethodSimple {
             unimplemented!()
         }
     }
+}
+
+fn failure_into_jsonrpc_err(err: ::failure::Error) -> jsonrpc_core::Error {
+    jsonrpc_core::Error::invalid_params(format!("{}", err))
 }

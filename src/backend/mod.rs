@@ -44,7 +44,14 @@ pub trait BackendRpcMethods {
     #[allow(unused_variables)]
     fn store_entity(&mut self, entity: &Entity, options_object: &Value) -> Result<Cid, Error> {
         Err(err_msg(
-            "The requested endpoint does not support this RPC method.",
+            "The requested backend does not support this RPC method.",
+        ))
+    }
+
+    #[allow(unused_variables)]
+    fn get_entity(&mut self, cid: &str) -> Result<Entity, Error> {
+        Err(err_msg(
+            "The requested backend does not support this RPC method.",
         ))
     }
 }
@@ -55,7 +62,16 @@ impl BackendRpcMethods for Backend {
         match self {
             #[cfg(feature = "backend_neo4j")]
             Backend::Neo4j(backend) => backend.store_entity(entity, options_object),
-            Backend::Ethereum(_) => unimplemented!(),
+            Backend::Ethereum(backend) => backend.store_entity(entity, options_object),
+        }
+    }
+
+    #[allow(unused_variables)]
+    fn get_entity(&mut self, cid: &str) -> Result<Entity, Error> {
+        match self {
+            #[cfg(feature = "backend_neo4j")]
+            Backend::Neo4j(backend) => backend.get_entity(cid),
+            Backend::Ethereum(backend) => backend.get_entity(cid),
         }
     }
 }

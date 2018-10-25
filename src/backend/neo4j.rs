@@ -82,4 +82,8 @@ impl BackendRpcMethods for Neo4jBackend {
 
         Ok(raw_cid)
     }
+
+    fn get_entity(&mut self, cid: &str) -> Result<Entity, Error> {
+        unimplemented!()
+    }
 }
