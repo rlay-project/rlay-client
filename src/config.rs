@@ -140,7 +140,8 @@ impl Config {
         match backend_name {
             None => {
                 if self.backends.len() > 1 {
-                    Err(err_msg("Multiple backends have been configured. Must specify the name of a backend to use."))
+                    let backend_names: Vec<_> = self.backends.keys().collect();
+                    Err(format_err!("Multiple backends have been configured. Must specify the name of a backend to use. Available backends: {:?}", backend_names))
                 } else if self.backends.len() == 0 {
                     Err(err_msg("No backends have been configured."))
                 } else {
