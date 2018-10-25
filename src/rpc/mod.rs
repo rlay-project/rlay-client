@@ -75,12 +75,9 @@ pub fn start_rpc(full_config: &Config, sync_state: MultiBackendSyncState) {
                 let sink = subscriber
                     .assign_id(SubscriptionId::Number(meta.session_id))
                     .unwrap();
-                let entity_map = sub_sync_state.backend("default_eth").unwrap().entity_map();
+                let entity_map = sub_sync_state.default_eth_backend().entity_map();
                 let mut entity_map_lock = entity_map.lock().unwrap();
-                let block_entity_map = sub_sync_state
-                    .backend("default_eth")
-                    .unwrap()
-                    .block_entity_map();
+                let block_entity_map = sub_sync_state.default_eth_backend().block_entity_map();
                 let block_entity_map_lock = block_entity_map.lock().unwrap();
                 let entity_stream = entity_map_lock
                     .on_insert_entity_with_replay(param_from_block, &block_entity_map_lock);

@@ -237,7 +237,11 @@ pub fn run_sync(config: &Config) {
         ()
     });
     // Calculate the payouts based on proposition ledger
-    let epoch_length: U256 = config.epoch_length.into();
+    let epoch_length: U256 = config
+        .default_eth_backend_config()
+        .unwrap()
+        .epoch_length
+        .into();
     let calculate_payouts_fut = retrieve_epoch_start_block(&eloop.handle().clone(), config)
         .and_then(|epoch_start_block| {
             Interval::new(Duration::from_secs(15))
@@ -342,7 +346,11 @@ pub fn run_sync(config: &Config) {
     // Submit calculated payout roots to smart contract
     let submit_handle = eloop.handle().clone();
     let computed_state_submit = computed_state.clone();
-    let submit_payouts = match config.payout_root_submission_disabled {
+    let submit_payouts = match config
+        .default_eth_backend_config()
+        .unwrap()
+        .payout_root_submission_disabled
+    {
         true => {
             trace!("Payout root submission disabled in config.");
             futures::future::Either::A(futures::future::empty())

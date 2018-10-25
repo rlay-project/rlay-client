@@ -10,7 +10,7 @@ use web3::types::H160;
 use web3;
 use futures_timer::FutureExt;
 
-use config::Config;
+use config::{Config, EthereumBackendConfig};
 
 pub static SUCCESS: Emoji = Emoji("✅  ", "");
 pub static FAILURE: Emoji = Emoji("❌  ", "");
@@ -114,7 +114,7 @@ pub fn print_contract_check(
 pub fn check_contracts(
     eloop: &mut tokio_core::reactor::Core,
     web3: &web3::Web3<impl Transport>,
-    config: &Config,
+    config: &EthereumBackendConfig,
 ) {
     if config.contract_addresses.is_empty() {
         println!(
@@ -163,13 +163,23 @@ pub fn check_web3(
             "{}{} (at \"{}\")",
             SUCCESS,
             style("Able to connect to JSON-RPC").green(),
-            config.network_address.as_ref().unwrap()
+            config
+                .default_eth_backend_config()
+                .unwrap()
+                .network_address
+                .as_ref()
+                .unwrap()
         ),
         Err(_) => println!(
             "{}{} (at \"{}\")",
             FAILURE,
             style("Unable to connect to JSON-RPC after 10s timeout").red(),
-            config.network_address.as_ref().unwrap()
+            config
+                .default_eth_backend_config()
+                .unwrap()
+                .network_address
+                .as_ref()
+                .unwrap()
         ),
     }
 }
@@ -179,5 +189,9 @@ pub fn run_checks(config: &Config) {
     let web3 = config.web3_with_handle(&eloop.handle());
 
     check_web3(&mut eloop, &web3, &config);
-    check_contracts(&mut eloop, &web3, &config);
+    check_contracts(
+        &mut eloop,
+        &web3,
+        &config.default_eth_backend_config().unwrap(),
+    );
 }

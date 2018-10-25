@@ -13,42 +13,20 @@ use web3;
 
 use backend::{Backend, BackendFromConfig};
 pub use self::rpc::RpcConfig;
-pub use self::backend::{BackendConfig, Neo4jBackendConfig};
+pub use self::backend::{BackendConfig, EthereumBackendConfig, Neo4jBackendConfig};
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Config {
-    #[serde(default = "default_network_address")]
-    /// Address of the host networks RPC
-    pub network_address: Option<String>,
-    #[serde(default)]
-    pub contract_addresses: HashMap<String, String>,
     #[serde(default = "default_data_path")]
     pub data_path: Option<String>,
     #[serde(default = "default_rpc_section")]
     pub rpc: RpcConfig,
-    // TODO: should be taken from smart contract
-    #[serde(default = "default_epoch_length")]
-    pub epoch_length: u64,
-    #[serde(default = "default_payout_root_submission_disabled")]
-    pub payout_root_submission_disabled: bool,
     #[serde(default)]
     pub backends: HashMap<String, BackendConfig>,
 }
 
-fn default_network_address() -> Option<String> {
-    Some("ws://localhost:8545".to_owned())
-}
-
 fn default_data_path() -> Option<String> {
     Some("./rlay_data".to_owned())
-}
-
-fn default_epoch_length() -> u64 {
-    100
-}
-
-fn default_payout_root_submission_disabled() -> bool {
-    false
 }
 
 fn default_rpc_section() -> RpcConfig {
@@ -92,10 +70,14 @@ impl Config {
     }
 
     pub fn contract_address(&self, name: &str) -> H160 {
-        let address_bytes = self.contract_addresses.get(name).expect(&format!(
-            "Could not find configuration key for contract_addresses.{}",
-            name
-        ))[2..]
+        let address_bytes = self.default_eth_backend_config()
+            .unwrap()
+            .contract_addresses
+            .get(name)
+            .expect(&format!(
+                "Could not find configuration key for contract_addresses.{}",
+                name
+            ))[2..]
             .from_hex()
             .unwrap();
 
@@ -106,11 +88,22 @@ impl Config {
         &self,
         eloop_handle: &tokio_core::reactor::Handle,
     ) -> web3::Web3<impl DuplexTransport> {
-        let network_address: Url = self.network_address.as_ref().unwrap().parse().unwrap();
+        let network_address: Url = self.default_eth_backend_config()
+            .unwrap()
+            .network_address
+            .as_ref()
+            .unwrap()
+            .parse()
+            .unwrap();
         let transport = match network_address.scheme() {
             #[cfg(feature = "transport_ws")]
             "ws" => web3::transports::WebSocket::with_event_loop(
-                    self.network_address.as_ref().unwrap(),
+                    self
+                        .default_eth_backend_config()
+                        .unwrap()
+                        .network_address
+                        .as_ref()
+                        .unwrap(),
                     eloop_handle
                 ).unwrap()
             ,
@@ -137,8 +130,14 @@ impl Config {
         Ok(())
     }
 
-    pub fn get_backend(&self, backend_name: Option<&str>) -> Result<Backend, Error> {
-        let config_for_name: &BackendConfig = match backend_name {
+    // #[cfg_attr(debug_assertions, deprecated(note = "Refactoring to swappable backends"))]
+    pub fn default_eth_backend_config(&self) -> Result<&EthereumBackendConfig, Error> {
+        let config = self.get_backend_config(Some("default_eth"))?;
+        Ok(config.as_ethereum().unwrap())
+    }
+
+    pub fn get_backend_config(&self, backend_name: Option<&str>) -> Result<&BackendConfig, Error> {
+        match backend_name {
             None => {
                 if self.backends.len() > 1 {
                     Err(err_msg("Multiple backends have been configured. Must specify the name of a backend to use."))
@@ -152,7 +151,11 @@ impl Config {
                 "Unable to find backend for name \"{}\"",
                 backend_name
             )),
-        }?;
+        }
+    }
+
+    pub fn get_backend(&self, backend_name: Option<&str>) -> Result<Backend, Error> {
+        let config_for_name: &BackendConfig = self.get_backend_config(backend_name)?;
 
         Backend::from_config(config_for_name.to_owned())
     }
@@ -192,13 +195,65 @@ pub mod rpc {
 }
 
 pub mod backend {
+    use rustc_hex::FromHex;
+    use std::collections::HashMap;
+    use web3::types::H160;
     #[cfg(feature = "backend_neo4j")]
     use rusted_cypher::GraphClient;
 
     #[derive(Debug, Deserialize, Clone)]
     #[serde(tag = "type")]
     pub enum BackendConfig {
+        #[serde(rename = "ethereum")] Ethereum(EthereumBackendConfig),
         #[serde(rename = "neo4j")] Neo4j(Neo4jBackendConfig),
+    }
+
+    impl BackendConfig {
+        pub fn as_ethereum(&self) -> Option<&EthereumBackendConfig> {
+            match self {
+                BackendConfig::Ethereum(config) => Some(config),
+                _ => None,
+            }
+        }
+    }
+
+    #[derive(Debug, Deserialize, Clone)]
+    pub struct EthereumBackendConfig {
+        #[serde(default = "default_network_address")]
+        /// Address of the host networks RPC
+        pub network_address: Option<String>,
+        #[serde(default)]
+        pub contract_addresses: HashMap<String, String>,
+        // TODO: should be taken from smart contract
+        #[serde(default = "default_epoch_length")]
+        pub epoch_length: u64,
+        #[serde(default = "default_payout_root_submission_disabled")]
+        pub payout_root_submission_disabled: bool,
+    }
+
+    fn default_network_address() -> Option<String> {
+        Some("ws://localhost:8545".to_owned())
+    }
+
+    fn default_epoch_length() -> u64 {
+        100
+    }
+
+    fn default_payout_root_submission_disabled() -> bool {
+        false
+    }
+
+    impl EthereumBackendConfig {
+        pub fn contract_address(&self, name: &str) -> H160 {
+            let address_bytes = self.contract_addresses.get(name).expect(&format!(
+                "Could not find configuration key for contract_addresses.{}",
+                name
+            ))[2..]
+                .from_hex()
+                .unwrap();
+
+            H160::from_slice(&address_bytes)
+        }
     }
 
     #[derive(Debug, Deserialize, Clone)]

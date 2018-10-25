@@ -30,6 +30,9 @@ impl BackendFromConfig for Backend {
 
     fn from_config(config: Self::C) -> Result<Self, Error> {
         match config {
+            BackendConfig::Ethereum(config) => {
+                Ok(Backend::Ethereum(EthereumBackend::from_config(config)?))
+            }
             #[cfg(feature = "backend_neo4j")]
             BackendConfig::Neo4j(config) => Ok(Backend::Neo4j(Neo4jBackend::from_config(config)?)),
             #[cfg(not(feature = "backend_neo4j"))]
