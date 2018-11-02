@@ -18,10 +18,10 @@ use std::sync::Arc;
 use web3::futures::prelude::*;
 
 use config::Config;
-use backend::BackendRpcMethods;
+use backend::{BackendRpcMethods, EthereumSyncState as SyncState};
 use aggregation::{detect_valued_pools, ValuedBooleanPropositionPool};
 use self::proxy::ProxyHandler;
-use sync::{MultiBackendSyncState, SyncState};
+use sync::MultiBackendSyncState;
 use web3_helpers::HexString;
 
 const NETWORK_VERSION: &'static str = "0.3.0";
@@ -155,7 +155,7 @@ pub fn proxy_handler_with_methods(
     );
     io.add_method(
         "rlay_experimentalGetEntity",
-        rpc_rlay_experimental_get_entity(sync_state.default_eth_backend()),
+        rpc_rlay_experimental_get_entity(full_config, sync_state),
     );
     io.add_method(
         "rlay_experimentalGetEntityCid",
@@ -407,19 +407,44 @@ fn rpc_rlay_experimental_list_cids_index(sync_state: SyncState) -> impl RpcMetho
     }
 }
 
-fn rpc_rlay_experimental_get_entity(sync_state: SyncState) -> impl RpcMethodSimple {
+fn rpc_rlay_experimental_get_entity(
+    config: &Config,
+    sync_state: MultiBackendSyncState,
+) -> impl RpcMethodSimple {
+    let config = config.clone();
+    let sync_state = sync_state.clone();
     move |params: Params| {
         if let Params::Array(params_array) = params {
-            let entity_map = sync_state.entity_map();
-            let entity_map_lock = entity_map.lock().unwrap();
+            // let entity_map = sync_state.entity_map();
+            // let entity_map_lock = entity_map.lock().unwrap();
 
             let cid = params_array.get(0).unwrap().as_str().unwrap();
-            let cid_no_prefix = str::replace(cid, "0x", "");
-            let cid_bytes = cid_no_prefix.from_hex().unwrap();
 
-            let entity_kind = entity_map_lock.get(&cid_bytes);
-            debug!("retrieved {:?}", entity_kind.is_some());
-            Ok(serde_json::to_value(entity_kind).unwrap())
+            let default_options = json!({});
+            let options_object = params_array.get(1).or(Some(&default_options));
+            let backend_name: Option<&str> = options_object
+                .and_then(|n| n.as_object())
+                .and_then(|n| n.get("backend"))
+                .and_then(|n| n.as_str());
+
+            let mut backend = config
+                .get_backend_with_syncstate(backend_name, &sync_state)
+                .map_err(failure_into_jsonrpc_err)?;
+
+            let entity = backend.get_entity(&cid).map_err(failure_into_jsonrpc_err)?;
+
+            // let entity = match backend {
+            // Backend::Ethereum(_) => {
+            // let cid_no_prefix = str::replace(cid, "0x", "");
+            // let cid_bytes = cid_no_prefix.from_hex().unwrap();
+
+            // let entity = entity_map_lock.get(&cid_bytes);
+            // }
+            // _ => unimplemented!(),
+            // };
+
+            debug!("retrieved {:?}", entity.is_some());
+            Ok(serde_json::to_value(entity).unwrap())
         } else {
             unimplemented!()
         }

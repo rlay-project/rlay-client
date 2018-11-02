@@ -2,10 +2,10 @@
 use failure::{err_msg, Error};
 use cid::{Cid, ToCid};
 use rustc_hex::ToHex;
-use rlay_ontology::ontology::Entity;
+use rlay_ontology::ontology::{Entity, EntityKind};
 use serde_json::{self, Value};
 
-use backend::{BackendFromConfig, BackendRpcMethods};
+use backend::{BackendFromConfig, BackendFromConfigAndSyncState, BackendRpcMethods};
 use config::backend::Neo4jBackendConfig;
 
 pub struct Neo4jBackend {
@@ -16,6 +16,15 @@ impl BackendFromConfig for Neo4jBackend {
     type C = Neo4jBackendConfig;
 
     fn from_config(config: Self::C) -> Result<Self, Error> {
+        Ok(Self { config })
+    }
+}
+
+impl BackendFromConfigAndSyncState for Neo4jBackend {
+    type C = Neo4jBackendConfig;
+    type S = ();
+
+    fn from_config_and_syncstate(config: Self::C, _sync_state: Self::S) -> Result<Self, Error> {
         Ok(Self { config })
     }
 }
@@ -83,7 +92,61 @@ impl BackendRpcMethods for Neo4jBackend {
         Ok(raw_cid)
     }
 
-    fn get_entity(&mut self, _cid: &str) -> Result<Entity, Error> {
-        unimplemented!()
+    fn get_entity(&mut self, cid: &str) -> Result<Option<Entity>, Error> {
+        let client = self.config.client().unwrap();
+
+        let query = format!(
+            "MATCH (n {{ cid: \"{0}\"}})-[r]->(m) RETURN labels(n),n,type(r),m",
+            cid
+        );
+        let query_res = client.exec(query).unwrap();
+        if query_res.rows().count() == 0 {
+            return Ok(None);
+        }
+
+        let first_row = query_res.rows().next().unwrap();
+        let labels: Value = first_row.get("labels(n)").unwrap();
+        let label = labels.as_array().unwrap()[0].clone();
+        // build empty entity with which we can check if fields are supposed to be arrays
+        let entity_kind = EntityKind::from_name(label.as_str().unwrap()).unwrap();
+        let empty_entity: Value = serde_json::to_value(entity_kind.empty_entity()).unwrap();
+
+        let mut entity: Value = first_row.get("n").unwrap();
+        entity["type"] = label;
+        entity.as_object_mut().unwrap().remove("cid");
+
+        for row in query_res.rows() {
+            let value_value: Value = row.get("m").unwrap();
+            let value_cid = value_value["cid"].clone();
+
+            let rel_type_value: Value = first_row.get("type(r)").unwrap();
+            let rel_type = rel_type_value.as_str().unwrap().clone();
+
+            match empty_entity[rel_type] {
+                Value::Array(_) => {
+                    if !entity[rel_type].is_array() {
+                        entity[rel_type] = Value::Array(Vec::new());
+                    }
+                    entity[rel_type].as_array_mut().unwrap().push(value_cid);
+                }
+                Value::String(_) => {
+                    entity[rel_type] = value_cid;
+                }
+                _ => unimplemented!(),
+            }
+        }
+
+        let entity: Entity = serde_json::from_value(entity).unwrap();
+
+        let retrieved_cid = format!("0x{}", entity.to_cid().unwrap().to_bytes().to_hex());
+        if retrieved_cid != cid {
+            return Err(format_err!(
+                "The retrieved CID did not match the requested cid: {} !+ {}",
+                cid,
+                retrieved_cid
+            ));
+        }
+
+        Ok(Some(entity))
     }
 }

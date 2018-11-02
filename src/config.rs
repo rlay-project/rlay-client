@@ -11,7 +11,8 @@ use web3::DuplexTransport;
 use web3::types::H160;
 use web3;
 
-use backend::{Backend, BackendFromConfig};
+use sync::MultiBackendSyncState;
+use backend::{Backend, BackendFromConfig, BackendFromConfigAndSyncState};
 pub use self::rpc::RpcConfig;
 pub use self::backend::{BackendConfig, EthereumBackendConfig, Neo4jBackendConfig};
 
@@ -159,6 +160,20 @@ impl Config {
         let config_for_name: &BackendConfig = self.get_backend_config(backend_name)?;
 
         Backend::from_config(config_for_name.to_owned())
+    }
+
+    pub fn get_backend_with_syncstate(
+        &self,
+        backend_name: Option<&str>,
+        sync_state: &MultiBackendSyncState,
+    ) -> Result<Backend, Error> {
+        let config_for_name: &BackendConfig = self.get_backend_config(backend_name)?;
+        let sync_state_for_name: Option<_> = sync_state.get_backend(backend_name).ok();
+
+        Backend::from_config_and_syncstate(
+            config_for_name.to_owned(),
+            sync_state_for_name.map(|n| n.to_owned()),
+        )
     }
 }
 

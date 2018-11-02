@@ -1,5 +1,6 @@
+use failure::{err_msg, Error};
 use futures_timer::Interval;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tokio_core;
@@ -11,9 +12,10 @@ use rustc_hex::ToHex;
 use rlay_ontology::ontology::Entity;
 use log::Level::Debug;
 
+use backend::EthereumSyncState as SyncState;
 use config::Config;
-use sync_ontology::{BlockEntityMap, EntityMap, EthOntologySyncer, OntologySyncer};
-use sync_proposition_ledger::{sync_ledger, PropositionLedger};
+use sync_ontology::{EthOntologySyncer, OntologySyncer};
+use sync_proposition_ledger::sync_ledger;
 use payout::{fill_epoch_payouts, fill_epoch_payouts_cumulative, load_epoch_payouts,
              retrieve_epoch_start_block, store_epoch_payouts, submit_epoch_payouts, Payout,
              PayoutEpochs};
@@ -60,98 +62,28 @@ impl MultiBackendSyncState {
         self.backends.get(name).map(|n| n.to_owned())
     }
 
+    pub fn get_backend(&self, backend_name: Option<&str>) -> Result<&SyncState, Error> {
+        match backend_name {
+            None => {
+                if self.backends.len() > 1 {
+                    let backend_names: Vec<_> = self.backends.keys().collect();
+                    Err(format_err!("Multiple backends have been configured. Must specify the name of a backend to use. Available backends: {:?}", backend_names))
+                } else if self.backends.len() == 0 {
+                    Err(err_msg("No backends have been configured."))
+                } else {
+                    Ok(self.backends.values().next().unwrap())
+                }
+            }
+            Some(backend_name) => self.backends.get(backend_name).ok_or(format_err!(
+                "Unable to find backend for name \"{}\"",
+                backend_name
+            )),
+        }
+    }
+
     // #[cfg_attr(debug_assertions, deprecated(note = "Refactoring to swappable backends"))]
     pub fn default_eth_backend(&self) -> SyncState {
         self.backend("default_eth").unwrap()
-    }
-}
-
-#[derive(Clone)]
-pub struct SyncState {
-    pub ontology: OntologySyncState,
-    pub proposition_ledger: Arc<Mutex<PropositionLedger>>,
-    pub proposition_ledger_block_highwatermark: Arc<Mutex<u64>>,
-}
-
-impl SyncState {
-    pub fn new() -> Self {
-        let ontology = OntologySyncState::new();
-
-        let proposition_ledger: PropositionLedger = vec![];
-        let proposition_ledger_mutex = Arc::new(Mutex::new(proposition_ledger));
-
-        Self {
-            ontology,
-            proposition_ledger: proposition_ledger_mutex,
-            proposition_ledger_block_highwatermark: Arc::new(Mutex::new(0u64)),
-        }
-    }
-
-    pub fn entity_map(&self) -> Arc<Mutex<EntityMap>> {
-        self.ontology.entity_map()
-    }
-
-    pub fn block_entity_map(&self) -> Arc<Mutex<BlockEntityMap>> {
-        self.ontology.block_entity_map()
-    }
-
-    pub fn cid_entity_kind_map(&self) -> Arc<Mutex<BTreeMap<Vec<u8>, String>>> {
-        self.ontology.cid_entity_kind_map()
-    }
-
-    pub fn proposition_ledger(&self) -> Arc<Mutex<PropositionLedger>> {
-        self.proposition_ledger.clone()
-    }
-
-    pub fn proposition_ledger_block_highwatermark(&self) -> Arc<Mutex<u64>> {
-        self.proposition_ledger_block_highwatermark.clone()
-    }
-
-    pub fn ontology_last_synced_block(&self) -> Arc<Mutex<Option<u64>>> {
-        self.ontology.last_synced_block()
-    }
-}
-
-#[derive(Clone)]
-pub struct OntologySyncState {
-    pub entity_map: Arc<Mutex<EntityMap>>,
-    pub block_entity_map: Arc<Mutex<BlockEntityMap>>,
-    pub cid_entity_kind_map: Arc<Mutex<BTreeMap<Vec<u8>, String>>>,
-    pub last_synced_block: Arc<Mutex<Option<u64>>>,
-}
-
-impl OntologySyncState {
-    pub fn new() -> Self {
-        let entity_map = EntityMap::new();
-        let entity_map_mutex = Arc::new(Mutex::new(entity_map));
-
-        let block_entity_map = BlockEntityMap::new();
-        let block_entity_map_mutex = Arc::new(Mutex::new(block_entity_map));
-
-        let cid_entity_kind_map: BTreeMap<Vec<u8>, String> = BTreeMap::new();
-        let cid_entity_kind_map_mutex = Arc::new(Mutex::new(cid_entity_kind_map));
-        Self {
-            entity_map: entity_map_mutex,
-            block_entity_map: block_entity_map_mutex,
-            cid_entity_kind_map: cid_entity_kind_map_mutex,
-            last_synced_block: Arc::new(Mutex::new(None)),
-        }
-    }
-
-    pub fn entity_map(&self) -> Arc<Mutex<EntityMap>> {
-        self.entity_map.clone()
-    }
-
-    pub fn block_entity_map(&self) -> Arc<Mutex<BlockEntityMap>> {
-        self.block_entity_map.clone()
-    }
-
-    pub fn cid_entity_kind_map(&self) -> Arc<Mutex<BTreeMap<Vec<u8>, String>>> {
-        self.cid_entity_kind_map.clone()
-    }
-
-    pub fn last_synced_block(&self) -> Arc<Mutex<Option<u64>>> {
-        self.last_synced_block.clone()
     }
 }
 
