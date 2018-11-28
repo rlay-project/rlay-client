@@ -1,6 +1,7 @@
 use cid::ToCid;
 use multibase::{encode as base_encode, Base};
 use rlay_ontology::ontology;
+use rlay_ontology::prelude::*;
 use serde::Serializer;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -170,19 +171,33 @@ impl ::serde::Serialize for BooleanPropositionPool {
     {
         #[derive(Serialize)]
         struct BooleanPropositionPoolSerialize {
-            values: Vec<Assertion>,
-            positive_values: Vec<Assertion>,
-            negative_values: Vec<Assertion>,
-            canonical_positive_value: Assertion,
-            canonical_negative_value: Assertion,
+            values: Vec<EntityFormatWeb3>,
+            positive_values: Vec<EntityFormatWeb3>,
+            negative_values: Vec<EntityFormatWeb3>,
+            canonical_positive_value: EntityFormatWeb3,
+            canonical_negative_value: EntityFormatWeb3,
         }
 
         let ext = BooleanPropositionPoolSerialize {
-            values: self.values.clone(),
-            positive_values: self.positive_values(),
-            negative_values: self.negative_values(),
-            canonical_positive_value: self.canonical_positive_value(),
-            canonical_negative_value: self.canonical_negative_value(),
+            values: self.values
+                .clone()
+                .into_iter()
+                .map(|n| Into::<Entity>::into(n).to_web3_format())
+                .collect(),
+            positive_values: self.positive_values()
+                .clone()
+                .into_iter()
+                .map(|n| Into::<Entity>::into(n).to_web3_format())
+                .collect(),
+            negative_values: self.negative_values()
+                .clone()
+                .into_iter()
+                .map(|n| Into::<Entity>::into(n).to_web3_format())
+                .collect(),
+            canonical_positive_value: Into::<Entity>::into(self.canonical_positive_value())
+                .to_web3_format(),
+            canonical_negative_value: Into::<Entity>::into(self.canonical_negative_value())
+                .to_web3_format(),
         };
 
         Ok(try!(ext.serialize(serializer)))
@@ -323,7 +338,7 @@ impl ::serde::Serialize for ValuedBooleanPropositionPool {
         #[allow(non_snake_case)]
         struct AssertionWithWeight {
             #[serde(flatten)]
-            pub assertion: Assertion,
+            pub assertion: EntityFormatWeb3,
             pub totalWeight: U256,
             pub isAggregatedValue: bool,
         }
@@ -353,7 +368,7 @@ impl ::serde::Serialize for ValuedBooleanPropositionPool {
         let add_weight = |assertion: Assertion| AssertionWithWeight {
             totalWeight: self.weights_for_value(&assertion),
             isAggregatedValue: self.is_aggregated_value_entity(&assertion),
-            assertion,
+            assertion: Into::<Entity>::into(assertion).to_web3_format(),
         };
 
         let add_weights =

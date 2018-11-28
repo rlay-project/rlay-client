@@ -9,7 +9,7 @@ use jsonrpc_pubsub::{PubSubHandler, Session, Subscriber, SubscriptionId};
 use serde_json;
 use ethabi::token::{StrictTokenizer, Token, Tokenizer};
 use ethabi;
-use rlay_ontology::ontology::{Annotation, Entity};
+use rlay_ontology::prelude::*;
 use rustc_hex::{FromHex, ToHex};
 use url::Url;
 use jsonrpc_core::futures::Future;
@@ -83,7 +83,9 @@ pub fn start_rpc(full_config: &Config, sync_state: MultiBackendSyncState) {
                     .on_insert_entity_with_replay(param_from_block, &block_entity_map_lock);
                 let mut mapped_stream = entity_stream
                     .and_then(|entity| {
-                        Ok(Params::Array(vec![serde_json::to_value(entity).unwrap()]))
+                        Ok(Params::Array(vec![
+                            serde_json::to_value(entity.to_web3_format()).unwrap(),
+                        ]))
                     })
                     .map_err(|_| panic!());
 
@@ -381,7 +383,9 @@ fn rpc_rlay_experimental_list_cids_index(sync_state: SyncState) -> impl RpcMetho
                                 .iter()
                                 .filter(|(_, entity)| &Into::<&str>::into(entity.kind()) == &kind)
                                 .filter(|(_, entity)| {
-                                    let entity_json = serde_json::to_value(entity).unwrap();
+                                    let entity_json = serde_json::to_value(
+                                        (*entity).clone().to_web3_format(),
+                                    ).unwrap();
                                     let field_val = &entity_json[field];
                                     match field_val {
                                         Value::Array(json_values) => {
@@ -415,9 +419,6 @@ fn rpc_rlay_experimental_get_entity(
     let sync_state = sync_state.clone();
     move |params: Params| {
         if let Params::Array(params_array) = params {
-            // let entity_map = sync_state.entity_map();
-            // let entity_map_lock = entity_map.lock().unwrap();
-
             let cid = params_array.get(0).unwrap().as_str().unwrap();
 
             let default_options = json!({});
@@ -433,18 +434,8 @@ fn rpc_rlay_experimental_get_entity(
 
             let entity = backend.get_entity(&cid).map_err(failure_into_jsonrpc_err)?;
 
-            // let entity = match backend {
-            // Backend::Ethereum(_) => {
-            // let cid_no_prefix = str::replace(cid, "0x", "");
-            // let cid_bytes = cid_no_prefix.from_hex().unwrap();
-
-            // let entity = entity_map_lock.get(&cid_bytes);
-            // }
-            // _ => unimplemented!(),
-            // };
-
             debug!("retrieved {:?}", entity.is_some());
-            Ok(serde_json::to_value(entity).unwrap())
+            Ok(serde_json::to_value(entity.map(|n| n.to_web3_format())).unwrap())
         } else {
             unimplemented!()
         }
@@ -455,8 +446,9 @@ fn rpc_rlay_experimental_get_entity_cid() -> impl RpcMethodSimple {
     move |params: Params| {
         if let Params::Array(params_array) = params {
             let entity_object = params_array.get(0).unwrap();
-            let entity: Entity = serde_json::from_value(entity_object.clone())
+            let web3_entity: EntityFormatWeb3 = serde_json::from_value(entity_object.clone())
                 .map_err(|err| jsonrpc_core::Error::invalid_params(err.description()))?;
+            let entity: Entity = Entity::from_web3_format(web3_entity);
             let cid: String = format!("0x{}", entity.to_cid().unwrap().to_bytes().to_hex());
 
             Ok(serde_json::to_value(cid).unwrap())
@@ -471,8 +463,9 @@ fn rpc_rlay_experimental_store_entity(config: &Config) -> impl RpcMethodSimple {
     move |params: Params| {
         if let Params::Array(params_array) = params {
             let entity_object = params_array.get(0).unwrap();
-            let entity: Entity = serde_json::from_value(entity_object.clone())
+            let web3_entity: EntityFormatWeb3 = serde_json::from_value(entity_object.clone())
                 .map_err(|err| jsonrpc_core::Error::invalid_params(err.description()))?;
+            let entity: Entity = Entity::from_web3_format(web3_entity);
 
             let default_options = json!({});
             let options_object = params_array.get(1).or(Some(&default_options));

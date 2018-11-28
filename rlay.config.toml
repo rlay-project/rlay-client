@@ -17,6 +17,6 @@ payout_root_submission_disabled = true
   RlayToken = "0x50a5ed5c21c1241e1f0c449b81020d3e206de6d1"
   PropositionLedger = "0x72628e4e6ad3816056bec173a5cfde9376791a92"
 
-[backends.myneo4j]
-type = "neo4j"
-uri = "http://neo4j:toasty123@localhost:7474/db/data"
+# [backends.myneo4j]
+# type = "neo4j"
+# uri = "http://neo4j:toasty123@localhost:7474/db/data"

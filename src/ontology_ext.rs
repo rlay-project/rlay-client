@@ -1,8 +1,7 @@
 use rlay_ontology::ontology;
 use cid::{self, Cid, ToCid};
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
-#[serde(tag = "type")]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Assertion {
     ClassAssertion(ontology::ClassAssertion),
     NegativeClassAssertion(ontology::NegativeClassAssertion),

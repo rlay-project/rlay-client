@@ -2,7 +2,7 @@
 use failure::{err_msg, Error};
 use cid::{Cid, ToCid};
 use rustc_hex::ToHex;
-use rlay_ontology::ontology::{Entity, EntityKind};
+use rlay_ontology::prelude::*;
 use serde_json::{self, Value};
 
 use backend::{BackendFromConfig, BackendFromConfigAndSyncState, BackendRpcMethods};
@@ -36,7 +36,7 @@ impl BackendRpcMethods for Neo4jBackend {
 
         let client = self.config.client().unwrap();
         let kind_name: &str = entity.kind().into();
-        let entity_val = serde_json::to_value(entity).unwrap();
+        let entity_val = serde_json::to_value(entity.clone().to_web3_format()).unwrap();
         let val = entity_val.as_object().unwrap();
         let mut values = Vec::new();
         let mut relationships = Vec::new();
@@ -109,7 +109,8 @@ impl BackendRpcMethods for Neo4jBackend {
         let label = labels.as_array().unwrap()[0].clone();
         // build empty entity with which we can check if fields are supposed to be arrays
         let entity_kind = EntityKind::from_name(label.as_str().unwrap()).unwrap();
-        let empty_entity: Value = serde_json::to_value(entity_kind.empty_entity()).unwrap();
+        let empty_entity: Value =
+            serde_json::to_value(entity_kind.empty_entity().to_web3_format()).unwrap();
 
         let mut entity: Value = first_row.get("n").unwrap();
         entity["type"] = label;
@@ -136,7 +137,8 @@ impl BackendRpcMethods for Neo4jBackend {
             }
         }
 
-        let entity: Entity = serde_json::from_value(entity).unwrap();
+        let web3_entity: EntityFormatWeb3 = serde_json::from_value(entity).unwrap();
+        let entity: Entity = Entity::from_web3_format(web3_entity);
 
         let retrieved_cid = format!("0x{}", entity.to_cid().unwrap().to_bytes().to_hex());
         if retrieved_cid != cid {

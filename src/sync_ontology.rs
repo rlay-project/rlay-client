@@ -2,7 +2,7 @@ use cid::ToCid;
 use rustc_hex::ToHex;
 use ethabi::{self, Event};
 use multibase::{encode as base_encode, Base};
-use rlay_ontology::ontology::{self, *, FromABIV2ResponseHinted};
+use rlay_ontology::prelude::*;
 use std::collections::{BTreeMap, HashMap, VecDeque};
 use std::sync::{Arc, Mutex};
 use tokio_core;
@@ -115,7 +115,7 @@ impl Stream for EntityMapInsertSubscription {
     }
 }
 
-pub fn entity_map_individuals(entity_map: &EntityMap) -> Vec<&ontology::Individual> {
+pub fn entity_map_individuals(entity_map: &EntityMap) -> Vec<&Individual> {
     entity_map
         .values()
         .filter_map(|entity| match entity {
@@ -125,7 +125,7 @@ pub fn entity_map_individuals(entity_map: &EntityMap) -> Vec<&ontology::Individu
         .collect()
 }
 
-pub fn entity_map_class_assertions(entity_map: &EntityMap) -> Vec<&ontology::ClassAssertion> {
+pub fn entity_map_class_assertions(entity_map: &EntityMap) -> Vec<&ClassAssertion> {
     entity_map
         .values()
         .filter_map(|entity| match entity {
@@ -154,7 +154,7 @@ pub trait OntologySyncer<P: Future<Item = (), Error = ()>> {
 
 pub fn entity_map_negative_class_assertions(
     entity_map: &EntityMap,
-) -> Vec<&ontology::NegativeClassAssertion> {
+) -> Vec<&NegativeClassAssertion> {
     entity_map
         .values()
         .filter_map(|entity| match entity {
