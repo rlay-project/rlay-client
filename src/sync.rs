@@ -128,6 +128,106 @@ impl ComputedState {
     }
 }
 
+/// Spawns a stream onto the provided eventloop that logs stats about the SyncState and the
+/// ComputedState at a regular interval.
+fn spawn_stats_loop(
+    eloop: &tokio_core::reactor::Handle,
+    sync_state: SyncState,
+    computed_state: ComputedState,
+) {
+    if !log_enabled!(Debug) {
+        return;
+    }
+    let counter_stream = Interval::new(Duration::from_secs(5))
+        .for_each(move |_| {
+            let entity_map = sync_state.entity_map();
+            let entity_map_lock = entity_map.lock().unwrap();
+            let ledger_lock = sync_state.proposition_ledger.lock().unwrap();
+            let payout_epochs = computed_state.payout_epochs_cum.lock().unwrap();
+            debug!("Num entities: {}", entity_map_lock.len());
+            let mut annotation_count = 0;
+            let mut class_count = 0;
+            let mut individual_count = 0;
+            for entity in entity_map_lock.values() {
+                match entity {
+                    Entity::Annotation(_) => annotation_count += 1,
+                    Entity::Class(_) => class_count += 1,
+                    Entity::Individual(_) => individual_count += 1,
+                    _ => {}
+                }
+            }
+            debug!("--- Num annotation: {}", annotation_count);
+            debug!("--- Num class: {}", class_count);
+            debug!("--- Num individual: {}", individual_count);
+            debug!("Num propositions: {}", ledger_lock.len());
+
+            for (epoch, payouts) in payout_epochs.iter() {
+                trace!("Payouts for epoch {}: {:?}", epoch, payouts);
+                if payouts.len() <= 0 {
+                    trace!("Not enough payouts to build payout tree");
+                    continue;
+                }
+                let tree = Payout::build_merkle_tree(payouts);
+                debug!(
+                    "submitPayoutRoot({}, \"0x{}\")",
+                    epoch,
+                    tree.root().to_hex()
+                );
+                for payout in payouts {
+                    let proof_str = ::payout::format_redeem_payout_call(*epoch, &tree, payout);
+                    debug!("Payout for 0x{}: {}", payout.address.to_hex(), proof_str);
+                }
+            }
+
+            Ok(())
+        })
+        .map_err(|err| {
+            error!("{:?}", err);
+            ()
+        });
+    eloop.spawn(counter_stream);
+}
+
+/// Spawns stream to continously submit payout roots, if enabled by config.
+fn spawn_payout_root_submission(
+    eloop: &tokio_core::reactor::Handle,
+    config: Config,
+    computed_state: ComputedState,
+) {
+    if config
+        .default_eth_backend_config()
+        .unwrap()
+        .payout_root_submission_disabled
+    {
+        trace!("Payout root submission disabled in config.");
+        return;
+    }
+
+    let submit_payouts_eloop = eloop.clone();
+    let submit_payouts = Interval::new(Duration::from_secs(5))
+        .map_err(|err| {
+            error!("{:?}", err);
+            ()
+        })
+        .for_each(move |_| {
+            submit_epoch_payouts(
+                &submit_payouts_eloop,
+                config.clone(),
+                computed_state.payout_epochs.clone(),
+                computed_state.payout_epochs_cum.clone(),
+            ).map(|_| ())
+                .map_err(|err| {
+                    error!("{:?}", err);
+                    ()
+                })
+        })
+        .map_err(|err| {
+            error!("{:?}", err);
+            ()
+        });
+    eloop.spawn(submit_payouts);
+}
+
 pub fn run_sync(config: &Config) {
     let mut eloop = tokio_core::reactor::Core::new().unwrap();
 
@@ -139,59 +239,74 @@ pub fn run_sync(config: &Config) {
     };
     let computed_state = ComputedState::load_from_files(config.clone());
 
-    // Sync ontology concepts from smart contract to local state
-    let mut syncer = EthOntologySyncer::new();
-    let sync_ontology_fut = syncer
-        .sync_ontology(
+    {
+        // Sync ontology concepts from smart contract to local state
+        let mut syncer = EthOntologySyncer::new();
+        let sync_ontology_fut = syncer
+            .sync_ontology(
+                eloop.handle(),
+                config.clone(),
+                sync_state.default_eth_backend().entity_map(),
+                sync_state.default_eth_backend().cid_entity_kind_map(),
+                sync_state.default_eth_backend().block_entity_map(),
+                sync_state
+                    .default_eth_backend()
+                    .ontology_last_synced_block(),
+            )
+            .map_err(|err| {
+                error!("Sync ontology: {:?}", err);
+                ()
+            });
+        eloop.handle().spawn(sync_ontology_fut);
+    }
+    {
+        // Sync proposition ledger from smart contract to local state
+        let sync_proposition_ledger_fut = sync_ledger(
             eloop.handle(),
             config.clone(),
-            sync_state.default_eth_backend().entity_map(),
-            sync_state.default_eth_backend().cid_entity_kind_map(),
-            sync_state.default_eth_backend().block_entity_map(),
+            sync_state.default_eth_backend().proposition_ledger(),
             sync_state
                 .default_eth_backend()
-                .ontology_last_synced_block(),
-        )
-        .map_err(|err| {
-            error!("Sync ontology: {:?}", err);
+                .proposition_ledger_block_highwatermark(),
+        ).map_err(|err| {
+            error!("Sync ledger: {:?}", err);
             ()
         });
-    // Sync proposition ledger from smart contract to local state
-    let sync_proposition_ledger_fut = sync_ledger(
-        eloop.handle(),
-        config.clone(),
-        sync_state.default_eth_backend().proposition_ledger(),
-        sync_state
-            .default_eth_backend()
-            .proposition_ledger_block_highwatermark(),
-    ).map_err(|err| {
-        error!("Sync ledger: {:?}", err);
-        ()
-    });
-    // Calculate the payouts based on proposition ledger
-    let epoch_length: U256 = config
-        .default_eth_backend_config()
-        .unwrap()
-        .epoch_length
-        .into();
-    let calculate_payouts_fut = retrieve_epoch_start_block(&eloop.handle().clone(), config)
-        .and_then(|epoch_start_block| {
+        eloop.handle().spawn(sync_proposition_ledger_fut);
+    }
+    {
+        let epoch_length: U256 = config
+            .default_eth_backend_config()
+            .unwrap()
+            .epoch_length
+            .into();
+        let computed_state_calculate_payouts = computed_state.clone();
+        let sync_state_calculate_payouts = sync_state.clone();
+
+        let calculate_payouts_fut = retrieve_epoch_start_block(
+            &eloop.handle().clone(),
+            &config.clone(),
+        ).and_then(move |epoch_start_block| {
             Interval::new(Duration::from_secs(15))
                 .and_then(move |_| Ok(epoch_start_block))
-                .for_each(|epoch_start_block| {
+                .for_each(move |epoch_start_block| {
                     fill_epoch_payouts(
                         epoch_start_block,
                         epoch_length,
-                        &sync_state
+                        &sync_state_calculate_payouts
                             .default_eth_backend()
                             .proposition_ledger_block_highwatermark(),
-                        &sync_state.default_eth_backend().proposition_ledger(),
-                        &computed_state.payout_epochs(),
-                        &sync_state.default_eth_backend().entity_map(),
+                        &sync_state_calculate_payouts
+                            .default_eth_backend()
+                            .proposition_ledger(),
+                        &computed_state_calculate_payouts.payout_epochs(),
+                        &sync_state_calculate_payouts
+                            .default_eth_backend()
+                            .entity_map(),
                     );
                     fill_epoch_payouts_cumulative(
-                        &computed_state.payout_epochs(),
-                        &computed_state.payout_epochs_cum(),
+                        &computed_state_calculate_payouts.payout_epochs(),
+                        &computed_state_calculate_payouts.payout_epochs_cum(),
                     );
                     Ok(())
                 })
@@ -200,118 +315,38 @@ pub fn run_sync(config: &Config) {
                     ()
                 })
         });
-    let sync_state_counter = sync_state.default_eth_backend().clone();
-    let computed_state_counter = computed_state.clone();
-    // Print some statistics about the local state
-    let counter_stream = match log_enabled!(Debug) {
-        true => {
-            let counter_stream = Interval::new(Duration::from_secs(5))
-                .for_each(|_| {
-                    let entity_map = sync_state_counter.entity_map();
-                    let entity_map_lock = entity_map.lock().unwrap();
-                    let ledger_lock = sync_state_counter.proposition_ledger.lock().unwrap();
-                    let payout_epochs = computed_state_counter.payout_epochs_cum.lock().unwrap();
-                    debug!("Num entities: {}", entity_map_lock.len());
-                    let mut annotation_count = 0;
-                    let mut class_count = 0;
-                    let mut individual_count = 0;
-                    for entity in entity_map_lock.values() {
-                        match entity {
-                            Entity::Annotation(_) => annotation_count += 1,
-                            Entity::Class(_) => class_count += 1,
-                            Entity::Individual(_) => individual_count += 1,
-                            _ => {}
-                        }
-                    }
-                    debug!("--- Num annotation: {}", annotation_count);
-                    debug!("--- Num class: {}", class_count);
-                    debug!("--- Num individual: {}", individual_count);
-                    debug!("Num propositions: {}", ledger_lock.len());
+        eloop.handle().spawn(calculate_payouts_fut);
+    }
 
-                    for (epoch, payouts) in payout_epochs.iter() {
-                        trace!("Payouts for epoch {}: {:?}", epoch, payouts);
-                        if payouts.len() <= 0 {
-                            trace!("Not enough payouts to build payout tree");
-                            continue;
-                        }
-                        let tree = Payout::build_merkle_tree(payouts);
-                        debug!(
-                            "submitPayoutRoot({}, \"0x{}\")",
-                            epoch,
-                            tree.root().to_hex()
-                        );
-                        for payout in payouts {
-                            let proof_str =
-                                ::payout::format_redeem_payout_call(*epoch, &tree, payout);
-                            debug!("Payout for 0x{}: {}", payout.address.to_hex(), proof_str);
-                        }
-                    }
+    spawn_stats_loop(
+        &eloop.handle(),
+        sync_state.default_eth_backend().clone(),
+        computed_state.clone(),
+    );
 
-                    Ok(())
-                })
-                .map_err(|err| {
-                    error!("{:?}", err);
-                    ()
-                });
-            trace!("Payout root submission disabled in config.");
-            futures::future::Either::A(counter_stream)
-        }
-        false => futures::future::Either::B(futures::future::empty()),
-    };
-
-    // Store calculated payouts on disk
-    let computed_state_store = computed_state.clone();
-    let store_payouts = Interval::new(Duration::from_secs(5))
-        .map_err(|err| {
-            error!("{:?}", err);
-            ()
-        })
-        .for_each(move |_| {
-            store_epoch_payouts(config.clone(), computed_state_store.payout_epochs());
-            Ok(())
-        })
-        .map_err(|err| {
-            error!("{:?}", err);
-            ()
-        });
-
-    // Submit calculated payout roots to smart contract
-    let submit_handle = eloop.handle().clone();
-    let computed_state_submit = computed_state.clone();
-    let submit_payouts = match config
-        .default_eth_backend_config()
-        .unwrap()
-        .payout_root_submission_disabled
     {
-        true => {
-            trace!("Payout root submission disabled in config.");
-            futures::future::Either::A(futures::future::empty())
-        }
-        false => {
-            let submit_with_interval = Interval::new(Duration::from_secs(5))
-                .map_err(|err| {
-                    error!("{:?}", err);
-                    ()
-                })
-                .for_each(move |_| {
-                    submit_epoch_payouts(
-                        &submit_handle,
-                        config.clone(),
-                        computed_state_submit.payout_epochs.clone(),
-                        computed_state_submit.payout_epochs_cum.clone(),
-                    ).map(|_| ())
-                        .map_err(|err| {
-                            error!("{:?}", err);
-                            ()
-                        })
-                })
-                .map_err(|err| {
-                    error!("{:?}", err);
-                    ()
-                });
-            futures::future::Either::B(submit_with_interval)
-        }
-    };
+        // Store calculated payouts on disk
+        let computed_state_store = computed_state.clone();
+        let store_payouts_config = config.clone();
+        let store_payouts = Interval::new(Duration::from_secs(5))
+            .map_err(|err| {
+                error!("{:?}", err);
+                ()
+            })
+            .for_each(move |_| {
+                store_epoch_payouts(
+                    store_payouts_config.clone(),
+                    computed_state_store.payout_epochs(),
+                );
+                Ok(())
+            })
+            .map_err(|err| {
+                error!("{:?}", err);
+                ()
+            });
+        eloop.handle().spawn(store_payouts);
+    }
+    spawn_payout_root_submission(&eloop.handle(), config.clone(), computed_state.clone());
 
     let rpc_config = config.clone();
     let rpc_sync_state = sync_state.clone();
@@ -319,12 +354,7 @@ pub fn run_sync(config: &Config) {
         ::rpc::start_rpc(&rpc_config, rpc_sync_state);
     });
 
-    eloop
-        .run(sync_ontology_fut.join5(
-            sync_proposition_ledger_fut,
-            calculate_payouts_fut,
-            counter_stream,
-            store_payouts.join(submit_payouts),
-        ))
-        .unwrap();
+    loop {
+        eloop.turn(None);
+    }
 }
