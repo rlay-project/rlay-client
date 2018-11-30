@@ -241,23 +241,23 @@ pub fn run_sync(config: &Config) {
 
     {
         // Sync ontology concepts from smart contract to local state
-        let mut syncer = EthOntologySyncer::new();
-        let sync_ontology_fut = syncer
-            .sync_ontology(
-                eloop.handle(),
-                config.clone(),
-                sync_state.default_eth_backend().entity_map(),
-                sync_state.default_eth_backend().cid_entity_kind_map(),
-                sync_state.default_eth_backend().block_entity_map(),
-                sync_state
-                    .default_eth_backend()
-                    .ontology_last_synced_block(),
-            )
-            .map_err(|err| {
-                error!("Sync ontology: {:?}", err);
-                ()
-            });
-        eloop.handle().spawn(sync_ontology_fut);
+        for sync_state in sync_state.backends.values() {
+            let mut syncer = EthOntologySyncer::new();
+            let sync_ontology_fut = syncer
+                .sync_ontology(
+                    eloop.handle(),
+                    config.clone(),
+                    sync_state.entity_map(),
+                    sync_state.cid_entity_kind_map(),
+                    sync_state.block_entity_map(),
+                    sync_state.ontology_last_synced_block(),
+                )
+                .map_err(|err| {
+                    error!("Sync ontology: {:?}", err);
+                    ()
+                });
+            eloop.handle().spawn(sync_ontology_fut);
+        }
     }
     {
         // Sync proposition ledger from smart contract to local state
