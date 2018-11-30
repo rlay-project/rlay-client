@@ -1,5 +1,4 @@
 use cid::ToCid;
-use multibase::{encode as base_encode, Base};
 use rlay_ontology::ontology;
 use rlay_ontology::prelude::*;
 use serde::Serializer;
@@ -10,7 +9,7 @@ use web3::types::U256;
 
 use ontology_ext::*;
 use sync_proposition_ledger::Proposition;
-use web3_helpers::HexString;
+use web3_helpers::{HexString, base58_encode};
 
 pub type PropositionSubject<'a> = &'a [u8];
 
@@ -160,7 +159,7 @@ impl BooleanPropositionPool {
     where
         S: Serializer,
     {
-        serializer.serialize_str(&base_encode(Base::Base58btc, val))
+        serializer.serialize_str(&base58_encode(val))
     }
 }
 

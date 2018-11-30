@@ -1,7 +1,6 @@
 use cid::ToCid;
 use rustc_hex::ToHex;
 use ethabi::{self, Event};
-use multibase::{encode as base_encode, Base};
 use rlay_ontology::prelude::*;
 use std::collections::{BTreeMap, HashMap, VecDeque};
 use std::sync::{Arc, Mutex};
@@ -13,7 +12,7 @@ use web3;
 
 use config::Config;
 use sync::subscribe_with_history;
-use web3_helpers::raw_query;
+use web3_helpers::{raw_query, base58_encode};
 
 pub type InnerEntityMap = BTreeMap<Vec<u8>, Entity>;
 pub type CidEntityMap = BTreeMap<Vec<u8>, String>;
@@ -206,7 +205,7 @@ impl EthOntologySyncer {
         }
 
         let cid = Self::cid_from_log(log, event);
-        let cid_base58 = base_encode(Base::Base58btc, &cid);
+        let cid_base58 = base58_encode(&cid);
         debug!("CID {:?}", cid_base58);
         debug!("CID(hex) 0x{}", cid.to_hex());
         let ontology_contract_abi = include_str!("../data/OntologyStorage.abi");
