@@ -99,6 +99,7 @@ impl BackendRpcMethods for Neo4jBackend {
             "MATCH (n {{ cid: \"{0}\"}})-[r]->(m) RETURN labels(n),n,type(r),m",
             cid
         );
+        trace!("get_entity query: {:?}", query);
         let query_res = client.exec(query).unwrap();
         if query_res.rows().count() == 0 {
             return Ok(None);
@@ -120,7 +121,7 @@ impl BackendRpcMethods for Neo4jBackend {
             let value_value: Value = row.get("m").unwrap();
             let value_cid = value_value["cid"].clone();
 
-            let rel_type_value: Value = first_row.get("type(r)").unwrap();
+            let rel_type_value: Value = row.get("type(r)").unwrap();
             let rel_type = rel_type_value.as_str().unwrap().clone();
 
             match empty_entity[rel_type] {
