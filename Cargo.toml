@@ -8,7 +8,7 @@ edition = "2018"
 [dependencies]
 web3 = "0.4.0"
 cid = { git = 'https://github.com/hobofan/rust-cid', rev = '27798e5245c234dae1236470a5a5568cb067a216' }
-rlay_ontology = { git = 'https://github.com/rlay-project/rlay-ontology', rev = '4017d664f4e017e49cf4ae6c45c93429102e9ef1', features = ["web3_compat"] }
+rlay_ontology = { git = 'https://github.com/rlay-project/rlay-ontology', rev = 'de1ad7f786a796ad2e35d98d2d797a8c630d58ab', features = ["web3_compat"] }
 merkle_light = { git = "https://github.com/hobofan/merkle_light", rev = 'f069616df909cb7a4426f6deb328bde6422a3510' }
 rustc-hex = "1.0.0"
 tokio-core = "0.1.17"
