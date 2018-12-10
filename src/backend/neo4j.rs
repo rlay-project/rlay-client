@@ -4,19 +4,32 @@ use cid::{Cid, ToCid};
 use rustc_hex::ToHex;
 use rlay_ontology::prelude::*;
 use serde_json::{self, Value};
+use rusted_cypher::GraphClient;
 
 use backend::{BackendFromConfig, BackendFromConfigAndSyncState, BackendRpcMethods};
 use config::backend::Neo4jBackendConfig;
 
 pub struct Neo4jBackend {
     pub config: Neo4jBackendConfig,
+    client: Option<GraphClient>,
+}
+
+impl Neo4jBackend {
+    pub fn client(&mut self) -> &GraphClient {
+        if let Some(ref client) = self.client {
+            return client;
+        }
+
+        self.client = Some(self.config.client().unwrap());
+        return self.client.as_ref().unwrap();
+    }
 }
 
 impl BackendFromConfig for Neo4jBackend {
     type C = Neo4jBackendConfig;
 
     fn from_config(config: Self::C) -> Result<Self, Error> {
-        Ok(Self { config })
+        Ok(Self { config, client: None })
     }
 }
 
@@ -25,7 +38,7 @@ impl BackendFromConfigAndSyncState for Neo4jBackend {
     type S = ();
 
     fn from_config_and_syncstate(config: Self::C, _sync_state: Self::S) -> Result<Self, Error> {
-        Ok(Self { config })
+        Ok(Self { config, client: None })
     }
 }
 
@@ -34,7 +47,7 @@ impl BackendRpcMethods for Neo4jBackend {
         let raw_cid = entity.to_cid().unwrap();
         let cid: String = format!("0x{}", raw_cid.to_bytes().to_hex());
 
-        let client = self.config.client().unwrap();
+        let client = self.client();
         let kind_name: &str = entity.kind().into();
         let entity_val = serde_json::to_value(entity.clone().to_web3_format()).unwrap();
         let val = entity_val.as_object().unwrap();
@@ -93,7 +106,7 @@ impl BackendRpcMethods for Neo4jBackend {
     }
 
     fn get_entity(&mut self, cid: &str) -> Result<Option<Entity>, Error> {
-        let client = self.config.client().unwrap();
+        let client = self.client();
 
         let query = format!(
             "MATCH (n {{ cid: \"{0}\"}})-[r]->(m) RETURN labels(n),n,type(r),m",
