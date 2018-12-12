@@ -1,3 +1,4 @@
+use ::web3::types::U256;
 use cid::ToCid;
 use rlay_ontology::ontology;
 use rlay_ontology::prelude::*;
@@ -5,11 +6,10 @@ use serde::Serializer;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use tiny_keccak::keccak256;
-use web3::types::U256;
 
-use ontology_ext::*;
-use sync_proposition_ledger::Proposition;
-use web3_helpers::{HexString, base58_encode};
+use crate::ontology_ext::*;
+use crate::sync_proposition_ledger::Proposition;
+use crate::web3_helpers::{base58_encode, HexString};
 
 pub type PropositionSubject<'a> = &'a [u8];
 
@@ -54,11 +54,12 @@ impl BooleanPropositionPool {
             return false;
         }
         self.values.push(assertion);
-        return true;
+
+        true
     }
 
     pub fn subject(&self) -> PropositionSubject {
-        self.values.get(0).unwrap().get_subject().unwrap().clone()
+        self.values.get(0).unwrap().get_subject().unwrap()
     }
 
     pub fn subject_property(&self) -> Vec<&[u8]> {
@@ -134,7 +135,7 @@ impl BooleanPropositionPool {
         let has_positive = self.has_positive_value();
         let has_negative = self.has_negative_value();
 
-        return has_positive && has_negative;
+        has_positive && has_negative
     }
 
     /// Helper for printing the values of a BooleanPropositionPool.
@@ -146,7 +147,8 @@ impl BooleanPropositionPool {
     }
 
     pub fn hash(&self) -> Vec<u8> {
-        let hash_data = self.canonical_parts()
+        let hash_data = self
+            .canonical_parts()
             .into_iter()
             .fold(Vec::new(), |mut acc, mut val| {
                 acc.append(&mut val);
@@ -178,17 +180,20 @@ impl ::serde::Serialize for BooleanPropositionPool {
         }
 
         let ext = BooleanPropositionPoolSerialize {
-            values: self.values
+            values: self
+                .values
                 .clone()
                 .into_iter()
                 .map(|n| Into::<Entity>::into(n).to_web3_format())
                 .collect(),
-            positive_values: self.positive_values()
+            positive_values: self
+                .positive_values()
                 .clone()
                 .into_iter()
                 .map(|n| Into::<Entity>::into(n).to_web3_format())
                 .collect(),
-            negative_values: self.negative_values()
+            negative_values: self
+                .negative_values()
                 .clone()
                 .into_iter()
                 .map(|n| Into::<Entity>::into(n).to_web3_format())
@@ -199,7 +204,7 @@ impl ::serde::Serialize for BooleanPropositionPool {
                 .to_web3_format(),
         };
 
-        Ok(try!(ext.serialize(serializer)))
+        Ok(ext.serialize(serializer)?)
     }
 }
 
@@ -288,9 +293,9 @@ impl ValuedBooleanPropositionPool {
         }
 
         if false_weight > true_weight {
-            return Some(false);
+            Some(false)
         } else {
-            return Some(true);
+            Some(true)
         }
     }
 
@@ -306,7 +311,8 @@ impl ValuedBooleanPropositionPool {
         if val.is_negative() && aggregated == false {
             return true;
         }
-        return false;
+
+        false
     }
 
     // TODO: potentially broken
@@ -324,7 +330,8 @@ impl ValuedBooleanPropositionPool {
         if val.proposition_cid == true_value_cid && aggregated == true {
             return true;
         }
-        return false;
+
+        false
     }
 }
 
@@ -390,7 +397,8 @@ impl ::serde::Serialize for ValuedBooleanPropositionPool {
             total_weight_aggregation_result = Some(self.negative_weights())
         }
 
-        let subject_property = self.pool
+        let subject_property = self
+            .pool
             .subject_property()
             .into_iter()
             .map(|n| HexString::wrap(n))
@@ -412,7 +420,7 @@ impl ::serde::Serialize for ValuedBooleanPropositionPool {
             totalWeightAggregationResult: total_weight_aggregation_result,
         };
 
-        Ok(try!(ext.serialize(serializer)))
+        Ok(ext.serialize(serializer)?)
     }
 }
 
@@ -425,7 +433,7 @@ pub fn detect_pools(ontology_entities: &[&ontology::Entity]) -> Vec<BooleanPropo
         .for_each(|assertion| {
             let entry = pools
                 .entry(assertion.canonical_parts())
-                .or_insert(BooleanPropositionPool::new());
+                .or_insert_with(BooleanPropositionPool::new);
             entry.try_insert(assertion);
         });
 

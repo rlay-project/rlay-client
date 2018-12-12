@@ -2,10 +2,10 @@ use std::collections::HashMap;
 use std::sync::Mutex;
 use web3::types::U256;
 
-use aggregation::{detect_valued_pools, ValuedBooleanPropositionPool};
-use payout::Payout;
-use sync_proposition_ledger::{Proposition, PropositionLedger};
-use sync_ontology::EntityMap;
+use crate::aggregation::{detect_valued_pools, ValuedBooleanPropositionPool};
+use crate::payout::Payout;
+use crate::sync_ontology::EntityMap;
+use crate::sync_proposition_ledger::{Proposition, PropositionLedger};
 
 // TODO: U256 and get from RlayToken contract
 const TOKENS_PER_BLOCK: f64 = 25000000000000000000f64;

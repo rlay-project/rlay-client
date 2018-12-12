@@ -1,28 +1,28 @@
 mod proxy;
 
-use std::error::Error;
+use ::web3::futures::prelude::*;
 use cid::ToCid;
+use ethabi;
+use ethabi::token::{StrictTokenizer, Token, Tokenizer};
+use jsonrpc_core::futures::Future;
 use jsonrpc_core::{self, *};
 use jsonrpc_http_server::ServerBuilder as HttpServerBuilder;
-use jsonrpc_ws_server::{RequestContext, ServerBuilder as WsServerBuilder};
 use jsonrpc_pubsub::{PubSubHandler, Session, Subscriber, SubscriptionId};
-use serde_json;
-use ethabi::token::{StrictTokenizer, Token, Tokenizer};
-use ethabi;
+use jsonrpc_ws_server::{RequestContext, ServerBuilder as WsServerBuilder};
 use rlay_ontology::prelude::*;
 use rustc_hex::{FromHex, ToHex};
-use url::Url;
-use jsonrpc_core::futures::Future;
-use std::{thread, time};
+use serde_json;
+use std::error::Error;
 use std::sync::Arc;
-use web3::futures::prelude::*;
+use std::{thread, time};
+use url::Url;
 
-use config::Config;
-use backend::{BackendRpcMethods, EthereumSyncState as SyncState};
-use aggregation::{detect_valued_pools, ValuedBooleanPropositionPool};
 use self::proxy::ProxyHandler;
-use sync::MultiBackendSyncState;
-use web3_helpers::HexString;
+use crate::aggregation::{detect_valued_pools, ValuedBooleanPropositionPool};
+use crate::backend::{BackendRpcMethods, EthereumSyncState as SyncState};
+use crate::config::Config;
+use crate::sync::MultiBackendSyncState;
+use crate::web3_helpers::HexString;
 
 const NETWORK_VERSION: &'static str = "0.3.0";
 const CLIENT_VERSION: &'static str = env!("CARGO_PKG_VERSION");
@@ -42,12 +42,15 @@ pub fn start_rpc(full_config: &Config, sync_state: MultiBackendSyncState) {
 
         let address: Url = http_proxy_config.rpc.network_address.parse().unwrap();
         let server = HttpServerBuilder::new(io)
-            .start_http(&format!(
-                "{}:{}",
-                address.host_str().unwrap(),
-                address.port().unwrap()
-            ).parse()
-                .unwrap())
+            .start_http(
+                &format!(
+                    "{}:{}",
+                    address.host_str().unwrap(),
+                    address.port().unwrap()
+                )
+                .parse()
+                .unwrap(),
+            )
             .expect("Unable to start RPC server");
         server.wait();
     });
@@ -83,9 +86,10 @@ pub fn start_rpc(full_config: &Config, sync_state: MultiBackendSyncState) {
                     .on_insert_entity_with_replay(param_from_block, &block_entity_map_lock);
                 let mut mapped_stream = entity_stream
                     .and_then(|entity| {
-                        Ok(Params::Array(vec![
-                            serde_json::to_value(entity.to_web3_format()).unwrap(),
-                        ]))
+                        Ok(Params::Array(vec![serde_json::to_value(
+                            entity.to_web3_format(),
+                        )
+                        .unwrap()]))
                     })
                     .map_err(|_| panic!());
 
@@ -116,12 +120,15 @@ pub fn start_rpc(full_config: &Config, sync_state: MultiBackendSyncState) {
                 context.remote.clone(),
             )
         })
-        .start(&format!(
-            "{}:{}",
-            address.host_str().unwrap(),
-            address.port().unwrap()
-        ).parse()
-            .unwrap())
+        .start(
+            &format!(
+                "{}:{}",
+                address.host_str().unwrap(),
+                address.port().unwrap()
+            )
+            .parse()
+            .unwrap(),
+        )
         .expect("Unable to start RPC server");
     server.wait().unwrap();
 }
@@ -177,7 +184,7 @@ pub fn proxy_handler_with_methods(
 fn rpc_rlay_version(config: &Config) -> impl RpcMethodSimple {
     let config = config.clone();
     move |_: Params| {
-        Ok(json!{{
+        Ok(json! {{
             "networkVersion": NETWORK_VERSION,
             "clientVersion": format!("rlay-client/{}", CLIENT_VERSION),
             "contractAddresses": {
@@ -213,7 +220,8 @@ fn rpc_rlay_get_proposition_pools(sync_state: SyncState) -> impl RpcMethodSimple
                 }
                 if let Some(param_subject_property) = params_map.get("subjectProperty") {
                     let value = |n: &ValuedBooleanPropositionPool| {
-                        let vals: Vec<_> = n.pool
+                        let vals: Vec<_> = n
+                            .pool
                             .subject_property()
                             .into_iter()
                             .map(HexString::fmt)
@@ -252,7 +260,7 @@ fn annotation_from_params(params: &Params) -> ::std::result::Result<Annotation, 
             if let Some(param_annotations) = param_annotations {
                 let param_annotations = param_annotations
                     .as_array()
-                    .ok_or("Param annotations is not an array".to_owned())?;
+                    .ok_or_else(|| "Param annotations is not an array".to_owned())?;
                 let annotations: Vec<_> = param_annotations
                     .iter()
                     .map(|n| StrictTokenizer::tokenize_bytes(n.as_str().unwrap()).unwrap())
@@ -299,7 +307,7 @@ fn rpc_rlay_encode_for_store() -> impl RpcMethodSimple {
 
         let data = function.encode_input(&tokens).unwrap().to_hex();
 
-        Ok(json!{{
+        Ok(json! {{
             "data": data,
         }})
     }
@@ -319,7 +327,7 @@ fn rpc_rlay_experimental_kind_for_cid(sync_state: SyncState) -> impl RpcMethodSi
             let cid_bytes = cid_no_prefix.from_hex().unwrap();
 
             let entity_kind = cid_entity_kind_map_lock.get(&cid_bytes);
-            Ok(json!{{
+            Ok(json! {{
                 "cid": cid,
                 "kind": entity_kind,
             }})
@@ -383,13 +391,16 @@ fn rpc_rlay_experimental_list_cids_index(sync_state: SyncState) -> impl RpcMetho
                                 .iter()
                                 .filter(|(_, entity)| &Into::<&str>::into(entity.kind()) == &kind)
                                 .filter(|(_, entity)| {
-                                    let entity_json = serde_json::to_value(
-                                        (*entity).clone().to_web3_format(),
-                                    ).unwrap();
+                                    let entity_json =
+                                        serde_json::to_value((*entity).clone().to_web3_format())
+                                            .unwrap();
                                     let field_val = &entity_json[field];
                                     match field_val {
                                         Value::Array(json_values) => {
-                                            let values: Vec<_> = json_values.iter().map(|n| n.as_str().unwrap()).collect();
+                                            let values: Vec<_> = json_values
+                                                .iter()
+                                                .map(|n| n.as_str().unwrap())
+                                                .collect();
                                             return values.contains(&value);
                                         }
                                         Value::String(string_value) => return string_value == value,
@@ -422,7 +433,7 @@ fn rpc_rlay_experimental_get_entity(
             let cid = params_array.get(0).unwrap().as_str().unwrap();
 
             let default_options = json!({});
-            let options_object = params_array.get(1).or(Some(&default_options));
+            let options_object = params_array.get(1).or_else(|| Some(&default_options));
             let backend_name: Option<&str> = options_object
                 .and_then(|n| n.as_object())
                 .and_then(|n| n.get("backend"))
@@ -468,7 +479,7 @@ fn rpc_rlay_experimental_store_entity(config: &Config) -> impl RpcMethodSimple {
             let entity: Entity = Entity::from_web3_format(web3_entity);
 
             let default_options = json!({});
-            let options_object = params_array.get(1).or(Some(&default_options));
+            let options_object = params_array.get(1).or_else(|| Some(&default_options));
             let backend_name: Option<&str> = options_object
                 .and_then(|n| n.as_object())
                 .and_then(|n| n.get("backend"))

@@ -1,10 +1,10 @@
 #![allow(unused_imports)]
-use failure::{err_msg, Error};
-use serde_json::Value;
 use cid::Cid;
+use failure::{err_msg, Error};
 use rlay_ontology::ontology::Entity;
+use serde_json::Value;
 
-use config::backend::BackendConfig;
+use crate::config::backend::BackendConfig;
 
 mod ethereum;
 #[cfg(feature = "backend_neo4j")]
@@ -29,7 +29,8 @@ pub trait BackendFromConfigAndSyncState: Sized {
 
 pub enum Backend {
     Ethereum(EthereumBackend),
-    #[cfg(feature = "backend_neo4j")] Neo4j(Neo4jBackend),
+    #[cfg(feature = "backend_neo4j")]
+    Neo4j(Neo4jBackend),
 }
 
 impl BackendFromConfig for Backend {

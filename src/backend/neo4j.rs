@@ -1,13 +1,13 @@
+use cid::{Cid, ToCid};
 #[allow(unused_imports)]
 use failure::{err_msg, Error};
-use cid::{Cid, ToCid};
-use rustc_hex::ToHex;
 use rlay_ontology::prelude::*;
-use serde_json::{self, Value};
+use rustc_hex::ToHex;
 use rusted_cypher::GraphClient;
+use serde_json::{self, Value};
 
-use backend::{BackendFromConfig, BackendFromConfigAndSyncState, BackendRpcMethods};
-use config::backend::Neo4jBackendConfig;
+use crate::backend::{BackendFromConfig, BackendFromConfigAndSyncState, BackendRpcMethods};
+use crate::config::backend::Neo4jBackendConfig;
 
 pub struct Neo4jBackend {
     pub config: Neo4jBackendConfig,
@@ -29,7 +29,10 @@ impl BackendFromConfig for Neo4jBackend {
     type C = Neo4jBackendConfig;
 
     fn from_config(config: Self::C) -> Result<Self, Error> {
-        Ok(Self { config, client: None })
+        Ok(Self {
+            config,
+            client: None,
+        })
     }
 }
 
@@ -38,7 +41,10 @@ impl BackendFromConfigAndSyncState for Neo4jBackend {
     type S = ();
 
     fn from_config_and_syncstate(config: Self::C, _sync_state: Self::S) -> Result<Self, Error> {
-        Ok(Self { config, client: None })
+        Ok(Self {
+            config,
+            client: None,
+        })
     }
 }
 

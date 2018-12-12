@@ -7,14 +7,14 @@ use std::path::Path;
 use tokio_core;
 use toml;
 use url::Url;
-use web3::DuplexTransport;
-use web3::types::H160;
 use web3;
+use web3::types::H160;
+use web3::DuplexTransport;
 
-use sync::MultiBackendSyncState;
-use backend::{Backend, BackendFromConfig, BackendFromConfigAndSyncState};
-pub use self::rpc::RpcConfig;
 pub use self::backend::{BackendConfig, EthereumBackendConfig, Neo4jBackendConfig};
+pub use self::rpc::RpcConfig;
+use crate::backend::{Backend, BackendFromConfig, BackendFromConfigAndSyncState};
+use crate::sync::MultiBackendSyncState;
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Config {
@@ -71,14 +71,17 @@ impl Config {
     }
 
     pub fn contract_address(&self, name: &str) -> H160 {
-        let address_bytes = self.default_eth_backend_config()
+        let address_bytes = self
+            .default_eth_backend_config()
             .unwrap()
             .contract_addresses
             .get(name)
-            .expect(&format!(
-                "Could not find configuration key for contract_addresses.{}",
-                name
-            ))[2..]
+            .unwrap_or_else(|| {
+                panic!(
+                    "Could not find configuration key for contract_addresses.{}",
+                    name
+                )
+            })[2..]
             .from_hex()
             .unwrap();
 
@@ -89,7 +92,8 @@ impl Config {
         &self,
         eloop_handle: &tokio_core::reactor::Handle,
     ) -> web3::Web3<impl DuplexTransport> {
-        let network_address: Url = self.default_eth_backend_config()
+        let network_address: Url = self
+            .default_eth_backend_config()
             .unwrap()
             .network_address
             .as_ref()
@@ -149,10 +153,10 @@ impl Config {
                     Ok(self.backends.values().next().unwrap())
                 }
             }
-            Some(backend_name) => self.backends.get(backend_name).ok_or(format_err!(
-                "Unable to find backend for name \"{}\"",
-                backend_name
-            )),
+            Some(backend_name) => self
+                .backends
+                .get(backend_name)
+                .ok_or_else(|| format_err!("Unable to find backend for name \"{}\"", backend_name)),
         }
     }
 
@@ -212,16 +216,18 @@ pub mod rpc {
 
 pub mod backend {
     use rustc_hex::FromHex;
-    use std::collections::HashMap;
-    use web3::types::H160;
     #[cfg(feature = "backend_neo4j")]
     use rusted_cypher::GraphClient;
+    use std::collections::HashMap;
+    use web3::types::H160;
 
     #[derive(Debug, Deserialize, Clone)]
     #[serde(tag = "type")]
     pub enum BackendConfig {
-        #[serde(rename = "ethereum")] Ethereum(EthereumBackendConfig),
-        #[serde(rename = "neo4j")] Neo4j(Neo4jBackendConfig),
+        #[serde(rename = "ethereum")]
+        Ethereum(EthereumBackendConfig),
+        #[serde(rename = "neo4j")]
+        Neo4j(Neo4jBackendConfig),
     }
 
     impl BackendConfig {
@@ -261,10 +267,12 @@ pub mod backend {
 
     impl EthereumBackendConfig {
         pub fn contract_address(&self, name: &str) -> H160 {
-            let address_bytes = self.contract_addresses.get(name).expect(&format!(
-                "Could not find configuration key for contract_addresses.{}",
-                name
-            ))[2..]
+            let address_bytes = self.contract_addresses.get(name).unwrap_or_else(|| {
+                panic!(
+                    "Could not find configuration key for contract_addresses.{}",
+                    name
+                )
+            })[2..]
                 .from_hex()
                 .unwrap();
 

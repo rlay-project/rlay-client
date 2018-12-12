@@ -1,24 +1,23 @@
+use ::web3::futures::{future::Either, prelude::*};
+use ::web3::types::{BlockNumber, FilterBuilder};
+use ::web3::Transport;
 use cid::ToCid;
-use rustc_hex::ToHex;
 use ethabi::{self, Event};
 use rlay_ontology::prelude::*;
+use rustc_hex::ToHex;
 use std::collections::{BTreeMap, HashMap, VecDeque};
 use std::sync::{Arc, Mutex};
 use tokio_core;
-use web3::futures::{future::Either, prelude::*};
-use web3::types::{BlockNumber, FilterBuilder};
-use web3::Transport;
-use web3;
 
-use config::Config;
-use sync::subscribe_with_history;
-use web3_helpers::{raw_query, base58_encode};
+use crate::config::Config;
+use crate::sync::subscribe_with_history;
+use crate::web3_helpers::{base58_encode, raw_query};
 
 pub type InnerEntityMap = BTreeMap<Vec<u8>, Entity>;
 pub type CidEntityMap = BTreeMap<Vec<u8>, String>;
 pub type BlockEntityMap = BTreeMap<u64, Vec<Entity>>;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct EntityMap {
     inner: InnerEntityMap,
 
@@ -26,14 +25,7 @@ pub struct EntityMap {
 }
 
 impl EntityMap {
-    pub fn new() -> Self {
-        Self {
-            inner: BTreeMap::new(),
-            insert_subscriber_buffers: Vec::new(),
-        }
-    }
-
-    pub fn insert(&mut self, key: Vec<u8>, value: Entity) -> Option<Entity> {
+    pub fn insert(&mut self, key: Vec<u8>, value: &Entity) -> Option<Entity> {
         let res = self.inner.insert(key, value.clone());
         for buffer in self.insert_subscriber_buffers.iter() {
             let mut buffer_lock = buffer.lock().unwrap();
@@ -59,7 +51,7 @@ impl EntityMap {
         if let Some(from_block) = from_block {
             let mut blocknumbers: Vec<_> = block_entity_map
                 .keys()
-                .filter(|block| block >= &&from_block)
+                .filter(|block| **block >= from_block)
                 .collect();
             blocknumbers.sort();
             for blocknumber in blocknumbers {
@@ -139,7 +131,6 @@ pub trait OntologySyncer<P: Future<Item = (), Error = ()>> {
 
     /// Returns a Future that when polled will sync all entities from the blockchain into the provided
     /// map.
-    #[cfg_attr(feature = "cargo-clippy", allow(needless_pass_by_value))]
     fn sync_ontology(
         &mut self,
         eloop_handle: tokio_core::reactor::Handle,
@@ -163,18 +154,15 @@ pub fn entity_map_negative_class_assertions(
         .collect()
 }
 
+#[derive(Default)]
 pub struct EthOntologySyncer;
 
 impl EthOntologySyncer {
-    pub fn new() -> Self {
-        Self {}
-    }
-
     fn is_stored_event(event_type: &str) -> bool {
         event_type.ends_with("Stored")
     }
 
-    fn cid_from_log(log: &web3::types::Log, event: &Event) -> Vec<u8> {
+    fn cid_from_log(log: &::web3::types::Log, event: &Event) -> Vec<u8> {
         let raw_log = ethabi::RawLog {
             topics: log.topics.to_owned(),
             data: log.data.0.to_owned(),
@@ -187,10 +175,10 @@ impl EthOntologySyncer {
     }
 
     fn process_ontology_storage_log(
-        log: &web3::types::Log,
-        signature_map: &HashMap<web3::types::H256, Event>,
+        log: &::web3::types::Log,
+        signature_map: &HashMap<::web3::types::H256, Event>,
         config: &Config,
-        web3: &web3::Web3<impl Transport>,
+        web3: &::web3::Web3<impl Transport>,
     ) -> impl Future<Item = Option<(Vec<u8>, String, Option<Entity>)>, Error = ()> {
         debug!(
             "got OntologyStorage log: {:?} - {:?}",
@@ -210,11 +198,12 @@ impl EthOntologySyncer {
         debug!("CID(hex) 0x{}", cid.to_hex());
         let ontology_contract_abi = include_str!("../data/OntologyStorage.abi");
         let abi = ethabi::Contract::load(ontology_contract_abi.as_bytes()).unwrap();
-        let contract = web3::contract::Contract::from_json(
+        let contract = ::web3::contract::Contract::from_json(
             web3.eth(),
             config.contract_address("OntologyStorage"),
             ontology_contract_abi.as_bytes(),
-        ).unwrap();
+        )
+        .unwrap();
 
         Either::A(
             Self::get_entity_for_log(web3, &abi, &contract, event.name.as_ref(), &cid)
@@ -223,22 +212,23 @@ impl EthOntologySyncer {
     }
 
     fn get_entity_kind_for_log(
-        web3: &web3::Web3<impl Transport>,
+        web3: &::web3::Web3<impl Transport>,
         abi: &ethabi::Contract,
-        contract: &web3::contract::Contract<impl Transport>,
+        contract: &::web3::contract::Contract<impl Transport>,
         cid: Vec<u8>,
         kind: EntityKind,
     ) -> impl Future<Item = Entity, Error = ()> {
         raw_query(
-            web3.eth(),
+            &web3.eth(),
             abi,
             contract.address(),
             &kind.retrieve_fn_name(),
             (cid.to_owned(),),
             None,
-            web3::contract::Options::default(),
+            &::web3::contract::Options::default(),
             None,
-        ).and_then(move |res| {
+        )
+        .and_then(move |res| {
             let ent: Entity = FromABIV2ResponseHinted::from_abiv2(&res.0, &kind);
             let retrieved_cid = ent.to_cid().unwrap().to_bytes();
             debug!("CID(retrieved) 0x{}", retrieved_cid.to_hex());
@@ -248,13 +238,13 @@ impl EthOntologySyncer {
             );
             Ok(ent)
         })
-            .map_err(|_| ())
+        .map_err(|_| ())
     }
 
     fn get_entity_for_log(
-        web3: &web3::Web3<impl Transport>,
+        web3: &::web3::Web3<impl Transport>,
         abi: &ethabi::Contract,
-        contract: &web3::contract::Contract<impl Transport>,
+        contract: &::web3::contract::Contract<impl Transport>,
         event_name: &str,
         cid: &[u8],
     ) -> impl Future<Item = Option<Entity>, Error = ()> {
@@ -285,7 +275,7 @@ impl OntologySyncer<Box<Future<Item = (), Error = ()>>> for EthOntologySyncer {
         let ontology_contract_abi = include_str!("../data/OntologyStorage.abi");
         let contract = ethabi::Contract::load(ontology_contract_abi.as_bytes()).unwrap();
 
-        let signature_map: HashMap<web3::types::H256, Event> = contract
+        let signature_map: HashMap<::web3::types::H256, Event> = contract
             .events
             .values()
             .cloned()
@@ -329,13 +319,13 @@ impl OntologySyncer<Box<Future<Item = (), Error = ()>>> for EthOntologySyncer {
                 .for_each(move |(entity, log): (Entity, _)| {
                     let entity_bytes = entity.to_bytes();
                     let mut entity_map_lock = entity_map_mutex.lock().unwrap();
-                    entity_map_lock.insert(entity_bytes.clone(), entity.clone());
+                    entity_map_lock.insert(entity_bytes.clone(), &entity);
 
                     if let Some(blocknumber) = log.block_number {
                         let mut block_entity_map_lock = block_entity_map_mutex.lock().unwrap();
-                        let mut added_this_block = block_entity_map_lock
+                        let added_this_block = block_entity_map_lock
                             .entry(blocknumber.as_u64())
-                            .or_insert(Vec::new());
+                            .or_insert_with(Vec::new);
                         added_this_block.push(entity);
                     }
                     Ok(())
