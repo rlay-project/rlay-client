@@ -91,7 +91,7 @@ pub struct OntologySyncState {
 
 impl OntologySyncState {
     pub fn new() -> Self {
-        let entity_map = EntityMap::new();
+        let entity_map = EntityMap::default();
         let entity_map_mutex = Arc::new(Mutex::new(entity_map));
 
         let block_entity_map = BlockEntityMap::new();

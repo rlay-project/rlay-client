@@ -17,7 +17,7 @@ pub type InnerEntityMap = BTreeMap<Vec<u8>, Entity>;
 pub type CidEntityMap = BTreeMap<Vec<u8>, String>;
 pub type BlockEntityMap = BTreeMap<u64, Vec<Entity>>;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct EntityMap {
     inner: InnerEntityMap,
 
@@ -25,14 +25,7 @@ pub struct EntityMap {
 }
 
 impl EntityMap {
-    pub fn new() -> Self {
-        Self {
-            inner: BTreeMap::new(),
-            insert_subscriber_buffers: Vec::new(),
-        }
-    }
-
-    pub fn insert(&mut self, key: Vec<u8>, value: Entity) -> Option<Entity> {
+    pub fn insert(&mut self, key: Vec<u8>, value: &Entity) -> Option<Entity> {
         let res = self.inner.insert(key, value.clone());
         for buffer in self.insert_subscriber_buffers.iter() {
             let mut buffer_lock = buffer.lock().unwrap();
@@ -58,7 +51,7 @@ impl EntityMap {
         if let Some(from_block) = from_block {
             let mut blocknumbers: Vec<_> = block_entity_map
                 .keys()
-                .filter(|block| block >= &&from_block)
+                .filter(|block| **block >= from_block)
                 .collect();
             blocknumbers.sort();
             for blocknumber in blocknumbers {
@@ -161,13 +154,10 @@ pub fn entity_map_negative_class_assertions(
         .collect()
 }
 
+#[derive(Default)]
 pub struct EthOntologySyncer;
 
 impl EthOntologySyncer {
-    pub fn new() -> Self {
-        Self {}
-    }
-
     fn is_stored_event(event_type: &str) -> bool {
         event_type.ends_with("Stored")
     }
@@ -229,13 +219,13 @@ impl EthOntologySyncer {
         kind: EntityKind,
     ) -> impl Future<Item = Entity, Error = ()> {
         raw_query(
-            web3.eth(),
+            &web3.eth(),
             abi,
             contract.address(),
             &kind.retrieve_fn_name(),
             (cid.to_owned(),),
             None,
-            ::web3::contract::Options::default(),
+            &::web3::contract::Options::default(),
             None,
         )
         .and_then(move |res| {
@@ -329,7 +319,7 @@ impl OntologySyncer<Box<Future<Item = (), Error = ()>>> for EthOntologySyncer {
                 .for_each(move |(entity, log): (Entity, _)| {
                     let entity_bytes = entity.to_bytes();
                     let mut entity_map_lock = entity_map_mutex.lock().unwrap();
-                    entity_map_lock.insert(entity_bytes.clone(), entity.clone());
+                    entity_map_lock.insert(entity_bytes.clone(), &entity);
 
                     if let Some(blocknumber) = log.block_number {
                         let mut block_entity_map_lock = block_entity_map_mutex.lock().unwrap();

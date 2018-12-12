@@ -59,7 +59,7 @@ impl BooleanPropositionPool {
     }
 
     pub fn subject(&self) -> PropositionSubject {
-        self.values.get(0).unwrap().get_subject().unwrap().clone()
+        self.values.get(0).unwrap().get_subject().unwrap()
     }
 
     pub fn subject_property(&self) -> Vec<&[u8]> {

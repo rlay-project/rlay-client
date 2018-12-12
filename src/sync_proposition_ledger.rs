@@ -58,8 +58,8 @@ pub enum PropositionLedgerSyncError {
 }
 
 pub fn sync_ledger(
-    eloop_handle: tokio_core::reactor::Handle,
-    config: Config,
+    eloop_handle: &tokio_core::reactor::Handle,
+    config: &Config,
     proposition_ledger_mutex: Arc<Mutex<PropositionLedger>>,
     ledger_block_highwatermark_mtx: Arc<Mutex<u64>>,
 ) -> impl Future<Item = (), Error = PropositionLedgerSyncError> {

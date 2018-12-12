@@ -164,7 +164,7 @@ fn spawn_stats_loop(
 
             for (epoch, payouts) in payout_epochs.iter() {
                 trace!("Payouts for epoch {}: {:?}", epoch, payouts);
-                if payouts.len() <= 0 {
+                if payouts.len() == 0 {
                     trace!("Not enough payouts to build payout tree");
                     continue;
                 }
@@ -244,7 +244,7 @@ pub fn run_sync(config: &Config) {
     {
         // Sync ontology concepts from smart contract to local state
         for sync_state in sync_state.backends.values() {
-            let mut syncer = EthOntologySyncer::new();
+            let mut syncer = EthOntologySyncer::default();
             let sync_ontology_fut = syncer
                 .sync_ontology(
                     eloop.handle(),
@@ -264,8 +264,8 @@ pub fn run_sync(config: &Config) {
     {
         // Sync proposition ledger from smart contract to local state
         let sync_proposition_ledger_fut = sync_ledger(
-            eloop.handle(),
-            config.clone(),
+            &eloop.handle(),
+            &config,
             sync_state.default_eth_backend().proposition_ledger(),
             sync_state
                 .default_eth_backend()

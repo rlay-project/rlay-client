@@ -9,13 +9,13 @@ use web3::types::{Address, BlockNumber, Bytes, CallRequest};
 use web3::Transport;
 
 pub fn raw_query<A, B, C, P, T>(
-    eth: Eth<T>,
+    eth: &Eth<T>,
     abi: &ethabi::Contract,
     address: C,
     func: &str,
     params: P,
     from: A,
-    options: Options,
+    options: &Options,
     block: B,
 ) -> CallFuture<Bytes, T::Out>
 where

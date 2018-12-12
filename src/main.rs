@@ -1,4 +1,4 @@
-#![warn(clippy::all)]
+#![warn(clippy::perf)]
 
 #[macro_use]
 extern crate failure;
@@ -95,7 +95,7 @@ fn main() {
         let config_path = matches.value_of("config_path");
         let config = config::Config::from_path_opt(config_path).expect("Couldn't read config file");
         doctor::run_checks(&config);
-    } else if let Some(_) = matches.subcommand_matches("init") {
+    } else if matches.subcommand_matches("init").is_some() {
         init::init();
     } else if let Some(matches) = matches.subcommand_matches("payout") {
         let config_path = matches.value_of("config_path");

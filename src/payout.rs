@@ -292,7 +292,7 @@ pub fn submit_epoch_payouts(
                     });
 
                 payout_root.and_then(move |existing_payout_root: H256| {
-                    if payouts.len() <= 0 {
+                    if payouts.len() == 0 {
                         trace!(
                             "Payout root for epoch {} does not have enough payouts to submit to smart contract",
                             epoch
