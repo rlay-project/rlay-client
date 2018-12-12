@@ -76,10 +76,12 @@ impl Config {
             .unwrap()
             .contract_addresses
             .get(name)
-            .expect(&format!(
-                "Could not find configuration key for contract_addresses.{}",
-                name
-            ))[2..]
+            .unwrap_or_else(|| {
+                panic!(
+                    "Could not find configuration key for contract_addresses.{}",
+                    name
+                )
+            })[2..]
             .from_hex()
             .unwrap();
 
@@ -151,10 +153,10 @@ impl Config {
                     Ok(self.backends.values().next().unwrap())
                 }
             }
-            Some(backend_name) => self.backends.get(backend_name).ok_or(format_err!(
-                "Unable to find backend for name \"{}\"",
-                backend_name
-            )),
+            Some(backend_name) => self
+                .backends
+                .get(backend_name)
+                .ok_or_else(|| format_err!("Unable to find backend for name \"{}\"", backend_name)),
         }
     }
 
@@ -265,10 +267,12 @@ pub mod backend {
 
     impl EthereumBackendConfig {
         pub fn contract_address(&self, name: &str) -> H160 {
-            let address_bytes = self.contract_addresses.get(name).expect(&format!(
-                "Could not find configuration key for contract_addresses.{}",
-                name
-            ))[2..]
+            let address_bytes = self.contract_addresses.get(name).unwrap_or_else(|| {
+                panic!(
+                    "Could not find configuration key for contract_addresses.{}",
+                    name
+                )
+            })[2..]
                 .from_hex()
                 .unwrap();
 

@@ -260,7 +260,7 @@ fn annotation_from_params(params: &Params) -> ::std::result::Result<Annotation, 
             if let Some(param_annotations) = param_annotations {
                 let param_annotations = param_annotations
                     .as_array()
-                    .ok_or("Param annotations is not an array".to_owned())?;
+                    .ok_or_else(|| "Param annotations is not an array".to_owned())?;
                 let annotations: Vec<_> = param_annotations
                     .iter()
                     .map(|n| StrictTokenizer::tokenize_bytes(n.as_str().unwrap()).unwrap())
@@ -433,7 +433,7 @@ fn rpc_rlay_experimental_get_entity(
             let cid = params_array.get(0).unwrap().as_str().unwrap();
 
             let default_options = json!({});
-            let options_object = params_array.get(1).or(Some(&default_options));
+            let options_object = params_array.get(1).or_else(|| Some(&default_options));
             let backend_name: Option<&str> = options_object
                 .and_then(|n| n.as_object())
                 .and_then(|n| n.get("backend"))
@@ -479,7 +479,7 @@ fn rpc_rlay_experimental_store_entity(config: &Config) -> impl RpcMethodSimple {
             let entity: Entity = Entity::from_web3_format(web3_entity);
 
             let default_options = json!({});
-            let options_object = params_array.get(1).or(Some(&default_options));
+            let options_object = params_array.get(1).or_else(|| Some(&default_options));
             let backend_name: Option<&str> = options_object
                 .and_then(|n| n.as_object())
                 .and_then(|n| n.get("backend"))

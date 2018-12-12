@@ -57,7 +57,6 @@ pub enum PropositionLedgerSyncError {
     UnknownError,
 }
 
-#[cfg_attr(feature = "cargo-clippy", allow(needless_pass_by_value))]
 pub fn sync_ledger(
     eloop_handle: tokio_core::reactor::Handle,
     config: Config,

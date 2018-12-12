@@ -1,4 +1,4 @@
-#![cfg_attr(feature = "cargo-clippy", allow(let_and_return))]
+#![warn(clippy::all)]
 
 #[macro_use]
 extern crate failure;

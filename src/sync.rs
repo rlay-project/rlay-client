@@ -75,10 +75,10 @@ impl MultiBackendSyncState {
                     Ok(self.backends.values().next().unwrap())
                 }
             }
-            Some(backend_name) => self.backends.get(backend_name).ok_or(format_err!(
-                "Unable to find backend for name \"{}\"",
-                backend_name
-            )),
+            Some(backend_name) => self
+                .backends
+                .get(backend_name)
+                .ok_or_else(|| format_err!("Unable to find backend for name \"{}\"", backend_name)),
         }
     }
 

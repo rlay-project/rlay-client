@@ -55,7 +55,7 @@ impl Payout {
         for payout in payouts {
             let payout_group = payouts_by_address
                 .entry(payout.address)
-                .or_insert(Vec::new());
+                .or_insert_with(Vec::new);
             payout_group.push(payout);
         }
         payouts_by_address

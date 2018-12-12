@@ -54,7 +54,8 @@ impl BooleanPropositionPool {
             return false;
         }
         self.values.push(assertion);
-        return true;
+
+        true
     }
 
     pub fn subject(&self) -> PropositionSubject {
@@ -134,7 +135,7 @@ impl BooleanPropositionPool {
         let has_positive = self.has_positive_value();
         let has_negative = self.has_negative_value();
 
-        return has_positive && has_negative;
+        has_positive && has_negative
     }
 
     /// Helper for printing the values of a BooleanPropositionPool.
@@ -292,9 +293,9 @@ impl ValuedBooleanPropositionPool {
         }
 
         if false_weight > true_weight {
-            return Some(false);
+            Some(false)
         } else {
-            return Some(true);
+            Some(true)
         }
     }
 
@@ -310,7 +311,8 @@ impl ValuedBooleanPropositionPool {
         if val.is_negative() && aggregated == false {
             return true;
         }
-        return false;
+
+        false
     }
 
     // TODO: potentially broken
@@ -328,7 +330,8 @@ impl ValuedBooleanPropositionPool {
         if val.proposition_cid == true_value_cid && aggregated == true {
             return true;
         }
-        return false;
+
+        false
     }
 }
 
@@ -430,7 +433,7 @@ pub fn detect_pools(ontology_entities: &[&ontology::Entity]) -> Vec<BooleanPropo
         .for_each(|assertion| {
             let entry = pools
                 .entry(assertion.canonical_parts())
-                .or_insert(BooleanPropositionPool::new());
+                .or_insert_with(BooleanPropositionPool::new);
             entry.try_insert(assertion);
         });
 

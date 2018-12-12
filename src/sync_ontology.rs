@@ -138,7 +138,6 @@ pub trait OntologySyncer<P: Future<Item = (), Error = ()>> {
 
     /// Returns a Future that when polled will sync all entities from the blockchain into the provided
     /// map.
-    #[cfg_attr(feature = "cargo-clippy", allow(needless_pass_by_value))]
     fn sync_ontology(
         &mut self,
         eloop_handle: tokio_core::reactor::Handle,
@@ -336,7 +335,7 @@ impl OntologySyncer<Box<Future<Item = (), Error = ()>>> for EthOntologySyncer {
                         let mut block_entity_map_lock = block_entity_map_mutex.lock().unwrap();
                         let added_this_block = block_entity_map_lock
                             .entry(blocknumber.as_u64())
-                            .or_insert(Vec::new());
+                            .or_insert_with(Vec::new);
                         added_this_block.push(entity);
                     }
                     Ok(())
