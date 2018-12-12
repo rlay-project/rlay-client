@@ -1,24 +1,25 @@
 use failure::{err_msg, Error};
 use futures_timer::Interval;
+use log::Level::Debug;
+use rlay_ontology::ontology::Entity;
+use rustc_hex::ToHex;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tokio_core;
+use web3;
 use web3::futures::{self, prelude::*};
 use web3::types::{Filter, Log, U256};
-use web3;
 use web3::DuplexTransport;
-use rustc_hex::ToHex;
-use rlay_ontology::ontology::Entity;
-use log::Level::Debug;
 
-use backend::EthereumSyncState as SyncState;
-use config::Config;
-use sync_ontology::{EthOntologySyncer, OntologySyncer};
-use sync_proposition_ledger::sync_ledger;
-use payout::{fill_epoch_payouts, fill_epoch_payouts_cumulative, load_epoch_payouts,
-             retrieve_epoch_start_block, store_epoch_payouts, submit_epoch_payouts, Payout,
-             PayoutEpochs};
+use crate::backend::EthereumSyncState as SyncState;
+use crate::config::Config;
+use crate::payout::{
+    fill_epoch_payouts, fill_epoch_payouts_cumulative, load_epoch_payouts,
+    retrieve_epoch_start_block, store_epoch_payouts, submit_epoch_payouts, Payout, PayoutEpochs,
+};
+use crate::sync_ontology::{EthOntologySyncer, OntologySyncer};
+use crate::sync_proposition_ledger::sync_ledger;
 
 // TODO: possibly contribute to rust-web3
 /// Subscribe on a filter, but also get all historic logs that fit the filter
@@ -174,7 +175,7 @@ fn spawn_stats_loop(
                     tree.root().to_hex()
                 );
                 for payout in payouts {
-                    let proof_str = ::payout::format_redeem_payout_call(*epoch, &tree, payout);
+                    let proof_str = crate::payout::format_redeem_payout_call(*epoch, &tree, payout);
                     debug!("Payout for 0x{}: {}", payout.address.to_hex(), proof_str);
                 }
             }
@@ -215,11 +216,12 @@ fn spawn_payout_root_submission(
                 config.clone(),
                 computed_state.payout_epochs.clone(),
                 computed_state.payout_epochs_cum.clone(),
-            ).map(|_| ())
-                .map_err(|err| {
-                    error!("{:?}", err);
-                    ()
-                })
+            )
+            .map(|_| ())
+            .map_err(|err| {
+                error!("{:?}", err);
+                ()
+            })
         })
         .map_err(|err| {
             error!("{:?}", err);
@@ -268,7 +270,8 @@ pub fn run_sync(config: &Config) {
             sync_state
                 .default_eth_backend()
                 .proposition_ledger_block_highwatermark(),
-        ).map_err(|err| {
+        )
+        .map_err(|err| {
             error!("Sync ledger: {:?}", err);
             ()
         });
@@ -283,38 +286,38 @@ pub fn run_sync(config: &Config) {
         let computed_state_calculate_payouts = computed_state.clone();
         let sync_state_calculate_payouts = sync_state.clone();
 
-        let calculate_payouts_fut = retrieve_epoch_start_block(
-            &eloop.handle().clone(),
-            &config.clone(),
-        ).and_then(move |epoch_start_block| {
-            Interval::new(Duration::from_secs(15))
-                .and_then(move |_| Ok(epoch_start_block))
-                .for_each(move |epoch_start_block| {
-                    fill_epoch_payouts(
-                        epoch_start_block,
-                        epoch_length,
-                        &sync_state_calculate_payouts
-                            .default_eth_backend()
-                            .proposition_ledger_block_highwatermark(),
-                        &sync_state_calculate_payouts
-                            .default_eth_backend()
-                            .proposition_ledger(),
-                        &computed_state_calculate_payouts.payout_epochs(),
-                        &sync_state_calculate_payouts
-                            .default_eth_backend()
-                            .entity_map(),
-                    );
-                    fill_epoch_payouts_cumulative(
-                        &computed_state_calculate_payouts.payout_epochs(),
-                        &computed_state_calculate_payouts.payout_epochs_cum(),
-                    );
-                    Ok(())
-                })
-                .map_err(|err| {
-                    error!("{:?}", err);
-                    ()
-                })
-        });
+        let calculate_payouts_fut =
+            retrieve_epoch_start_block(&eloop.handle().clone(), &config.clone()).and_then(
+                move |epoch_start_block| {
+                    Interval::new(Duration::from_secs(15))
+                        .and_then(move |_| Ok(epoch_start_block))
+                        .for_each(move |epoch_start_block| {
+                            fill_epoch_payouts(
+                                epoch_start_block,
+                                epoch_length,
+                                &sync_state_calculate_payouts
+                                    .default_eth_backend()
+                                    .proposition_ledger_block_highwatermark(),
+                                &sync_state_calculate_payouts
+                                    .default_eth_backend()
+                                    .proposition_ledger(),
+                                &computed_state_calculate_payouts.payout_epochs(),
+                                &sync_state_calculate_payouts
+                                    .default_eth_backend()
+                                    .entity_map(),
+                            );
+                            fill_epoch_payouts_cumulative(
+                                &computed_state_calculate_payouts.payout_epochs(),
+                                &computed_state_calculate_payouts.payout_epochs_cum(),
+                            );
+                            Ok(())
+                        })
+                        .map_err(|err| {
+                            error!("{:?}", err);
+                            ()
+                        })
+                },
+            );
         eloop.handle().spawn(calculate_payouts_fut);
     }
 
@@ -351,7 +354,7 @@ pub fn run_sync(config: &Config) {
     let rpc_config = config.clone();
     let rpc_sync_state = sync_state.clone();
     ::std::thread::spawn(move || {
-        ::rpc::start_rpc(&rpc_config, rpc_sync_state);
+        crate::rpc::start_rpc(&rpc_config, rpc_sync_state);
     });
 
     loop {

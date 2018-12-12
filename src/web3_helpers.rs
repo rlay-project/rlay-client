@@ -1,12 +1,12 @@
 use ethabi;
 use multibase::{encode as base_encode, Base};
 use rustc_hex::ToHex;
-use web3::Transport;
 use web3::api::Eth;
-use web3::contract::Options;
 use web3::contract::tokens::Tokenize;
+use web3::contract::Options;
 use web3::helpers::CallFuture;
 use web3::types::{Address, BlockNumber, Bytes, CallRequest};
+use web3::Transport;
 
 pub fn raw_query<A, B, C, P, T>(
     eth: Eth<T>,
@@ -71,7 +71,7 @@ impl<'a> ::serde::Serialize for HexString<'a> {
     where
         S: ::serde::Serializer,
     {
-        Ok(try!(serializer.serialize_str(&Self::fmt(self.inner))))
+        Ok(serializer.serialize_str(&Self::fmt(self.inner))?)
     }
 }
 

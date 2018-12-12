@@ -1,41 +1,15 @@
 #![cfg_attr(feature = "cargo-clippy", allow(let_and_return))]
 
-extern crate byteorder;
-extern crate cid;
-extern crate clap;
-extern crate console;
-extern crate dialoguer;
-extern crate env_logger;
-extern crate ethabi;
 #[macro_use]
 extern crate failure;
 #[macro_use]
 extern crate failure_derive;
-extern crate futures_timer;
-extern crate hyper;
-extern crate jsonrpc_core;
-extern crate jsonrpc_http_server;
-extern crate jsonrpc_pubsub;
-extern crate jsonrpc_ws_server;
 #[macro_use]
 extern crate log;
-extern crate merkle_light;
-extern crate multibase;
-extern crate rlay_ontology;
-extern crate rustc_hex;
-extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 #[macro_use]
 extern crate serde_json;
-extern crate tiny_keccak;
-extern crate tokio_core;
-extern crate toml;
-extern crate url;
-extern crate web3;
-
-#[cfg(feature = "backend_neo4j")]
-extern crate rusted_cypher;
 
 pub mod aggregation;
 pub mod backend;
@@ -53,12 +27,12 @@ pub mod sync_ontology;
 pub mod sync_proposition_ledger;
 pub mod web3_helpers;
 
-use std::io::Write;
 use clap::{App, Arg, SubCommand};
-use log::LevelFilter;
 use env_logger::Builder;
+use log::LevelFilter;
+use std::io::Write;
 
-use payout_cli::PayoutParams;
+use crate::payout_cli::PayoutParams;
 
 fn main() {
     let mut builder = Builder::from_default_env();

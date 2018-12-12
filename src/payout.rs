@@ -9,16 +9,16 @@ use std::hash::Hasher;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 use tokio_core;
-use web3::Transport;
+use web3;
 use web3::futures::{self, prelude::*};
 use web3::types::{Address, H256, U256};
-use web3;
+use web3::Transport;
 
-use config::Config;
-use merkle::Keccak256Algorithm;
-use payout_calculation::payouts_for_epoch;
-use sync_ontology::EntityMap;
-use sync_proposition_ledger::PropositionLedger;
+use crate::config::Config;
+use crate::merkle::Keccak256Algorithm;
+use crate::payout_calculation::payouts_for_epoch;
+use crate::sync_ontology::EntityMap;
+use crate::sync_proposition_ledger::PropositionLedger;
 
 pub type PayoutEpochs = HashMap<u64, Vec<Payout>>;
 
@@ -53,7 +53,7 @@ impl Payout {
     pub fn compact_payouts(payouts: Vec<Self>) -> Vec<Self> {
         let mut payouts_by_address: HashMap<Address, Vec<Self>> = HashMap::new();
         for payout in payouts {
-            let mut payout_group = payouts_by_address
+            let payout_group = payouts_by_address
                 .entry(payout.address)
                 .or_insert(Vec::new());
             payout_group.push(payout);
@@ -185,7 +185,8 @@ fn rlay_token_contract(
         web3.eth(),
         config.contract_address("RlayToken"),
         token_contract_abi.as_bytes(),
-    ).expect("Couldn't load RlayToken contract")
+    )
+    .expect("Couldn't load RlayToken contract")
 }
 
 /// Load epoch_payouts from files in data directory.
@@ -227,7 +228,7 @@ pub fn store_epoch_payouts(config: Config, payout_epochs_mtx: Arc<Mutex<PayoutEp
             continue;
         }
 
-        let content = json!{{
+        let content = json! {{
             "epoch": epoch_num,
             "payouts": payouts,
         }};
@@ -333,7 +334,7 @@ pub fn format_redeem_payout_call(
     tree: &MerkleTree<[u8; 32], Keccak256Algorithm>,
     payout: &Payout,
 ) -> String {
-    let proof = ::merkle::gen_proof_for_data(&tree, payout);
+    let proof = crate::merkle::gen_proof_for_data(&tree, payout);
     let lemma = proof.lemma().to_owned();
     let mut proof_str = String::new();
 

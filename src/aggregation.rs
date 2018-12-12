@@ -1,3 +1,4 @@
+use ::web3::types::U256;
 use cid::ToCid;
 use rlay_ontology::ontology;
 use rlay_ontology::prelude::*;
@@ -5,11 +6,10 @@ use serde::Serializer;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use tiny_keccak::keccak256;
-use web3::types::U256;
 
-use ontology_ext::*;
-use sync_proposition_ledger::Proposition;
-use web3_helpers::{HexString, base58_encode};
+use crate::ontology_ext::*;
+use crate::sync_proposition_ledger::Proposition;
+use crate::web3_helpers::{base58_encode, HexString};
 
 pub type PropositionSubject<'a> = &'a [u8];
 
@@ -146,7 +146,8 @@ impl BooleanPropositionPool {
     }
 
     pub fn hash(&self) -> Vec<u8> {
-        let hash_data = self.canonical_parts()
+        let hash_data = self
+            .canonical_parts()
             .into_iter()
             .fold(Vec::new(), |mut acc, mut val| {
                 acc.append(&mut val);
@@ -178,17 +179,20 @@ impl ::serde::Serialize for BooleanPropositionPool {
         }
 
         let ext = BooleanPropositionPoolSerialize {
-            values: self.values
+            values: self
+                .values
                 .clone()
                 .into_iter()
                 .map(|n| Into::<Entity>::into(n).to_web3_format())
                 .collect(),
-            positive_values: self.positive_values()
+            positive_values: self
+                .positive_values()
                 .clone()
                 .into_iter()
                 .map(|n| Into::<Entity>::into(n).to_web3_format())
                 .collect(),
-            negative_values: self.negative_values()
+            negative_values: self
+                .negative_values()
                 .clone()
                 .into_iter()
                 .map(|n| Into::<Entity>::into(n).to_web3_format())
@@ -199,7 +203,7 @@ impl ::serde::Serialize for BooleanPropositionPool {
                 .to_web3_format(),
         };
 
-        Ok(try!(ext.serialize(serializer)))
+        Ok(ext.serialize(serializer)?)
     }
 }
 
@@ -390,7 +394,8 @@ impl ::serde::Serialize for ValuedBooleanPropositionPool {
             total_weight_aggregation_result = Some(self.negative_weights())
         }
 
-        let subject_property = self.pool
+        let subject_property = self
+            .pool
             .subject_property()
             .into_iter()
             .map(|n| HexString::wrap(n))
@@ -412,7 +417,7 @@ impl ::serde::Serialize for ValuedBooleanPropositionPool {
             totalWeightAggregationResult: total_weight_aggregation_result,
         };
 
-        Ok(try!(ext.serialize(serializer)))
+        Ok(ext.serialize(serializer)?)
     }
 }
 

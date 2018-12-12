@@ -3,12 +3,12 @@ use failure::SyncFailure;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use tokio_core;
+use web3;
 use web3::futures::prelude::*;
 use web3::types::{Address, BlockNumber, FilterBuilder, Log, U256};
-use web3;
 
-use config::Config;
-use sync::subscribe_with_history;
+use crate::config::Config;
+use crate::sync::subscribe_with_history;
 
 // TODO: reevaluate Hash, ParitialEq and Eq derives as there could theoretically be collisions.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
@@ -51,8 +51,10 @@ pub type PropositionLedger = Vec<Proposition>;
 
 #[derive(Fail, Debug)]
 pub enum PropositionLedgerSyncError {
-    #[fail(display = "Web3 error: {}", error)] Web3 { error: SyncFailure<web3::Error> },
-    #[fail(display = "An unknown error has occurred.")] UnknownError,
+    #[fail(display = "Web3 error: {}", error)]
+    Web3 { error: SyncFailure<web3::Error> },
+    #[fail(display = "An unknown error has occurred.")]
+    UnknownError,
 }
 
 #[cfg_attr(feature = "cargo-clippy", allow(needless_pass_by_value))]

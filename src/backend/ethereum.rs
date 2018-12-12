@@ -1,14 +1,14 @@
 #[allow(unused_imports)]
 use failure::{err_msg, Error};
-use std::sync::{Arc, Mutex};
-use std::collections::BTreeMap;
 use rlay_ontology::ontology::Entity;
 use rustc_hex::{FromHex, ToHex};
+use std::collections::BTreeMap;
+use std::sync::{Arc, Mutex};
 
-use sync_ontology::{BlockEntityMap, EntityMap};
-use sync_proposition_ledger::{sync_ledger, PropositionLedger};
-use backend::{BackendFromConfig, BackendFromConfigAndSyncState, BackendRpcMethods};
-use config::backend::EthereumBackendConfig;
+use crate::backend::{BackendFromConfig, BackendFromConfigAndSyncState, BackendRpcMethods};
+use crate::config::backend::EthereumBackendConfig;
+use crate::sync_ontology::{BlockEntityMap, EntityMap};
+use crate::sync_proposition_ledger::{sync_ledger, PropositionLedger};
 
 pub struct EthereumBackend {
     pub config: EthereumBackendConfig,
