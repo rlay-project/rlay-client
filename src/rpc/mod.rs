@@ -247,7 +247,7 @@ fn rpc_rlay_get_proposition_pools(sync_state: SyncState) -> impl RpcMethodSimple
     }
 }
 
-fn entity_to_tokens(contract: &ethabi::Contract, entity: Entity) -> Vec<Token> {
+fn entity_to_tokens(contract: &ethabi::Contract, mut entity: Entity) -> Vec<Token> {
     let mut tokens = Vec::new();
 
     let entity_kind: &str = entity.kind().into();
@@ -256,6 +256,7 @@ fn entity_to_tokens(contract: &ethabi::Contract, entity: Entity) -> Vec<Token> {
         .function(&function_name)
         .expect("Could not find function");
 
+    entity.canonicalize();
     let web3_entity = entity.to_web3_format();
     let web3_entity_json = serde_json::to_value(web3_entity).unwrap();
 
