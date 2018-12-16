@@ -92,7 +92,9 @@ impl CanonicalParts for ontology::ClassAssertion {
     fn canonical_parts(&self) -> Vec<Vec<u8>> {
         let mut parts = Vec::new();
 
-        parts.push(self.subject.clone());
+        if let Some(ref val) = self.subject {
+            parts.push(val.clone());
+        }
         parts.push(self.class.clone());
 
         parts
@@ -103,7 +105,9 @@ impl CanonicalParts for ontology::NegativeClassAssertion {
     fn canonical_parts(&self) -> Vec<Vec<u8>> {
         let mut parts = Vec::new();
 
-        parts.push(self.subject.clone());
+        if let Some(ref val) = self.subject {
+            parts.push(val.clone());
+        }
         parts.push(self.class.clone());
 
         parts
@@ -201,13 +205,13 @@ impl GetSubject for Assertion {
 
 impl GetSubject for ontology::ClassAssertion {
     fn get_subject(&self) -> Option<&[u8]> {
-        Some(&self.subject)
+        self.subject.as_ref().map(|n| n.as_slice())
     }
 }
 
 impl GetSubject for ontology::NegativeClassAssertion {
     fn get_subject(&self) -> Option<&[u8]> {
-        Some(&self.subject)
+        self.subject.as_ref().map(|n| n.as_slice())
     }
 }
 
@@ -530,13 +534,21 @@ impl GetSubjectProperty for Assertion {
 
 impl GetSubjectProperty for ontology::ClassAssertion {
     fn get_subject_property(&self) -> Vec<&[u8]> {
-        vec![&self.subject]
+        let mut vals = Vec::new();
+        if let Some(ref val) = self.subject {
+            vals.push(val.as_slice());
+        }
+        vals
     }
 }
 
 impl GetSubjectProperty for ontology::NegativeClassAssertion {
     fn get_subject_property(&self) -> Vec<&[u8]> {
-        vec![&self.subject]
+        let mut vals = Vec::new();
+        if let Some(ref val) = self.subject {
+            vals.push(val.as_slice());
+        }
+        vals
     }
 }
 

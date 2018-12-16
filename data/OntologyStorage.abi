@@ -142,7 +142,35 @@
   {
     "constant": true,
     "inputs": [],
+    "name": "annotationassertion_storage",
+    "outputs": [
+      {
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
     "name": "negativeobjectpropertyassertion_storage",
+    "outputs": [
+      {
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "negativeannotationassertion_storage",
     "outputs": [
       {
         "name": "",
@@ -791,6 +819,30 @@
     "type": "event"
   },
   {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "name": "_cid",
+        "type": "bytes"
+      }
+    ],
+    "name": "AnnotationAssertionStored",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "name": "_cid",
+        "type": "bytes"
+      }
+    ],
+    "name": "NegativeAnnotationAssertionStored",
+    "type": "event"
+  },
+  {
     "constant": false,
     "inputs": [
       {
@@ -932,12 +984,12 @@
     "constant": false,
     "inputs": [
       {
-        "name": "_annotations",
-        "type": "bytes[]"
-      },
-      {
         "name": "_complementOf",
         "type": "bytes"
+      },
+      {
+        "name": "_annotations",
+        "type": "bytes[]"
       },
       {
         "name": "_superClassExpression",
@@ -966,12 +1018,12 @@
     "name": "retrieveObjectComplementOf",
     "outputs": [
       {
-        "name": "_annotations",
-        "type": "bytes[]"
-      },
-      {
         "name": "_complementOf",
         "type": "bytes"
+      },
+      {
+        "name": "_annotations",
+        "type": "bytes[]"
       },
       {
         "name": "_superClassExpression",
@@ -1824,6 +1876,30 @@
       {
         "name": "_annotations",
         "type": "bytes[]"
+      },
+      {
+        "name": "_class_assertions",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_negative_class_assertions",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_object_property_assertions",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_negative_object_property_assertions",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_data_property_assertions",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_negative_data_property_assertions",
+        "type": "bytes[]"
       }
     ],
     "name": "storeIndividual",
@@ -1849,6 +1925,30 @@
     "outputs": [
       {
         "name": "_annotations",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_class_assertions",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_negative_class_assertions",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_object_property_assertions",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_negative_object_property_assertions",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_data_property_assertions",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_negative_data_property_assertions",
         "type": "bytes[]"
       }
     ],
@@ -1902,11 +2002,11 @@
         "type": "bytes[]"
       },
       {
-        "name": "_class",
+        "name": "_subject",
         "type": "bytes"
       },
       {
-        "name": "_subject",
+        "name": "_class",
         "type": "bytes"
       }
     ],
@@ -1936,11 +2036,11 @@
         "type": "bytes[]"
       },
       {
-        "name": "_class",
+        "name": "_subject",
         "type": "bytes"
       },
       {
-        "name": "_subject",
+        "name": "_class",
         "type": "bytes"
       }
     ],
@@ -1956,11 +2056,11 @@
         "type": "bytes[]"
       },
       {
-        "name": "_class",
+        "name": "_subject",
         "type": "bytes"
       },
       {
-        "name": "_subject",
+        "name": "_class",
         "type": "bytes"
       }
     ],
@@ -1990,11 +2090,11 @@
         "type": "bytes[]"
       },
       {
-        "name": "_class",
+        "name": "_subject",
         "type": "bytes"
       },
       {
-        "name": "_subject",
+        "name": "_class",
         "type": "bytes"
       }
     ],
@@ -2010,11 +2110,11 @@
         "type": "bytes[]"
       },
       {
-        "name": "_property",
+        "name": "_subject",
         "type": "bytes"
       },
       {
-        "name": "_subject",
+        "name": "_property",
         "type": "bytes"
       },
       {
@@ -2048,11 +2148,11 @@
         "type": "bytes[]"
       },
       {
-        "name": "_property",
+        "name": "_subject",
         "type": "bytes"
       },
       {
-        "name": "_subject",
+        "name": "_property",
         "type": "bytes"
       },
       {
@@ -2072,11 +2172,11 @@
         "type": "bytes[]"
       },
       {
-        "name": "_property",
+        "name": "_subject",
         "type": "bytes"
       },
       {
-        "name": "_subject",
+        "name": "_property",
         "type": "bytes"
       },
       {
@@ -2110,11 +2210,11 @@
         "type": "bytes[]"
       },
       {
-        "name": "_property",
+        "name": "_subject",
         "type": "bytes"
       },
       {
-        "name": "_subject",
+        "name": "_property",
         "type": "bytes"
       },
       {
@@ -2134,11 +2234,11 @@
         "type": "bytes[]"
       },
       {
-        "name": "_property",
+        "name": "_subject",
         "type": "bytes"
       },
       {
-        "name": "_subject",
+        "name": "_property",
         "type": "bytes"
       },
       {
@@ -2172,11 +2272,11 @@
         "type": "bytes[]"
       },
       {
-        "name": "_property",
+        "name": "_subject",
         "type": "bytes"
       },
       {
-        "name": "_subject",
+        "name": "_property",
         "type": "bytes"
       },
       {
@@ -2196,11 +2296,11 @@
         "type": "bytes[]"
       },
       {
-        "name": "_property",
+        "name": "_subject",
         "type": "bytes"
       },
       {
-        "name": "_subject",
+        "name": "_property",
         "type": "bytes"
       },
       {
@@ -2234,15 +2334,139 @@
         "type": "bytes[]"
       },
       {
+        "name": "_subject",
+        "type": "bytes"
+      },
+      {
         "name": "_property",
         "type": "bytes"
+      },
+      {
+        "name": "_target",
+        "type": "bytes"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "name": "_annotations",
+        "type": "bytes[]"
       },
       {
         "name": "_subject",
         "type": "bytes"
       },
       {
-        "name": "_target",
+        "name": "_property",
+        "type": "bytes"
+      },
+      {
+        "name": "_value",
+        "type": "bytes"
+      }
+    ],
+    "name": "storeAnnotationAssertion",
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "name": "_cid",
+        "type": "bytes"
+      }
+    ],
+    "name": "retrieveAnnotationAssertion",
+    "outputs": [
+      {
+        "name": "_annotations",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_subject",
+        "type": "bytes"
+      },
+      {
+        "name": "_property",
+        "type": "bytes"
+      },
+      {
+        "name": "_value",
+        "type": "bytes"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "name": "_annotations",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_subject",
+        "type": "bytes"
+      },
+      {
+        "name": "_property",
+        "type": "bytes"
+      },
+      {
+        "name": "_value",
+        "type": "bytes"
+      }
+    ],
+    "name": "storeNegativeAnnotationAssertion",
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "name": "_cid",
+        "type": "bytes"
+      }
+    ],
+    "name": "retrieveNegativeAnnotationAssertion",
+    "outputs": [
+      {
+        "name": "_annotations",
+        "type": "bytes[]"
+      },
+      {
+        "name": "_subject",
+        "type": "bytes"
+      },
+      {
+        "name": "_property",
+        "type": "bytes"
+      },
+      {
+        "name": "_value",
         "type": "bytes"
       }
     ],

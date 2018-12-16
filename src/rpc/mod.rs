@@ -3,7 +3,8 @@ mod proxy;
 use ::web3::futures::prelude::*;
 use cid::ToCid;
 use ethabi;
-use ethabi::token::{StrictTokenizer, Token, Tokenizer};
+use ethabi::token::Token;
+use ethabi::ParamType;
 use jsonrpc_core::futures::Future;
 use jsonrpc_core::{self, *};
 use jsonrpc_http_server::ServerBuilder as HttpServerBuilder;
@@ -24,7 +25,7 @@ use crate::config::Config;
 use crate::sync::MultiBackendSyncState;
 use crate::web3_helpers::HexString;
 
-const NETWORK_VERSION: &'static str = "0.3.0";
+const NETWORK_VERSION: &'static str = "0.3.3";
 const CLIENT_VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
 pub fn start_rpc(full_config: &Config, sync_state: MultiBackendSyncState) {
@@ -246,49 +247,53 @@ fn rpc_rlay_get_proposition_pools(sync_state: SyncState) -> impl RpcMethodSimple
     }
 }
 
-fn annotation_from_params(params: &Params) -> ::std::result::Result<Annotation, String> {
-    println!("PARAM1 {:?}", params);
-    if let Params::Array(params_array) = params {
-        println!("PARAM {:?}", params_array[0]);
-        if let Value::Object(ref params_map) = params_array[0] {
-            let mut annotation = Annotation::default();
+fn entity_to_tokens(contract: &ethabi::Contract, entity: Entity) -> Vec<Token> {
+    let mut tokens = Vec::new();
 
-            let param_annotations = params_map.get("annotations");
-            // let param_property = params_map.get("property");
-            // let param_value = params_map.get("value");
+    let entity_kind: &str = entity.kind().into();
+    let function_name = format!("store{}", entity_kind);
+    let function = contract
+        .function(&function_name)
+        .expect("Could not find function");
 
-            if let Some(param_annotations) = param_annotations {
-                let param_annotations = param_annotations
-                    .as_array()
-                    .ok_or_else(|| "Param annotations is not an array".to_owned())?;
-                let annotations: Vec<_> = param_annotations
-                    .iter()
-                    .map(|n| StrictTokenizer::tokenize_bytes(n.as_str().unwrap()).unwrap())
-                    .collect();
-                annotation.annotations = annotations;
-            }
+    let web3_entity = entity.to_web3_format();
+    let web3_entity_json = serde_json::to_value(web3_entity).unwrap();
 
-            Ok(annotation)
-        } else {
-            Err("First params has to be a object".to_owned())
-        }
-    } else {
-        Err("Params has to be an array with single object".to_owned())
+    for param in &function.inputs {
+        let param_value = web3_entity_json.get(&param.name[1..]);
+        let value = match param_value {
+            Some(param_value) => match param.kind {
+                ParamType::Bytes => {
+                    let value = param_value.as_str().unwrap();
+                    let value_bytes = value[2..].from_hex().unwrap();
+                    Token::Bytes(value_bytes)
+                }
+                // TODO: properly handle other inner param types
+                ParamType::Array(_) => Token::Array(
+                    param_value
+                        .as_array()
+                        .unwrap()
+                        .into_iter()
+                        .map(|n| {
+                            let value = n.as_str().unwrap();
+                            let value_bytes = value[2..].from_hex().unwrap();
+
+                            Token::Bytes(value_bytes)
+                        })
+                        .collect(),
+                ),
+                _ => unimplemented!(),
+            },
+            None => match param.kind {
+                ParamType::Bytes => Token::Bytes(Vec::new()),
+                ParamType::Array(_) => Token::Array(Vec::new()),
+                _ => unimplemented!(),
+            },
+        };
+        tokens.push(value);
     }
-}
 
-fn annotation_to_tokens(annotation: Annotation) -> Vec<Token> {
-    vec![
-        Token::Array(
-            annotation
-                .annotations
-                .into_iter()
-                .map(|n| Token::Bytes(n))
-                .collect(),
-        ),
-        Token::Bytes(annotation.property),
-        Token::Bytes(annotation.value),
-    ]
+    tokens
 }
 
 /// `rlay_encodeForStore` RPC call.
@@ -296,20 +301,30 @@ fn annotation_to_tokens(annotation: Annotation) -> Vec<Token> {
 /// Encodes the `data` for a `store<Entity>` contract call.
 fn rpc_rlay_encode_for_store() -> impl RpcMethodSimple {
     move |params: Params| {
-        let ontology_contract_abi = include_str!("../../data/OntologyStorage.abi");
-        let contract = ethabi::Contract::load(ontology_contract_abi.as_bytes()).unwrap();
+        if let Params::Array(params_array) = params {
+            let ontology_contract_abi = include_str!("../../data/OntologyStorage.abi");
+            let contract = ethabi::Contract::load(ontology_contract_abi.as_bytes()).unwrap();
 
-        let annotation = annotation_from_params(&params).expect("Could not parse annotation");
-        let tokens = annotation_to_tokens(annotation);
-        let function = contract
-            .function("storeAnnotation")
-            .expect("Could not find function");
+            let entity_object = params_array.get(0).unwrap();
+            let web3_entity: EntityFormatWeb3 = serde_json::from_value(entity_object.clone())
+                .map_err(|err| jsonrpc_core::Error::invalid_params(err.description()))?;
+            let entity: Entity = Entity::from_web3_format(web3_entity);
 
-        let data = function.encode_input(&tokens).unwrap().to_hex();
+            let tokens = entity_to_tokens(&contract, entity.clone());
+            let entity_kind: &str = entity.kind().into();
+            let function_name = format!("store{}", entity_kind);
+            let function = contract
+                .function(&function_name)
+                .expect("Could not find function");
 
-        Ok(json! {{
-            "data": data,
-        }})
+            let data = function.encode_input(&tokens).unwrap().to_hex();
+
+            Ok(json! {{
+                "data": data,
+            }})
+        } else {
+            panic!("Not an array of arguments")
+        }
     }
 }
 
