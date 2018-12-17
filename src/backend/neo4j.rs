@@ -171,4 +171,13 @@ impl BackendRpcMethods for Neo4jBackend {
 
         Ok(Some(entity))
     }
+
+    fn neo4j_query(&mut self, query: &str) -> Result<Vec<String>, Error> {
+        let client = self.client();
+
+        let query_res = client.exec(query).unwrap();
+        let cids: Vec<_> = query_res.rows().map(|row| row.get_n(0).unwrap()).collect();
+
+        Ok(cids)
+    }
 }

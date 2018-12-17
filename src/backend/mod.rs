@@ -84,6 +84,13 @@ pub trait BackendRpcMethods {
             "The requested backend does not support this RPC method.",
         ))
     }
+
+    #[allow(unused_variables)]
+    fn neo4j_query(&mut self, query: &str) -> Result<Vec<String>, Error> {
+        Err(err_msg(
+            "The requested backend does not support this RPC method.",
+        ))
+    }
 }
 
 impl BackendRpcMethods for Backend {
@@ -102,6 +109,15 @@ impl BackendRpcMethods for Backend {
             #[cfg(feature = "backend_neo4j")]
             Backend::Neo4j(backend) => backend.get_entity(cid),
             Backend::Ethereum(backend) => backend.get_entity(cid),
+        }
+    }
+
+    #[allow(unused_variables)]
+    fn neo4j_query(&mut self, query: &str) -> Result<Vec<String>, Error> {
+        match self {
+            #[cfg(feature = "backend_neo4j")]
+            Backend::Neo4j(backend) => backend.neo4j_query(query),
+            Backend::Ethereum(backend) => backend.neo4j_query(query),
         }
     }
 }

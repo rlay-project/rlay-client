@@ -174,7 +174,7 @@ pub fn proxy_handler_with_methods(
     }
     io.add_method(
         "rlay_experimentalGetEntity",
-        rpc_rlay_experimental_get_entity(full_config, sync_state),
+        rpc_rlay_experimental_get_entity(full_config, sync_state.clone()),
     );
     io.add_method(
         "rlay_experimentalGetEntityCid",
@@ -183,6 +183,10 @@ pub fn proxy_handler_with_methods(
     io.add_method(
         "rlay_experimentalStoreEntity",
         rpc_rlay_experimental_store_entity(full_config),
+    );
+    io.add_method(
+        "rlay_experimentalNeo4jQuery",
+        rpc_rlay_experimental_neo4j_query(full_config, sync_state),
     );
 
     io
@@ -537,6 +541,48 @@ fn rpc_rlay_experimental_store_entity(config: &Config) -> impl RpcMethodSimple {
 
             let cid: String = format!("0x{}", raw_cid.to_bytes().to_hex());
             Ok(serde_json::to_value(cid).unwrap())
+        } else {
+            unimplemented!()
+        }
+    }
+}
+
+fn rpc_rlay_experimental_neo4j_query(
+    config: &Config,
+    sync_state: MultiBackendSyncState,
+) -> impl RpcMethodSimple {
+    let config = config.clone();
+    let sync_state = sync_state.clone();
+    move |params: Params| {
+        if let Params::Array(params_array) = params {
+            let query = params_array.get(0).unwrap().as_str().unwrap();
+
+            let default_options = json!({});
+            let options_object = params_array.get(1).or_else(|| Some(&default_options));
+            let backend_name: Option<&str> = options_object
+                .and_then(|n| n.as_object())
+                .and_then(|n| n.get("backend"))
+                .and_then(|n| n.as_str());
+
+            let mut backend = config
+                .get_backend_with_syncstate(backend_name, &sync_state)
+                .map_err(failure_into_jsonrpc_err)?;
+
+            let cids = backend
+                .neo4j_query(&query)
+                .map_err(failure_into_jsonrpc_err)?;
+            let entities: Vec<_> = cids
+                .into_iter()
+                .map(|cid| {
+                    backend
+                        .get_entity(&cid.to_string())
+                        .unwrap()
+                        .unwrap()
+                        .to_web3_format()
+                })
+                .collect();
+
+            Ok(serde_json::to_value(entities).unwrap())
         } else {
             unimplemented!()
         }
