@@ -10,7 +10,7 @@ use web3;
 use web3::types::H160;
 use web3::Transport;
 
-use crate::config::{Config, EthereumBackendConfig};
+use crate::config::{BackendConfig, Config, EthereumBackendConfig};
 
 pub static SUCCESS: Emoji = Emoji("✅  ", "");
 pub static FAILURE: Emoji = Emoji("❌  ", "");
@@ -152,7 +152,7 @@ pub fn check_contracts(
 pub fn check_web3(
     eloop: &mut tokio_core::reactor::Core,
     web3: &web3::Web3<impl Transport>,
-    config: &Config,
+    config: &EthereumBackendConfig,
 ) {
     let version_future = web3.net().version().timeout(Duration::from_secs(10));
 
@@ -163,35 +163,38 @@ pub fn check_web3(
             "{}{} (at \"{}\")",
             SUCCESS,
             style("Able to connect to JSON-RPC").green(),
-            config
-                .default_eth_backend_config()
-                .unwrap()
-                .network_address
-                .as_ref()
-                .unwrap()
+            config.network_address.as_ref().unwrap()
         ),
         Err(_) => println!(
             "{}{} (at \"{}\")",
             FAILURE,
             style("Unable to connect to JSON-RPC after 10s timeout").red(),
-            config
-                .default_eth_backend_config()
-                .unwrap()
-                .network_address
-                .as_ref()
-                .unwrap()
+            config.network_address.as_ref().unwrap()
         ),
     }
+}
+
+pub fn run_checks_backend_ethereum(
+    eloop: &mut tokio_core::reactor::Core,
+    web3: &web3::Web3<impl Transport>,
+    name: &str,
+    config: &EthereumBackendConfig,
+) {
+    println!("Checking backend \"{}\":", name);
+    check_web3(eloop, web3, config);
+    check_contracts(eloop, web3, config);
 }
 
 pub fn run_checks(config: &Config) {
     let mut eloop = tokio_core::reactor::Core::new().unwrap();
     let web3 = config.web3_with_handle(&eloop.handle());
 
-    check_web3(&mut eloop, &web3, &config);
-    check_contracts(
-        &mut eloop,
-        &web3,
-        &config.default_eth_backend_config().unwrap(),
-    );
+    for (backend_name, backend_config) in config.backends.iter() {
+        match backend_config {
+            BackendConfig::Ethereum(config) => {
+                run_checks_backend_ethereum(&mut eloop, &web3, backend_name, config);
+            }
+            _ => {}
+        }
+    }
 }
