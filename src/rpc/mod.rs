@@ -1,6 +1,7 @@
 mod proxy;
 
 use ::web3::futures::prelude::*;
+use ::web3::types::H160;
 use cid::ToCid;
 use ethabi;
 use ethabi::token::Token;
@@ -21,7 +22,7 @@ use url::Url;
 use self::proxy::ProxyHandler;
 use crate::aggregation::{detect_valued_pools, ValuedBooleanPropositionPool};
 use crate::backend::{BackendRpcMethods, EthereumSyncState as SyncState};
-use crate::config::Config;
+use crate::config::{BackendConfig, Config};
 use crate::sync::MultiBackendSyncState;
 use crate::web3_helpers::HexString;
 
@@ -145,24 +146,32 @@ pub fn proxy_handler_with_methods(
             .as_ref()
             .unwrap(),
     );
-    io.add_method("rlay_version", rpc_rlay_version(full_config));
-    io.add_method(
-        "rlay_getPropositionPools",
-        rpc_rlay_get_proposition_pools(sync_state.default_eth_backend()),
-    );
     io.add_method("rlay_encodeForStore", rpc_rlay_encode_for_store());
-    io.add_method(
-        "rlay_experimentalKindForCid",
-        rpc_rlay_experimental_kind_for_cid(sync_state.default_eth_backend()),
-    );
-    io.add_method(
-        "rlay_experimentalListCids",
-        rpc_rlay_experimental_list_cids(sync_state.default_eth_backend()),
-    );
-    io.add_method(
-        "rlay_experimentalListCidsIndex",
-        rpc_rlay_experimental_list_cids_index(sync_state.default_eth_backend()),
-    );
+    io.add_method("rlay_version", rpc_rlay_version(full_config));
+
+    match sync_state.backend("default_eth") {
+        Some(sync_state_default_eth_backend) => {
+            io.add_method(
+                "rlay_getPropositionPools",
+                rpc_rlay_get_proposition_pools(sync_state_default_eth_backend.clone()),
+            );
+            io.add_method(
+                "rlay_experimentalKindForCid",
+                rpc_rlay_experimental_kind_for_cid(sync_state_default_eth_backend.clone()),
+            );
+            io.add_method(
+                "rlay_experimentalListCids",
+                rpc_rlay_experimental_list_cids(sync_state_default_eth_backend.clone()),
+            );
+            io.add_method(
+                "rlay_experimentalListCidsIndex",
+                rpc_rlay_experimental_list_cids_index(sync_state_default_eth_backend.clone()),
+            );
+        }
+        None => {
+            warn!("Running without \"default_eth\" backend. Some RPC methods might be unavailable")
+        }
+    }
     io.add_method(
         "rlay_experimentalGetEntity",
         rpc_rlay_experimental_get_entity(full_config, sync_state),
@@ -185,14 +194,31 @@ pub fn proxy_handler_with_methods(
 fn rpc_rlay_version(config: &Config) -> impl RpcMethodSimple {
     let config = config.clone();
     move |_: Params| {
+        let contract_addresses = match config.get_backend_config(Some("default_eth")) {
+            Ok(default_eth_backend_config) => match default_eth_backend_config {
+                BackendConfig::Ethereum(default_eth_backend_config) => {
+                    json! {{
+                        "OntologyStorage": default_eth_backend_config.contract_address("OntologyStorage"),
+                        "RlayToken": default_eth_backend_config.contract_address("RlayToken"),
+                        "PropositionLedger": default_eth_backend_config.contract_address("PropositionLedger"),
+                    }}
+                }
+                _ => panic!("\"default_eth\" is not an Ethereum backend"),
+            },
+            Err(_) => {
+                warn!("Running without \"default_eth\" backend. The rlay_version RPC method contains some dummy data");
+                json! {{
+                    "OntologyStorage": H160::zero(),
+                    "RlayToken": H160::zero(),
+                    "PropositionLedger": H160::zero(),
+                }}
+            }
+        };
+
         Ok(json! {{
             "networkVersion": NETWORK_VERSION,
             "clientVersion": format!("rlay-client/{}", CLIENT_VERSION),
-            "contractAddresses": {
-                "OntologyStorage": config.contract_address("OntologyStorage"),
-                "RlayToken": config.contract_address("RlayToken"),
-                "PropositionLedger": config.contract_address("PropositionLedger"),
-            }
+            "contractAddresses": contract_addresses,
         }})
     }
 }

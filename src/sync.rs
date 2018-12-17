@@ -235,7 +235,9 @@ pub fn run_sync(config: &Config) {
 
     let sync_state = {
         let mut sync_state = MultiBackendSyncState::new();
-        sync_state.add_backend("default_eth".to_owned());
+        for (backend_name, _) in config.backends.iter() {
+            sync_state.add_backend(backend_name.clone());
+        }
 
         sync_state
     };
@@ -300,78 +302,104 @@ pub fn run_sync(config: &Config) {
         }
     }
     {
-        let epoch_length: U256 = config
-            .default_eth_backend_config()
-            .unwrap()
-            .epoch_length
-            .into();
-        let computed_state_calculate_payouts = computed_state.clone();
-        let sync_state_calculate_payouts = sync_state.clone();
+        // TODO: make compatible with multiple backends
+        for (backend_name, _) in sync_state.backends.iter() {
+            if backend_name != "default_eth" {
+                debug!("payout calculation is only implemented for default_eth backend right now");
+                continue;
+            }
 
-        let calculate_payouts_fut =
-            retrieve_epoch_start_block(&eloop.handle().clone(), &config.clone()).and_then(
-                move |epoch_start_block| {
-                    Interval::new(Duration::from_secs(15))
-                        .and_then(move |_| Ok(epoch_start_block))
-                        .for_each(move |epoch_start_block| {
-                            fill_epoch_payouts(
-                                epoch_start_block,
-                                epoch_length,
-                                &sync_state_calculate_payouts
-                                    .default_eth_backend()
-                                    .proposition_ledger_block_highwatermark(),
-                                &sync_state_calculate_payouts
-                                    .default_eth_backend()
-                                    .proposition_ledger(),
-                                &computed_state_calculate_payouts.payout_epochs(),
-                                &sync_state_calculate_payouts
-                                    .default_eth_backend()
-                                    .entity_map(),
-                            );
-                            fill_epoch_payouts_cumulative(
-                                &computed_state_calculate_payouts.payout_epochs(),
-                                &computed_state_calculate_payouts.payout_epochs_cum(),
-                            );
-                            Ok(())
-                        })
-                        .map_err(|err| {
-                            error!("{:?}", err);
-                            ()
-                        })
-                },
-            );
-        eloop.handle().spawn(calculate_payouts_fut);
+            let epoch_length: U256 = config
+                .default_eth_backend_config()
+                .unwrap()
+                .epoch_length
+                .into();
+            let computed_state_calculate_payouts = computed_state.clone();
+            let sync_state_calculate_payouts = sync_state.clone();
+
+            let calculate_payouts_fut =
+                retrieve_epoch_start_block(&eloop.handle().clone(), &config.clone()).and_then(
+                    move |epoch_start_block| {
+                        Interval::new(Duration::from_secs(15))
+                            .and_then(move |_| Ok(epoch_start_block))
+                            .for_each(move |epoch_start_block| {
+                                fill_epoch_payouts(
+                                    epoch_start_block,
+                                    epoch_length,
+                                    &sync_state_calculate_payouts
+                                        .default_eth_backend()
+                                        .proposition_ledger_block_highwatermark(),
+                                    &sync_state_calculate_payouts
+                                        .default_eth_backend()
+                                        .proposition_ledger(),
+                                    &computed_state_calculate_payouts.payout_epochs(),
+                                    &sync_state_calculate_payouts
+                                        .default_eth_backend()
+                                        .entity_map(),
+                                );
+                                fill_epoch_payouts_cumulative(
+                                    &computed_state_calculate_payouts.payout_epochs(),
+                                    &computed_state_calculate_payouts.payout_epochs_cum(),
+                                );
+                                Ok(())
+                            })
+                            .map_err(|err| {
+                                error!("{:?}", err);
+                                ()
+                            })
+                    },
+                );
+            eloop.handle().spawn(calculate_payouts_fut);
+        }
     }
 
-    spawn_stats_loop(
-        &eloop.handle(),
-        sync_state.default_eth_backend().clone(),
-        computed_state.clone(),
-    );
+    for (backend_name, _) in sync_state.backends.iter() {
+        if backend_name != "default_eth" {
+            debug!("printing stats loop is only implemented for default_eth backend right now");
+            continue;
+        }
+        spawn_stats_loop(
+            &eloop.handle(),
+            sync_state.default_eth_backend().clone(),
+            computed_state.clone(),
+        );
+    }
 
     {
         // Store calculated payouts on disk
-        let computed_state_store = computed_state.clone();
-        let store_payouts_config = config.clone();
-        let store_payouts = Interval::new(Duration::from_secs(5))
-            .map_err(|err| {
-                error!("{:?}", err);
-                ()
-            })
-            .for_each(move |_| {
-                store_epoch_payouts(
-                    store_payouts_config.clone(),
-                    computed_state_store.payout_epochs(),
-                );
-                Ok(())
-            })
-            .map_err(|err| {
-                error!("{:?}", err);
-                ()
-            });
-        eloop.handle().spawn(store_payouts);
+        for (backend_name, _) in sync_state.backends.iter() {
+            if backend_name != "default_eth" {
+                debug!("storing calculated payouts is only implemented for default_eth backend right now");
+                continue;
+            }
+            let computed_state_store = computed_state.clone();
+            let store_payouts_config = config.clone();
+            let store_payouts = Interval::new(Duration::from_secs(5))
+                .map_err(|err| {
+                    error!("{:?}", err);
+                    ()
+                })
+                .for_each(move |_| {
+                    store_epoch_payouts(
+                        store_payouts_config.clone(),
+                        computed_state_store.payout_epochs(),
+                    );
+                    Ok(())
+                })
+                .map_err(|err| {
+                    error!("{:?}", err);
+                    ()
+                });
+            eloop.handle().spawn(store_payouts);
+        }
     }
-    spawn_payout_root_submission(&eloop.handle(), config.clone(), computed_state.clone());
+    for (backend_name, _) in sync_state.backends.iter() {
+        if backend_name != "default_eth" {
+            debug!("submitting payout roots is only implemented for default_eth backend right now");
+            continue;
+        }
+        spawn_payout_root_submission(&eloop.handle(), config.clone(), computed_state.clone());
+    }
 
     let rpc_config = config.clone();
     let rpc_sync_state = sync_state.clone();

@@ -183,7 +183,10 @@ fn rlay_token_contract(
     let token_contract_abi = include_str!("../data/RlayToken.abi");
     web3::contract::Contract::from_json(
         web3.eth(),
-        config.contract_address("RlayToken"),
+        config
+            .default_eth_backend_config()
+            .unwrap()
+            .contract_address("RlayToken"),
         token_contract_abi.as_bytes(),
     )
     .expect("Couldn't load RlayToken contract")

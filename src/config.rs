@@ -1,5 +1,4 @@
 use failure::{err_msg, Error};
-use rustc_hex::FromHex;
 use std::collections::HashMap;
 use std::fs::{self, File};
 use std::io::Read;
@@ -8,7 +7,6 @@ use tokio_core;
 use toml;
 use url::Url;
 use web3;
-use web3::types::H160;
 use web3::DuplexTransport;
 
 pub use self::backend::{BackendConfig, EthereumBackendConfig, Neo4jBackendConfig};
@@ -68,24 +66,6 @@ impl Config {
         file.read_to_string(&mut contents)?;
         let config = toml::from_str(&contents)?;
         Ok(config)
-    }
-
-    pub fn contract_address(&self, name: &str) -> H160 {
-        let address_bytes = self
-            .default_eth_backend_config()
-            .unwrap()
-            .contract_addresses
-            .get(name)
-            .unwrap_or_else(|| {
-                panic!(
-                    "Could not find configuration key for contract_addresses.{}",
-                    name
-                )
-            })[2..]
-            .from_hex()
-            .unwrap();
-
-        H160::from_slice(&address_bytes)
     }
 
     pub fn web3_with_handle(
