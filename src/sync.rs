@@ -13,13 +13,13 @@ use web3::types::{Filter, Log, U256};
 use web3::DuplexTransport;
 
 use crate::backend::EthereumSyncState as SyncState;
-use crate::config::Config;
+use crate::config::{BackendConfig, Config};
 use crate::payout::{
     fill_epoch_payouts, fill_epoch_payouts_cumulative, load_epoch_payouts,
     retrieve_epoch_start_block, store_epoch_payouts, submit_epoch_payouts, Payout, PayoutEpochs,
 };
 use crate::sync_ontology::{EthOntologySyncer, OntologySyncer};
-use crate::sync_proposition_ledger::sync_ledger;
+use crate::sync_proposition_ledger::{EthPropositionLedgerSyncer, PropositionLedgerSyncer};
 
 // TODO: possibly contribute to rust-web3
 /// Subscribe on a filter, but also get all historic logs that fit the filter
@@ -243,39 +243,61 @@ pub fn run_sync(config: &Config) {
 
     {
         // Sync ontology concepts from smart contract to local state
-        for sync_state in sync_state.backends.values() {
-            let mut syncer = EthOntologySyncer::default();
-            let sync_ontology_fut = syncer
-                .sync_ontology(
-                    eloop.handle(),
-                    config.clone(),
-                    sync_state.entity_map(),
-                    sync_state.cid_entity_kind_map(),
-                    sync_state.block_entity_map(),
-                    sync_state.ontology_last_synced_block(),
-                )
-                .map_err(|err| {
-                    error!("Sync ontology: {:?}", err);
-                    ()
-                });
-            eloop.handle().spawn(sync_ontology_fut);
+        for (backend_name, sync_state) in sync_state.backends.iter() {
+            match config.get_backend_config(Some(backend_name)).unwrap() {
+                BackendConfig::Ethereum(config) => {
+                    let mut syncer = EthOntologySyncer::default();
+                    let sync_ontology_fut = syncer
+                        .sync_ontology(
+                            eloop.handle(),
+                            config.clone(),
+                            sync_state.entity_map(),
+                            sync_state.cid_entity_kind_map(),
+                            sync_state.block_entity_map(),
+                            sync_state.ontology_last_synced_block(),
+                        )
+                        .map_err(|err| {
+                            error!("Sync ontology: {:?}", err);
+                            ()
+                        });
+                    eloop.handle().spawn(sync_ontology_fut);
+                }
+                _ => {
+                    debug!(
+                        "No syncing of ontology implemented for backend type of backend \"{}\"",
+                        backend_name
+                    );
+                }
+            }
         }
     }
     {
         // Sync proposition ledger from smart contract to local state
-        let sync_proposition_ledger_fut = sync_ledger(
-            &eloop.handle(),
-            &config,
-            sync_state.default_eth_backend().proposition_ledger(),
-            sync_state
-                .default_eth_backend()
-                .proposition_ledger_block_highwatermark(),
-        )
-        .map_err(|err| {
-            error!("Sync ledger: {:?}", err);
-            ()
-        });
-        eloop.handle().spawn(sync_proposition_ledger_fut);
+        for (backend_name, sync_state) in sync_state.backends.iter() {
+            match config.get_backend_config(Some(backend_name)).unwrap() {
+                BackendConfig::Ethereum(config) => {
+                    let mut syncer = EthPropositionLedgerSyncer::default();
+                    let sync_proposition_ledger_fut = syncer
+                        .sync_ledger(
+                            &eloop.handle(),
+                            config.clone(),
+                            sync_state.proposition_ledger(),
+                            sync_state.proposition_ledger_block_highwatermark(),
+                        )
+                        .map_err(|err| {
+                            error!("Sync ledger: {:?}", err);
+                            ()
+                        });
+                    eloop.handle().spawn(sync_proposition_ledger_fut);
+                }
+                _ => {
+                    debug!(
+                        "No syncing of proposition ledger implemented for backend type of backend \"{}\"",
+                        backend_name
+                    );
+                }
+            }
+        }
     }
     {
         let epoch_length: U256 = config

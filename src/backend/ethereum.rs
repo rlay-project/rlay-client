@@ -8,7 +8,7 @@ use std::sync::{Arc, Mutex};
 use crate::backend::{BackendFromConfig, BackendFromConfigAndSyncState, BackendRpcMethods};
 use crate::config::backend::EthereumBackendConfig;
 use crate::sync_ontology::{BlockEntityMap, EntityMap};
-use crate::sync_proposition_ledger::{sync_ledger, PropositionLedger};
+use crate::sync_proposition_ledger::PropositionLedger;
 
 pub struct EthereumBackend {
     pub config: EthereumBackendConfig,

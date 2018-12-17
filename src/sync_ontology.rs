@@ -9,7 +9,7 @@ use std::collections::{BTreeMap, HashMap, VecDeque};
 use std::sync::{Arc, Mutex};
 use tokio_core;
 
-use crate::config::Config;
+use crate::config::EthereumBackendConfig;
 use crate::sync::subscribe_with_history;
 use crate::web3_helpers::{base58_encode, raw_query};
 
@@ -177,7 +177,7 @@ impl EthOntologySyncer {
     fn process_ontology_storage_log(
         log: &::web3::types::Log,
         signature_map: &HashMap<::web3::types::H256, Event>,
-        config: &Config,
+        config: &EthereumBackendConfig,
         web3: &::web3::Web3<impl Transport>,
     ) -> impl Future<Item = Option<(Vec<u8>, String, Option<Entity>)>, Error = ()> {
         debug!(
@@ -259,7 +259,7 @@ impl EthOntologySyncer {
 }
 
 impl OntologySyncer<Box<Future<Item = (), Error = ()>>> for EthOntologySyncer {
-    type Config = Config;
+    type Config = EthereumBackendConfig;
 
     fn sync_ontology(
         &mut self,
