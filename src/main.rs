@@ -17,6 +17,7 @@ pub mod config;
 pub mod doctor;
 pub mod init;
 pub mod merkle;
+pub mod modules;
 pub mod ontology_ext;
 pub mod payout;
 pub mod payout_calculation;
