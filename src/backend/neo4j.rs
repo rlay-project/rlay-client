@@ -3,8 +3,10 @@ use cid::{Cid, ToCid};
 use failure::{err_msg, Error};
 use rlay_ontology::prelude::*;
 use rustc_hex::ToHex;
+use rusted_cypher::cypher::result::Rows;
 use rusted_cypher::GraphClient;
 use serde_json::{self, Value};
+use std::collections::HashMap;
 
 use crate::backend::{BackendFromConfig, BackendFromConfigAndSyncState, BackendRpcMethods};
 use crate::config::backend::Neo4jBackendConfig;
@@ -22,6 +24,98 @@ impl Neo4jBackend {
 
         self.client = Some(self.config.client().unwrap());
         return self.client.as_ref().unwrap();
+    }
+
+    /// Convert rows that has a return statement like `RETURN labels(n),n,type(r),m` into entities
+    fn rows_to_entity(rows: Rows) -> Vec<Entity> {
+        let mut entity_map = HashMap::<String, Value>::new();
+
+        for row in rows {
+            let labels: Value = row.get("labels(n)").unwrap();
+            let label = labels.as_array().unwrap()[0].clone();
+            // build empty entity with which we can check if fields are supposed to be arrays
+            let entity_kind = EntityKind::from_name(label.as_str().unwrap()).unwrap();
+            let empty_entity: Value =
+                serde_json::to_value(entity_kind.empty_entity().to_web3_format()).unwrap();
+
+            let main_entity_cid: String = row
+                .get::<Value>("n")
+                .unwrap()
+                .as_object_mut()
+                .unwrap()
+                .get("cid")
+                .unwrap()
+                .as_str()
+                .unwrap()
+                .to_owned();
+            let entity = entity_map.entry(main_entity_cid).or_insert_with(|| {
+                let mut main_entity: Value = row.get("n").unwrap();
+                main_entity["type"] = label;
+                main_entity.as_object_mut().unwrap().remove("cid");
+
+                main_entity
+            });
+
+            let value_value: Value = row.get("m").unwrap();
+            let value_cid = value_value["cid"].clone();
+
+            let rel_type_value: Value = row.get("type(r)").unwrap();
+            let rel_type = rel_type_value.as_str().unwrap().clone();
+
+            match empty_entity[rel_type] {
+                Value::Array(_) => {
+                    if !entity[rel_type].is_array() {
+                        entity[rel_type] = Value::Array(Vec::new());
+                    }
+                    entity[rel_type].as_array_mut().unwrap().push(value_cid);
+                }
+                Value::String(_) => {
+                    entity[rel_type] = value_cid;
+                }
+                _ => unimplemented!(),
+            }
+        }
+
+        entity_map
+            .values()
+            .into_iter()
+            .map(|entity| {
+                let web3_entity: EntityFormatWeb3 =
+                    serde_json::from_value((*entity).clone()).unwrap();
+                let entity: Entity = Entity::from_web3_format(web3_entity);
+
+                entity
+            })
+            .collect()
+    }
+
+    pub fn get_entities(&mut self, cids: &[String]) -> Result<Vec<Entity>, Error> {
+        let client = self.client();
+        let deduped_cids = {
+            let mut deduped_cids = cids.to_owned();
+            deduped_cids.dedup();
+            deduped_cids
+        };
+
+        let query = format!(
+            "MATCH (n)-[r]->(m) WHERE n.cid IN {0:?} RETURN labels(n),n,type(r),m",
+            deduped_cids
+        );
+        trace!("get_entities query: \"{}\"", query);
+        let query_res = client.exec(query).unwrap();
+        if query_res.rows().count() == 0 {
+            return Ok(vec![]);
+        }
+
+        let entities = Self::rows_to_entity(query_res.rows());
+        debug_assert!(
+            deduped_cids.len() == entities.len(),
+            "{} cids provided and {} entities retrieved",
+            deduped_cids.len(),
+            entities.len()
+        );
+
+        Ok(entities)
     }
 }
 
@@ -115,7 +209,7 @@ impl BackendRpcMethods for Neo4jBackend {
         let client = self.client();
 
         let query = format!(
-            "MATCH (n {{ cid: \"{0}\"}})-[r]->(m) RETURN labels(n),n,type(r),m",
+            "MATCH (n {{ cid: \"{0}\" }})-[r]->(m) RETURN labels(n),n,type(r),m",
             cid
         );
         trace!("get_entity query: {:?}", query);
@@ -124,41 +218,10 @@ impl BackendRpcMethods for Neo4jBackend {
             return Ok(None);
         }
 
-        let first_row = query_res.rows().next().unwrap();
-        let labels: Value = first_row.get("labels(n)").unwrap();
-        let label = labels.as_array().unwrap()[0].clone();
-        // build empty entity with which we can check if fields are supposed to be arrays
-        let entity_kind = EntityKind::from_name(label.as_str().unwrap()).unwrap();
-        let empty_entity: Value =
-            serde_json::to_value(entity_kind.empty_entity().to_web3_format()).unwrap();
-
-        let mut entity: Value = first_row.get("n").unwrap();
-        entity["type"] = label;
-        entity.as_object_mut().unwrap().remove("cid");
-
-        for row in query_res.rows() {
-            let value_value: Value = row.get("m").unwrap();
-            let value_cid = value_value["cid"].clone();
-
-            let rel_type_value: Value = row.get("type(r)").unwrap();
-            let rel_type = rel_type_value.as_str().unwrap().clone();
-
-            match empty_entity[rel_type] {
-                Value::Array(_) => {
-                    if !entity[rel_type].is_array() {
-                        entity[rel_type] = Value::Array(Vec::new());
-                    }
-                    entity[rel_type].as_array_mut().unwrap().push(value_cid);
-                }
-                Value::String(_) => {
-                    entity[rel_type] = value_cid;
-                }
-                _ => unimplemented!(),
-            }
-        }
-
-        let web3_entity: EntityFormatWeb3 = serde_json::from_value(entity).unwrap();
-        let entity: Entity = Entity::from_web3_format(web3_entity);
+        let entity = Self::rows_to_entity(query_res.rows())
+            .get(0)
+            .unwrap()
+            .to_owned();
 
         let retrieved_cid = format!("0x{}", entity.to_cid().unwrap().to_bytes().to_hex());
         if retrieved_cid != cid {

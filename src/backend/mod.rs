@@ -33,6 +33,16 @@ pub enum Backend {
     Neo4j(Neo4jBackend),
 }
 
+impl Backend {
+    pub fn get_entities(&mut self, _cids: &[String]) -> Result<Vec<Entity>, Error> {
+        match self {
+            #[cfg(feature = "backend_neo4j")]
+            Backend::Neo4j(backend) => backend.get_entities(_cids),
+            Backend::Ethereum(_) => unimplemented!(),
+        }
+    }
+}
+
 impl BackendFromConfig for Backend {
     type C = BackendConfig;
 

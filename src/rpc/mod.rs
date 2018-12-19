@@ -571,15 +571,11 @@ fn rpc_rlay_experimental_neo4j_query(
             let cids = backend
                 .neo4j_query(&query)
                 .map_err(failure_into_jsonrpc_err)?;
-            let entities: Vec<_> = cids
+            let entities: Vec<_> = backend
+                .get_entities(&cids)
+                .map_err(failure_into_jsonrpc_err)?
                 .into_iter()
-                .map(|cid| {
-                    backend
-                        .get_entity(&cid.to_string())
-                        .unwrap()
-                        .unwrap()
-                        .to_web3_format()
-                })
+                .map(|entity| entity.to_web3_format())
                 .collect();
 
             Ok(serde_json::to_value(entities).unwrap())
