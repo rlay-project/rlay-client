@@ -571,10 +571,39 @@ fn rpc_rlay_experimental_neo4j_query(
             let cids = backend
                 .neo4j_query(&query)
                 .map_err(failure_into_jsonrpc_err)?;
+
+            let activated_filters_names: Vec<&str> = options_object
+                .and_then(|n| n.as_object())
+                .and_then(|n| n.get("filters"))
+                .and_then(|n| {
+                    n.as_array().and_then(|filters_arr| {
+                        Some(
+                            filters_arr
+                                .into_iter()
+                                .map(|n| n.as_str().unwrap())
+                                .collect::<Vec<_>>(),
+                        )
+                    })
+                })
+                .unwrap_or_else(Vec::new);
+            let filter_registry = crate::modules::ModuleRegistry::with_builtins();
+
+            let activated_filters: Vec<_> = activated_filters_names
+                .into_iter()
+                .map(|filter_name| filter_registry.filter(filter_name).unwrap())
+                .collect();
             let entities: Vec<_> = backend
                 .get_entities(&cids)
                 .map_err(failure_into_jsonrpc_err)?
                 .into_iter()
+                .filter(|entity| {
+                    for filter in &activated_filters {
+                        if !filter.borrow_mut().filter(entity.clone()) {
+                            return false;
+                        }
+                    }
+                    return true;
+                })
                 .map(|entity| entity.to_web3_format())
                 .collect();
 
