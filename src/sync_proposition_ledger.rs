@@ -8,7 +8,7 @@ use web3::futures::prelude::*;
 use web3::types::{Address, BlockNumber, FilterBuilder, Log, U256};
 
 use crate::config::EthereumBackendConfig;
-use crate::sync::subscribe_with_history;
+use crate::web3_helpers::subscribe_with_history;
 
 // TODO: reevaluate Hash, ParitialEq and Eq derives as there could theoretically be collisions.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]

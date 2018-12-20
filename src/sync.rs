@@ -8,9 +8,8 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tokio_core;
 use web3;
-use web3::futures::{self, prelude::*};
-use web3::types::{Filter, Log, U256};
-use web3::DuplexTransport;
+use web3::futures::prelude::*;
+use web3::types::U256;
 
 use crate::backend::EthereumSyncState as SyncState;
 use crate::config::{BackendConfig, Config};
@@ -20,28 +19,6 @@ use crate::payout::{
 };
 use crate::sync_ontology::{EthOntologySyncer, OntologySyncer};
 use crate::sync_proposition_ledger::{EthPropositionLedgerSyncer, PropositionLedgerSyncer};
-
-// TODO: possibly contribute to rust-web3
-/// Subscribe on a filter, but also get all historic logs that fit the filter
-pub fn subscribe_with_history(
-    web3: &web3::Web3<impl DuplexTransport>,
-    filter: Filter,
-) -> impl Stream<Item = Log, Error = web3::Error> {
-    let history_future = web3.eth().logs(filter.clone());
-    let subscribe_future = web3.eth_subscribe().subscribe_logs(filter);
-
-    let combined_future = history_future
-        .join(subscribe_future)
-        .into_stream()
-        .and_then(|(history, subscribe_stream)| {
-            let history_stream = futures::stream::iter_ok(history);
-
-            Ok(Stream::chain(history_stream, subscribe_stream))
-        })
-        .flatten();
-
-    combined_future
-}
 
 #[derive(Clone)]
 pub struct MultiBackendSyncState {

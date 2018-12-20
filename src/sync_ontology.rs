@@ -10,8 +10,7 @@ use std::sync::{Arc, Mutex};
 use tokio_core;
 
 use crate::config::EthereumBackendConfig;
-use crate::sync::subscribe_with_history;
-use crate::web3_helpers::{base58_encode, raw_query};
+use crate::web3_helpers::{base58_encode, raw_query, subscribe_with_history};
 
 pub type InnerEntityMap = BTreeMap<Vec<u8>, Entity>;
 pub type CidEntityMap = BTreeMap<Vec<u8>, String>;

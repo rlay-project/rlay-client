@@ -4,8 +4,10 @@ use rustc_hex::ToHex;
 use web3::api::Eth;
 use web3::contract::tokens::Tokenize;
 use web3::contract::Options;
+use web3::futures::{self, prelude::*};
 use web3::helpers::CallFuture;
-use web3::types::{Address, BlockNumber, Bytes, CallRequest};
+use web3::types::{Address, BlockNumber, Bytes, CallRequest, Filter, Log};
+use web3::DuplexTransport;
 use web3::Transport;
 
 pub fn raw_query<A, B, C, P, T>(
@@ -42,6 +44,30 @@ where
         })
         .unwrap()
     // .unwrap_or_else(Into::into)
+}
+
+// TODO: possibly contribute to rust-web3
+// I think a normal subscribe_logs with from: 'earliest', should also replay old logs,
+// but haven't tried it yet
+/// Subscribe on a filter, but also get all historic logs that fit the filter
+pub fn subscribe_with_history(
+    web3: &web3::Web3<impl DuplexTransport>,
+    filter: Filter,
+) -> impl Stream<Item = Log, Error = web3::Error> {
+    let history_future = web3.eth().logs(filter.clone());
+    let subscribe_future = web3.eth_subscribe().subscribe_logs(filter);
+
+    let combined_future = history_future
+        .join(subscribe_future)
+        .into_stream()
+        .and_then(|(history, subscribe_stream)| {
+            let history_stream = futures::stream::iter_ok(history);
+
+            Ok(Stream::chain(history_stream, subscribe_stream))
+        })
+        .flatten();
+
+    combined_future
 }
 
 pub struct HexString<'a> {
