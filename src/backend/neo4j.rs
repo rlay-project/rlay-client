@@ -72,6 +72,9 @@ impl Neo4jBackend {
                 Value::String(_) => {
                     entity[rel_type] = value_cid;
                 }
+                Value::Null => {
+                    entity[rel_type] = value_cid;
+                }
                 _ => unimplemented!(),
             }
         }
