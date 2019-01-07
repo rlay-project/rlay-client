@@ -4,6 +4,7 @@ use failure::{err_msg, Error};
 use rlay_ontology::prelude::*;
 use rustc_hex::ToHex;
 use rusted_cypher::cypher::result::Rows;
+use rusted_cypher::cypher::Statement;
 use rusted_cypher::GraphClient;
 use serde_json::{self, Value};
 use std::collections::HashMap;
@@ -192,18 +193,20 @@ impl BackendRpcMethods for Neo4jBackend {
             }
         }
 
-        let mut query = format!("MERGE (n {{cid: \"{1}\"}}) SET n:{0}", kind_name, cid);
+        let mut statement_query = format!("MERGE (n {{cid: \"{1}\"}}) SET n:{0}", kind_name, cid);
         if !values.is_empty() {
-            query.push_str(", ");
-            query.push_str(&values.join(", "));
+            statement_query.push_str(", ");
+            statement_query.push_str(&values.join(", "));
         }
 
-        trace!("NEO4J QUERY: {}", query);
-        client.exec(query).unwrap();
+        trace!("NEO4J QUERY: {}", statement_query);
+        let mut query = client.query();
+        query.add_statement(Statement::new(statement_query));
         for relationship in relationships {
             trace!("NEO4J QUERY: {}", relationship);
-            client.exec(relationship).unwrap();
+            query.add_statement(Statement::new(relationship));
         }
+        query.send().unwrap();
 
         Ok(raw_cid)
     }
