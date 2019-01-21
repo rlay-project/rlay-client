@@ -102,8 +102,8 @@ impl Neo4jBackend {
         };
 
         let query = format!(
-            "MATCH (n)-[r]->(m) WHERE n.cid IN {0:?} RETURN labels(n),n,type(r),m",
-            deduped_cids
+            "MATCH (n:RlayEntity)-[r]->(m) WHERE n.cid IN {0:?} RETURN labels(n),n,type(r),m",
+            deduped_cids,
         );
         trace!("get_entities query: \"{}\"", query);
         let query_res = client.exec(query).unwrap();
@@ -160,7 +160,7 @@ impl BackendRpcMethods for Neo4jBackend {
         {
             let mut add_relationship_value = |cid, key, value| {
                 let rel_query = format!(
-                    "MATCH (n {{ cid: \"{0}\"}}) MERGE (m {{ cid: {2} }}) MERGE (n)-[r:{1}]->(m)",
+                    "MATCH (n:RlayEntity {{ cid: \"{0}\"}}) MERGE (m {{ cid: {2} }}) MERGE (n)-[r:{1}]->(m)",
                     cid, key, value
                 );
                 relationships.push(rel_query);
@@ -193,7 +193,10 @@ impl BackendRpcMethods for Neo4jBackend {
             }
         }
 
-        let mut statement_query = format!("MERGE (n {{cid: \"{1}\"}}) SET n:{0}", kind_name, cid);
+        let mut statement_query = format!(
+            "MERGE (n:RlayEntity {{cid: \"{1}\"}}) SET n:{0}",
+            kind_name, cid
+        );
         if !values.is_empty() {
             statement_query.push_str(", ");
             statement_query.push_str(&values.join(", "));
@@ -215,7 +218,7 @@ impl BackendRpcMethods for Neo4jBackend {
         let client = self.client();
 
         let query = format!(
-            "MATCH (n {{ cid: \"{0}\" }})-[r]->(m) RETURN labels(n),n,type(r),m",
+            "MATCH (n:RlayEntity {{ cid: \"{0}\" }})-[r]->(m) RETURN labels(n),n,type(r),m",
             cid
         );
         trace!("get_entity query: {:?}", query);
