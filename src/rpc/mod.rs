@@ -590,7 +590,7 @@ fn rpc_rlay_experimental_neo4j_query(
 
             let activated_filters: Vec<_> = activated_filters_names
                 .into_iter()
-                .map(|filter_name| filter_registry.filter(filter_name).unwrap())
+                .filter_map(|filter_name| filter_registry.filter(filter_name))
                 .collect();
             let entities: Vec<_> = backend
                 .get_entities(&cids)
