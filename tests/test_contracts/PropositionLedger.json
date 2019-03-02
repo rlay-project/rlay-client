@@ -1,0 +1,137 @@
+{
+  "contractName": "PropositionLedger",
+  "abi": [
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "propositionStorageContractAddr",
+      "outputs": [
+        {
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "tokenContractAddr",
+      "outputs": [
+        {
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [
+        {
+          "name": "",
+          "type": "bytes32"
+        }
+      ],
+      "name": "weights",
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "name": "_tokenContractAddr",
+          "type": "address"
+        },
+        {
+          "name": "_propositionStorageContractAddr",
+          "type": "address"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "name": "_cid",
+          "type": "bytes"
+        },
+        {
+          "indexed": false,
+          "name": "_amount",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "name": "_sender",
+          "type": "address"
+        }
+      ],
+      "name": "PropositionWeightIncreased",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "name": "_cid",
+          "type": "bytes"
+        },
+        {
+          "indexed": false,
+          "name": "_amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "PropositionWeightNewTotal",
+      "type": "event"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "propositionCid",
+          "type": "bytes"
+        },
+        {
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "submitProposition",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x608060405234801561001057600080fd5b5060405160408061060483398101604052805160209091015161003b82640100000000610094810204565b151561004657600080fd5b61005881640100000000610094810204565b151561006357600080fd5b60008054600160a060020a03938416600160a060020a0319918216179091556001805492909316911617905561009c565b6000903b1190565b610559806100ab6000396000f3006080604052600436106100615763ffffffff7c01000000000000000000000000000000000000000000000000000000006000350416630ec7d4fe8114610066578063398a60a4146100a457806356d0f6f7146101015780637addf67514610116575b600080fd5b34801561007257600080fd5b5061007b610140565b6040805173ffffffffffffffffffffffffffffffffffffffff9092168252519081900360200190f35b3480156100b057600080fd5b506040805160206004803580820135601f81018490048402850184019095528484526100ff943694929360249392840191908190840183828082843750949750509335945061015c9350505050565b005b34801561010d57600080fd5b5061007b6104f8565b34801561012257600080fd5b5061012e600435610514565b60408051918252519081900360200190f35b60015473ffffffffffffffffffffffffffffffffffffffff1681565b60008054600154604080517fdd62ed3e000000000000000000000000000000000000000000000000000000008152336004820152306024820152905173ffffffffffffffffffffffffffffffffffffffff9384169492909316928591859163dd62ed3e9160448082019260209290919082900301818887803b1580156101e157600080fd5b505af11580156101f5573d6000803e3d6000fd5b505050506040513d602081101561020b57600080fd5b5051101561021857600080fd5b604080517f70a082310000000000000000000000000000000000000000000000000000000081523360048201529051859173ffffffffffffffffffffffffffffffffffffffff8616916370a08231916024808201926020929091908290030181600087803b15801561028957600080fd5b505af115801561029d573d6000803e3d6000fd5b505050506040513d60208110156102b357600080fd5b505110156102c057600080fd5b6102c985610526565b604080517f23b872dd00000000000000000000000000000000000000000000000000000000815233600482015230602482015260448101879052905191925073ffffffffffffffffffffffffffffffffffffffff8516916323b872dd916064808201926020929091908290030181600087803b15801561034857600080fd5b505af115801561035c573d6000803e3d6000fd5b505050506040513d602081101561037257600080fd5b50506000818152600260209081526040808320805488019055805180830188905233918101829052606080825289519082015288517f56c39cada96a3e40d2fe3386c0dc47aa8ab845584538a788d8afc045b4ea1671948a948a94939283926080840192880191908190849084905b838110156103f95781810151838201526020016103e1565b50505050905090810190601f1680156104265780820380516001836020036101000a031916815260200191505b5094505050505060405180910390a17fd3ee6032279c27e06e43aceb4eef3e85e23e3faf4bd4a564314ec713ac0d59b885600260008460001916600019168152602001908152602001600020546040518080602001838152602001828103825284818151815260200191508051906020019080838360005b838110156104b657818101518382015260200161049e565b50505050905090810190601f1680156104e35780820380516001836020036101000a031916815260200191505b50935050505060405180910390a15050505050565b60005473ffffffffffffffffffffffffffffffffffffffff1681565b60026020526000908152604090205481565b60260151905600a165627a7a72305820c8be0b6efb60b2e606bc5e068af9ecf24fac688dcb240579f0978404980cd73e0029",
+  "deployedBytecode": "0x6080604052600436106100615763ffffffff7c01000000000000000000000000000000000000000000000000000000006000350416630ec7d4fe8114610066578063398a60a4146100a457806356d0f6f7146101015780637addf67514610116575b600080fd5b34801561007257600080fd5b5061007b610140565b6040805173ffffffffffffffffffffffffffffffffffffffff9092168252519081900360200190f35b3480156100b057600080fd5b506040805160206004803580820135601f81018490048402850184019095528484526100ff943694929360249392840191908190840183828082843750949750509335945061015c9350505050565b005b34801561010d57600080fd5b5061007b6104f8565b34801561012257600080fd5b5061012e600435610514565b60408051918252519081900360200190f35b60015473ffffffffffffffffffffffffffffffffffffffff1681565b60008054600154604080517fdd62ed3e000000000000000000000000000000000000000000000000000000008152336004820152306024820152905173ffffffffffffffffffffffffffffffffffffffff9384169492909316928591859163dd62ed3e9160448082019260209290919082900301818887803b1580156101e157600080fd5b505af11580156101f5573d6000803e3d6000fd5b505050506040513d602081101561020b57600080fd5b5051101561021857600080fd5b604080517f70a082310000000000000000000000000000000000000000000000000000000081523360048201529051859173ffffffffffffffffffffffffffffffffffffffff8616916370a08231916024808201926020929091908290030181600087803b15801561028957600080fd5b505af115801561029d573d6000803e3d6000fd5b505050506040513d60208110156102b357600080fd5b505110156102c057600080fd5b6102c985610526565b604080517f23b872dd00000000000000000000000000000000000000000000000000000000815233600482015230602482015260448101879052905191925073ffffffffffffffffffffffffffffffffffffffff8516916323b872dd916064808201926020929091908290030181600087803b15801561034857600080fd5b505af115801561035c573d6000803e3d6000fd5b505050506040513d602081101561037257600080fd5b50506000818152600260209081526040808320805488019055805180830188905233918101829052606080825289519082015288517f56c39cada96a3e40d2fe3386c0dc47aa8ab845584538a788d8afc045b4ea1671948a948a94939283926080840192880191908190849084905b838110156103f95781810151838201526020016103e1565b50505050905090810190601f1680156104265780820380516001836020036101000a031916815260200191505b5094505050505060405180910390a17fd3ee6032279c27e06e43aceb4eef3e85e23e3faf4bd4a564314ec713ac0d59b885600260008460001916600019168152602001908152602001600020546040518080602001838152602001828103825284818151815260200191508051906020019080838360005b838110156104b657818101518382015260200161049e565b50505050905090810190601f1680156104e35780820380516001836020036101000a031916815260200191505b50935050505060405180910390a15050505050565b60005473ffffffffffffffffffffffffffffffffffffffff1681565b60026020526000908152604090205481565b60260151905600a165627a7a72305820c8be0b6efb60b2e606bc5e068af9ecf24fac688dcb240579f0978404980cd73e0029",
+  "sourceMap": "363:2351:2:-;;;729:366;8:9:-1;5:2;;;30:1;27;20:12;5:2;729:366:2;;;;;;;;;;;;;;;;;;;872:30;729:366;872:10;;;;:30;:::i;:::-;864:39;;;;;;;;921:43;932:31;921:10;;;;:43;:::i;:::-;913:52;;;;;;;;976:17;:38;;-1:-1:-1;;;;;976:38:2;;;-1:-1:-1;;;;;;976:38:2;;;;;;;;1024:64;;;;;;;;;;;363:2351;;1101:160;1157:4;1211:17;;1246:8;;1101:160::o;363:2351::-;;;;;;;",
+  "deployedSourceMap": "363:2351:2:-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;585:45;;8:9:-1;5:2;;;30:1;27;20:12;5:2;585:45:2;;;;;;;;;;;;;;;;;;;;;;;1861:851;;8:9:-1;5:2;;;30:1;27;20:12;5:2;-1:-1;1861:851:2;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;-1:-1:-1;1861:851:2;;-1:-1:-1;;1861:851:2;;;-1:-1:-1;1861:851:2;;-1:-1:-1;;;;1861:851:2;;;547:32;;8:9:-1;5:2;;;30:1;27;20:12;5:2;547:32:2;;;;679:43;;8:9:-1;5:2;;;30:1;27;20:12;5:2;-1:-1;679:43:2;;;;;;;;;;;;;;;;;;;;;585:45;;;;;;:::o;1861:851::-;1965:28;2011:17;;;2108:30;2258:41;;;;;;2282:10;2258:41;;;;2294:4;2258:41;;;;;;2011:17;;;;;2108:30;;;;;2303:6;;2011:17;;2258:23;;:41;;;;;;;;;;;;;;;1965:28;2011:17;2258:41;;;5:2:-1;;;;30:1;27;20:12;5:2;2258:41:2;;;;8:9:-1;5:2;;;45:16;42:1;39;24:38;77:16;74:1;67:27;5:2;2258:41:2;;;;;;;13:2:-1;8:3;5:11;2:2;;;29:1;26;19:12;2:2;-1:-1;2258:41:2;:51;;2250:60;;;;;;2328:35;;;;;;2352:10;2328:35;;;;;;2367:6;;2328:23;;;;;;:35;;;;;;;;;;;;;;;-1:-1:-1;2328:23:2;:35;;;5:2:-1;;;;30:1;27;20:12;5:2;2328:35:2;;;;8:9:-1;5:2;;;45:16;42:1;39;24:38;77:16;74:1;67:27;5:2;2328:35:2;;;;;;;13:2:-1;8:3;5:11;2:2;;;29:1;26;19:12;2:2;-1:-1;2328:35:2;:45;;2320:54;;;;;;2411:29;2425:14;2411:13;:29::i;:::-;2450:52;;;;;;2477:10;2450:52;;;;2489:4;2450:52;;;;;;;;;;;;2385:55;;-1:-1:-1;2450:26:2;;;;;;:52;;;;;;;;;;;;;;;-1:-1:-1;2450:26:2;:52;;;5:2:-1;;;;30:1;27;20:12;5:2;2450:52:2;;;;8:9:-1;5:2;;;45:16;42:1;39;24:38;77:16;74:1;67:27;5:2;2450:52:2;;;;;;;13:2:-1;8:3;5:11;2:2;;;29:1;26;19:12;2:2;-1:-1;;2512:24:2;;;;:7;2450:52;2512:24;;;;;;;:34;;;;;;2561:62;;;;;;;;2612:10;2561:62;;;;;;;;;;;;;;;;;;;;2588:14;;2540:6;;2612:10;2561:62;;;;;;;;;;;;;;;;;8:100:-1;33:3;30:1;27:10;8:100;;;90:11;;;84:18;71:11;;;64:39;52:2;45:10;8:100;;;12:14;2561:62:2;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;2638:67;2664:14;2680:7;:24;2688:15;2680:24;;;;;;;;;;;;;;;;;;2638:67;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;23:1:-1;8:100;33:3;30:1;27:10;8:100;;;90:11;;;84:18;71:11;;;64:39;52:2;45:10;8:100;;;12:14;2638:67:2;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;1861:851;;;;;:::o;547:32::-;;;;;;:::o;679:43::-;;;;;;;;;;;;;:::o;477:204:3:-;601:21;;595:28;;477:204::o",
+  "source": "pragma solidity ^0.4.21;\n\nimport \"./IPropositionStorage.sol\";\nimport \"./cid.sol\";\nimport \"tokens/eip20/EIP20Interface.sol\";\n\n/// @notice The PropositionLedger tracks how much weight has been put on which propositions.\n/// In the future this should extend to tracking more exactly who has added weight to a proposition,\n/// and at what point in time they did that\ncontract PropositionLedger {\n    event PropositionWeightIncreased(bytes _cid, uint256 _amount, address _sender);\n    event PropositionWeightNewTotal(bytes _cid, uint256 _amount);\n\n    address public tokenContractAddr;\n    address public propositionStorageContractAddr;\n\n    // proposition => total staked amount\n    mapping (bytes32 => uint256) public weights;\n\n    function PropositionLedger(\n        address _tokenContractAddr,\n        address _propositionStorageContractAddr\n    ) public {\n        require(isContract(_tokenContractAddr));\n        require(isContract(_propositionStorageContractAddr));\n\n        tokenContractAddr = _tokenContractAddr;\n        propositionStorageContractAddr = _propositionStorageContractAddr;\n    }\n\n    function isContract(address addr) private view returns (bool) {\n        uint size;\n        assembly { size := extcodesize(addr) }\n        return size > 0;\n    }\n\n    /// @notice The main function used for adding weight to a proposition.\n    /// @dev Emits `PropositionWeightIncreased` and `PropositionWeightNewTotal` when a proposition is successfully added.\n    /// @param propositionCid CID of the proposition that the msg.sender is putting weight on. Needs to be stored in the OntologyStorage as a Individual before calling the function.\n    /// @param amount The amount of the ERC20 Token that is put down as weight for the proposition. A ERC20 allowance in the height of `amount` for this contract has to be granted for this function call to succeed.\n    function submitProposition(\n        bytes propositionCid,\n        uint256 amount\n    ) public {\n        EIP20Interface tokenContract = EIP20Interface(tokenContractAddr);\n        IPropositionStorage propositionStorageContract = IPropositionStorage(propositionStorageContractAddr);\n\n        // TODO\n        // require(propositionStorageContract.isPropositionStored(propositionCid));\n        require(tokenContract.allowance(msg.sender, this) >= amount);\n        require(tokenContract.balanceOf(msg.sender) >= amount);\n\n        bytes32 propositionHash = cid.unwrapCid(propositionCid);\n        tokenContract.transferFrom(msg.sender, this, amount);\n        weights[propositionHash] += amount;\n        emit PropositionWeightIncreased(propositionCid, amount, msg.sender);\n        emit PropositionWeightNewTotal(propositionCid, weights[propositionHash]);\n    }\n}\n",
+  "sourcePath": "/Users/hobofan/rlay/rlay-protocol/contracts/PropositionLedger.sol",
+  "compiler": {
+    "name": "solc",
+    "version": "0.4.24+commit.e67f0147.Emscripten.clang"
+  },
+  "networks": {},
+  "schemaVersion": "2.0.0",
+  "updatedAt": "2019-03-01T18:16:31.679Z"
+}
