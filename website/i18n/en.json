@@ -25,6 +25,10 @@
         "title": "Guides",
         "sidebar_label": "Overview"
       },
+      "rlay-ontology-serialization-formats": {
+        "title": "Rlay Ontology - Serialization Formats",
+        "sidebar_label": "Serialization Formats"
+      },
       "rlay-ontology": {
         "title": "Rlay Ontology - Getting Started",
         "sidebar_label": "Getting Started"
