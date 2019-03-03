@@ -5,3 +5,5 @@ website/build
 
 /target
 **/*.rs.bk
+
+tests/rlay.config.toml

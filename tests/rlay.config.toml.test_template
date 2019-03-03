@@ -1,0 +1,16 @@
+[rpc]
+disabled = false
+network_address = "http://127.0.0.1:8546"
+ws_network_address = "ws://127.0.0.1:8547"
+
+[backends]
+
+[backends.default_eth]
+type = "ethereum"
+# `network_address` is the address of the Ethereum RPC endpoint we are connecting to
+network_address = "ws://127.0.0.1:9545"
+
+  [backends.default_eth.contract_addresses]
+  OntologyStorage = ""
+  RlayToken = ""
+  PropositionLedger = ""

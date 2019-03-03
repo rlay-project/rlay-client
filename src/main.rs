@@ -14,6 +14,7 @@ extern crate serde_json;
 pub mod aggregation;
 pub mod backend;
 pub mod config;
+pub mod deploy;
 pub mod doctor;
 pub mod init;
 pub mod merkle;
@@ -85,6 +86,18 @@ fn main() {
         .subcommand(
             SubCommand::with_name("init").about("Initialize a directory as a project using Rlay"),
         )
+        .subcommand(
+            SubCommand::with_name("deploy-contracts")
+                .about("Deploy Ethereum contracts")
+                .arg(&config_path_arg)
+                .arg(
+                    Arg::with_name("from_address")
+                        .long("from")
+                        .value_name("FROM_ADDRESS")
+                        .help("Sets a deployment from address")
+                        .takes_value(true),
+                ),
+        )
         .get_matches();
 
     if let Some(matches) = matches.subcommand_matches("client") {
@@ -106,5 +119,13 @@ fn main() {
             let payout_args = PayoutParams::from_matches(matches.clone());
             payout_cli::show_payout(&config, payout_args);
         }
+    } else if let Some(matches) = matches.subcommand_matches("deploy-contracts") {
+        let config_path = matches.value_of("config_path");
+        let config = config::Config::from_path_opt(config_path).expect("Couldn't read config file");
+
+        let from = matches
+            .value_of("from_address")
+            .expect("--from is a required flag");
+        deploy::deploy_contracts(&config, from);
     }
 }
