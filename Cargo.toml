@@ -40,6 +40,9 @@ dialoguer = "0.1.0"
 rusted_cypher = { git = "https://github.com/xenodata-lab/rusted-cypher", rev = "3218935b067fe41d06e2de55d0af07f6e4cb176b", optional = true }
 hlua = "0.4.1"
 
+[dev-dependencies]
+assert_cmd = "0.10.2"
+
 [patch.crates-io]
 # see https://github.com/ipld/rust-cid/pull/9
 cid = { git = 'https://github.com/hobofan/rust-cid', rev = '27798e5245c234dae1236470a5a5568cb067a216' }
