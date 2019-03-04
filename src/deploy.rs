@@ -1,8 +1,11 @@
-use crate::config::{BackendConfig, Config};
+use crate::config::Config;
 
-use rustc_hex::FromHex;
+use rustc_hex::{FromHex, ToHex};
 use serde_derive::Deserialize;
 use std::collections::BTreeMap;
+use std::fs::File;
+use std::io::{Read, Write};
+use toml_edit::{value, Document};
 use web3::futures::future::Future;
 use web3::types::Address;
 
@@ -244,19 +247,26 @@ pub fn deploy_contracts(config: &Config, deployer_address: &str) {
     let library_addresses: Vec<_> = libraries
         .iter()
         .map(|library_name| {
-            let (_eloop, contract) = deploy_contract(
-                web3_url,
-                &format!("{}Storage", library_name),
-                deployer_address,
-                (),
-            );
+            let contract_name = format!("{}Storage", library_name);
+            let (_eloop, contract) =
+                deploy_contract(web3_url, &contract_name, deployer_address, ());
             let deployed_address = contract.wait().unwrap();
+            info!(
+                "Deployed {contract} at {address}",
+                contract = contract_name,
+                address = deployed_address.to_hex(),
+            );
             deployed_address
         })
         .collect();
 
     let (_eloop, rlay_token) = deploy_contract(web3_url, "RlayToken", deployer_address, ());
     let rlay_token_address = rlay_token.wait().unwrap();
+    info!(
+        "Deployed {contract} at {address}",
+        contract = "RlayToken",
+        address = rlay_token_address.to_hex(),
+    );
 
     let (_eloop, ontology_storage) = deploy_contract(
         web3_url,
@@ -265,6 +275,11 @@ pub fn deploy_contracts(config: &Config, deployer_address: &str) {
         library_addresses,
     );
     let ontology_storage_address = ontology_storage.wait().unwrap();
+    info!(
+        "Deployed {contract} at {address}",
+        contract = "OntologyStorage",
+        address = ontology_storage_address.to_hex(),
+    );
 
     let (_eloop, proposition_ledger) = deploy_contract(
         web3_url,
@@ -276,8 +291,30 @@ pub fn deploy_contracts(config: &Config, deployer_address: &str) {
         ),
     );
     let proposition_ledger_address = proposition_ledger.wait().unwrap();
+    info!(
+        "Deployed {contract} at {address}",
+        contract = "PropositionLedger",
+        address = proposition_ledger_address.to_hex(),
+    );
 
-    println!("RlayToken {:?}", rlay_token_address);
-    println!("OntologyStorage {:?}", ontology_storage_address);
-    println!("PropositionLedger {:?}", proposition_ledger_address);
+    if let Some(ref config_path) = config.config_path {
+        let contents = {
+            let mut file = File::open(config_path).unwrap();
+            let mut contents = String::new();
+            file.read_to_string(&mut contents).unwrap();
+            contents
+        };
+
+        let mut doc = contents.parse::<Document>().expect("invalid doc");
+
+        doc["backends"]["default_eth"]["contract_addresses"]["RlayToken"] =
+            value(format!("0x{}", rlay_token_address.to_hex()));
+        doc["backends"]["default_eth"]["contract_addresses"]["OntologyStorage"] =
+            value(format!("0x{}", ontology_storage_address.to_hex()));
+        doc["backends"]["default_eth"]["contract_addresses"]["PropositionLedger"] =
+            value(format!("0x{}", proposition_ledger_address.to_hex()));
+
+        let mut file = File::create(config_path).unwrap();
+        file.write_all(doc.to_string().as_bytes()).unwrap();
+    }
 }
