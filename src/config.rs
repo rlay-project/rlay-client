@@ -16,6 +16,9 @@ use crate::sync::MultiBackendSyncState;
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Config {
+    /// The path the config was loaded from.
+    #[serde(skip_deserializing)]
+    pub(crate) config_path: Option<String>,
     #[serde(default = "default_data_path")]
     pub data_path: Option<String>,
     #[serde(default = "default_rpc_section")]
@@ -64,7 +67,8 @@ impl Config {
         let mut file = File::open(path)?;
         let mut contents = String::new();
         file.read_to_string(&mut contents)?;
-        let config = toml::from_str(&contents)?;
+        let mut config: Config = toml::from_str(&contents)?;
+        config.config_path = Some(path.to_str().unwrap().to_owned());
         Ok(config)
     }
 
