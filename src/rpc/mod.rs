@@ -88,9 +88,9 @@ pub fn start_rpc(full_config: &Config, sync_state: MultiBackendSyncState) {
                     .on_insert_entity_with_replay(param_from_block, &block_entity_map_lock);
                 let mut mapped_stream = entity_stream
                     .and_then(|entity| {
-                        Ok(Params::Array(vec![serde_json::to_value(
-                            entity.to_web3_format(),
-                        )
+                        Ok(Params::Array(vec![serde_json::to_value(FormatWeb3(
+                            entity,
+                        ))
                         .unwrap()]))
                     })
                     .map_err(|_| panic!());
@@ -287,7 +287,7 @@ fn entity_to_tokens(contract: &ethabi::Contract, mut entity: Entity) -> Vec<Toke
         .expect("Could not find function");
 
     entity.canonicalize();
-    let web3_entity = entity.to_web3_format();
+    let web3_entity = FormatWeb3(entity);
     let web3_entity_json = serde_json::to_value(web3_entity).unwrap();
 
     for param in &function.inputs {
@@ -337,9 +337,9 @@ fn rpc_rlay_encode_for_store() -> impl RpcMethodSimple {
             let contract = ethabi::Contract::load(ontology_contract_abi.as_bytes()).unwrap();
 
             let entity_object = params_array.get(0).unwrap();
-            let web3_entity: EntityFormatWeb3 = serde_json::from_value(entity_object.clone())
+            let web3_entity: FormatWeb3<Entity> = serde_json::from_value(entity_object.clone())
                 .map_err(|err| jsonrpc_core::Error::invalid_params(err.description()))?;
-            let entity: Entity = Entity::from_web3_format(web3_entity);
+            let entity: Entity = web3_entity.0;
 
             let tokens = entity_to_tokens(&contract, entity.clone());
             let entity_kind: &str = entity.kind().into();
@@ -438,7 +438,7 @@ fn rpc_rlay_experimental_list_cids_index(sync_state: SyncState) -> impl RpcMetho
                                 .filter(|(_, entity)| &Into::<&str>::into(entity.kind()) == &kind)
                                 .filter(|(_, entity)| {
                                     let entity_json =
-                                        serde_json::to_value((*entity).clone().to_web3_format())
+                                        serde_json::to_value(FormatWeb3((*entity).clone()))
                                             .unwrap();
                                     let field_val = &entity_json[field];
                                     match field_val {
@@ -492,7 +492,7 @@ fn rpc_rlay_experimental_get_entity(
             let entity = backend.get_entity(&cid).map_err(failure_into_jsonrpc_err)?;
 
             debug!("retrieved {:?}", entity.is_some());
-            Ok(serde_json::to_value(entity.map(|n| n.to_web3_format())).unwrap())
+            Ok(serde_json::to_value(entity.map(|n| FormatWeb3(n))).unwrap())
         } else {
             unimplemented!()
         }
@@ -503,9 +503,9 @@ fn rpc_rlay_experimental_get_entity_cid() -> impl RpcMethodSimple {
     move |params: Params| {
         if let Params::Array(params_array) = params {
             let entity_object = params_array.get(0).unwrap();
-            let web3_entity: EntityFormatWeb3 = serde_json::from_value(entity_object.clone())
+            let web3_entity: FormatWeb3<Entity> = serde_json::from_value(entity_object.clone())
                 .map_err(|err| jsonrpc_core::Error::invalid_params(err.description()))?;
-            let entity: Entity = Entity::from_web3_format(web3_entity);
+            let entity: Entity = web3_entity.0;
             let cid: String = format!("0x{}", entity.to_cid().unwrap().to_bytes().to_hex());
 
             Ok(serde_json::to_value(cid).unwrap())
@@ -520,9 +520,9 @@ fn rpc_rlay_experimental_store_entity(config: &Config) -> impl RpcMethodSimple {
     move |params: Params| {
         if let Params::Array(params_array) = params {
             let entity_object = params_array.get(0).unwrap();
-            let web3_entity: EntityFormatWeb3 = serde_json::from_value(entity_object.clone())
+            let web3_entity: FormatWeb3<Entity> = serde_json::from_value(entity_object.clone())
                 .map_err(|err| jsonrpc_core::Error::invalid_params(err.description()))?;
-            let entity: Entity = Entity::from_web3_format(web3_entity);
+            let entity: Entity = web3_entity.0;
 
             let default_options = json!({});
             let options_object = params_array.get(1).or_else(|| Some(&default_options));
@@ -604,7 +604,7 @@ fn rpc_rlay_experimental_neo4j_query(
                     }
                     return true;
                 })
-                .map(|entity| entity.to_web3_format())
+                .map(|entity| FormatWeb3(entity))
                 .collect();
 
             Ok(serde_json::to_value(entities).unwrap())

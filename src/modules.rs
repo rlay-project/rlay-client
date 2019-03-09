@@ -7,7 +7,7 @@ use std::fs::File;
 use std::path::Path;
 
 #[derive(Clone)]
-pub struct LuaEntity(EntityFormatWeb3);
+pub struct LuaEntity(FormatWeb3<Entity>);
 
 impl<'lua, L> hlua::Push<L> for LuaEntity
 where
@@ -94,7 +94,7 @@ impl<'a> FilterModule<'a> {
     }
 
     pub fn filter(&mut self, entity: Entity) -> bool {
-        let entity = LuaEntity(entity.to_web3_format());
+        let entity = LuaEntity(FormatWeb3(entity));
         let mut filter_fn = self
             .module
             .lua

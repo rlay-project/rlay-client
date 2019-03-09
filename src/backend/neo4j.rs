@@ -37,7 +37,7 @@ impl Neo4jBackend {
             // build empty entity with which we can check if fields are supposed to be arrays
             let entity_kind = EntityKind::from_name(label.as_str().unwrap()).unwrap();
             let empty_entity: Value =
-                serde_json::to_value(entity_kind.empty_entity().to_web3_format()).unwrap();
+                serde_json::to_value(FormatWeb3(entity_kind.empty_entity())).unwrap();
 
             let main_entity_cid: String = row
                 .get::<Value>("n")
@@ -84,9 +84,9 @@ impl Neo4jBackend {
             .values()
             .into_iter()
             .map(|entity| {
-                let web3_entity: EntityFormatWeb3 =
+                let web3_entity: FormatWeb3<Entity> =
                     serde_json::from_value((*entity).clone()).unwrap();
-                let entity: Entity = Entity::from_web3_format(web3_entity);
+                let entity: Entity = web3_entity.0;
 
                 entity
             })
@@ -153,7 +153,7 @@ impl BackendRpcMethods for Neo4jBackend {
 
         let client = self.client();
         let kind_name: &str = entity.kind().into();
-        let entity_val = serde_json::to_value(entity.clone().to_web3_format()).unwrap();
+        let entity_val = serde_json::to_value(FormatWeb3(entity.clone())).unwrap();
         let val = entity_val.as_object().unwrap();
         let mut values = Vec::new();
         let mut relationships = Vec::new();
