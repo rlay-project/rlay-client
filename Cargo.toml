@@ -24,7 +24,6 @@ futures-timer = "0.1.1"
 log = "0.4.6"
 env_logger = "0.5.10"
 tiny-keccak = "1.4.2"
-byteorder = "1.2.3"
 serde_json = { version = "1.0.22", features = ["preserve_order"] }
 # using from git, as jsonrpc-ws-server is not on crates.io
 jsonrpc-core = { git = 'https://github.com/paritytech/jsonrpc', rev = 'v8.0.1' }
