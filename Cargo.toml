@@ -7,8 +7,8 @@ edition = "2018"
 
 [dependencies]
 web3 = "0.4.0"
-cid = { git = 'https://github.com/hobofan/rust-cid', rev = '27798e5245c234dae1236470a5a5568cb067a216' }
-rlay_ontology = { git = 'https://github.com/rlay-project/rlay-ontology', rev = '980a6f38702009cd7a80481c0fe5621261df7ea1', features = ["web3_compat"] }
+cid = { git = 'https://github.com/hobofan/rust-cid', rev = '87332277d2cdb5b7cb6484c23b5711c28b44c684' }
+rlay_ontology = { git = 'https://github.com/rlay-project/rlay-ontology', rev = '44db8c77df6daf34f5a9cee691e7d6476d74b316', features = ["web3_compat"] }
 merkle_light = { git = "https://github.com/hobofan/merkle_light", rev = 'f069616df909cb7a4426f6deb328bde6422a3510' }
 ethabi = { git = "https://github.com/hobofan/ethabi", rev = '42df1ca0ac5976040b9091f35875b9548c30ef41' }
 rustc-hex = "1.0.0"
@@ -17,9 +17,9 @@ multibase = "0.6.0"
 clap = "2.31"
 console = "0.6.1"
 failure = "=0.1.1"
-serde = "1.0.66"
+serde = "=1.0.79"
 toml = "0.4.6"
-serde_derive = "1.0.66"
+serde_derive = "=1.0.79"
 futures-timer = "0.1.1"
 log = "0.4.2"
 env_logger = "0.5.10"
@@ -46,7 +46,7 @@ assert_cmd = "0.10.2"
 
 [patch.crates-io]
 # see https://github.com/ipld/rust-cid/pull/9
-cid = { git = 'https://github.com/hobofan/rust-cid', rev = '27798e5245c234dae1236470a5a5568cb067a216' }
+cid = { git = 'https://github.com/hobofan/rust-cid', rev = '87332277d2cdb5b7cb6484c23b5711c28b44c684' }
 ethabi = { git = "https://github.com/hobofan/ethabi", rev = '42df1ca0ac5976040b9091f35875b9548c30ef41' }
 
 [features]
