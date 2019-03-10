@@ -6,7 +6,7 @@ license = "MIT OR Apache-2.0"
 edition = "2018"
 
 [dependencies]
-web3 = "0.4.0"
+web3 = "0.6.0"
 cid = { git = 'https://github.com/hobofan/rust-cid', rev = '87332277d2cdb5b7cb6484c23b5711c28b44c684' }
 rlay_ontology = { git = 'https://github.com/rlay-project/rlay-ontology', rev = '44db8c77df6daf34f5a9cee691e7d6476d74b316', features = ["web3_compat"] }
 merkle_light = { git = "https://github.com/hobofan/merkle_light", rev = 'f069616df909cb7a4426f6deb328bde6422a3510' }
@@ -21,7 +21,7 @@ serde = "=1.0.79"
 toml = "0.4.6"
 serde_derive = "=1.0.79"
 futures-timer = "0.1.1"
-log = "0.4.2"
+log = "0.4.6"
 env_logger = "0.5.10"
 tiny-keccak = "1.4.2"
 byteorder = "1.2.3"
@@ -31,7 +31,7 @@ jsonrpc-core = { git = 'https://github.com/paritytech/jsonrpc', rev = 'v8.0.1' }
 jsonrpc-pubsub = { git = 'https://github.com/paritytech/jsonrpc', rev = 'v8.0.1' }
 jsonrpc-http-server = { git = 'https://github.com/paritytech/jsonrpc', rev = 'v8.0.1' }
 jsonrpc-ws-server = { git = 'https://github.com/paritytech/jsonrpc', rev = 'v8.0.1' }
-hyper = "0.12.6"
+hyper = "0.12.25"
 url = "1.7.1"
 failure_derive = "=0.1.1"
 dialoguer = "0.1.0"
