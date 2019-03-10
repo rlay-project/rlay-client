@@ -1,13 +1,14 @@
-use tokio_core;
-use hyper::Client;
+use futures::future::Either;
 use hyper::header::HeaderValue;
 use hyper::rt::Stream;
+use hyper::Client;
 use hyper::{self, Body, Method, Request as HyperRequest};
 use jsonrpc_core::*;
 use jsonrpc_pubsub::{PubSubHandler, PubSubMetadata, Session};
 use std::collections::{HashMap, HashSet};
 use std::default::Default;
 use std::sync::Arc;
+use tokio_core;
 use web3::futures::Future;
 
 #[derive(Debug, Default)]
@@ -61,14 +62,14 @@ impl PubSubMetadata for NoopPubSubMetadata {
 pub struct WebsocketMetadata {
     session: Option<Arc<Session>>,
     pub session_id: u64,
-    pub remote: Option<tokio_core::reactor::Remote>,
+    pub remote: Option<jsonrpc_ws_server::tokio::runtime::TaskExecutor>,
 }
 
 impl WebsocketMetadata {
     pub fn new(
         session: Option<Arc<Session>>,
         session_id: u64,
-        remote: tokio_core::reactor::Remote,
+        remote: jsonrpc_ws_server::tokio::runtime::TaskExecutor,
     ) -> Self {
         Self {
             session,
@@ -106,11 +107,10 @@ impl From<ProxyHandler<NoopPubSubMetadata>> for MetaIoHandler<NoopPubSubMetadata
 
 impl From<ProxyHandler<NoopPubSubMetadata>> for PubSubHandler<WebsocketMetadata, ProxyMiddleware> {
     fn from(io: ProxyHandler<NoopPubSubMetadata>) -> Self {
-        let mut handler =
-            PubSubHandler::new(MetaIoHandler::with_middleware(ProxyMiddleware::new(
-                io.proxy_target_url,
-                io.methods.clone().into_iter().map(|(key, _)| key).collect(),
-            )));
+        let mut handler = PubSubHandler::new(MetaIoHandler::with_middleware(ProxyMiddleware::new(
+            io.proxy_target_url,
+            io.methods.clone().into_iter().map(|(key, _)| key).collect(),
+        )));
 
         for (name, method) in io.methods.into_iter() {
             handler.add_method(&name, move |params| match method.clone() {
@@ -140,8 +140,9 @@ impl ProxyMiddleware {
 
 impl<M: Metadata> Middleware<M> for ProxyMiddleware {
     type Future = Box<Future<Item = Option<Response>, Error = ()> + Send>;
+    type CallFuture = Box<Future<Item = Option<Output>, Error = ()> + Send>;
 
-    fn on_request<F, X>(&self, request: Request, meta: M, process: F) -> Self::Future
+    fn on_request<F, X>(&self, request: Request, meta: M, process: F) -> Either<Self::Future, X>
     where
         F: FnOnce(Request, M) -> X + Send,
         X: Future<Item = Option<Response>, Error = ()> + Send + 'static,
@@ -158,7 +159,7 @@ impl<M: Metadata> Middleware<M> for ProxyMiddleware {
         }
 
         if matches_custom_method {
-            return Box::new(process(request, meta));
+            return Either::A(Box::new(process(request, meta)));
         }
 
         let client = Client::new();
@@ -177,9 +178,9 @@ impl<M: Metadata> Middleware<M> for ProxyMiddleware {
             .request(req)
             .and_then(|res| res.into_body().concat2());
 
-        Box::new(post.map_err(|_| ()).and_then(|body| {
+        Either::A(Box::new(post.map_err(|_| ()).and_then(|body| {
             let response: Response = serde_json::from_slice(&body).unwrap();
             Ok(Some(response))
-        }))
+        })))
     }
 }

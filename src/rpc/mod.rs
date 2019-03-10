@@ -107,7 +107,7 @@ pub fn start_rpc(full_config: &Config, sync_state: MultiBackendSyncState) {
                 });
             },
         ),
-        ("rlay_unsubscribeEntities", |_id: SubscriptionId| {
+        ("rlay_unsubscribeEntities", |_id: SubscriptionId, _| {
             println!("Closing subscription");
             futures::future::ok(Value::Bool(true))
         }),
@@ -119,7 +119,7 @@ pub fn start_rpc(full_config: &Config, sync_state: MultiBackendSyncState) {
             proxy::WebsocketMetadata::new(
                 Some(Arc::new(Session::new(context.sender()))),
                 context.session_id,
-                context.remote.clone(),
+                context.executor.clone(),
             )
         })
         .start(
