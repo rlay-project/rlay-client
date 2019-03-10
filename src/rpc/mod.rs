@@ -553,6 +553,7 @@ fn rpc_rlay_experimental_neo4j_query(
 ) -> impl RpcMethodSimple {
     let config = config.clone();
     let sync_state = sync_state.clone();
+    let filter_registry = crate::modules::ModuleRegistry::with_builtins();
     move |params: Params| {
         if let Params::Array(params_array) = params {
             let query = params_array.get(0).unwrap().as_str().unwrap();
@@ -586,7 +587,6 @@ fn rpc_rlay_experimental_neo4j_query(
                     })
                 })
                 .unwrap_or_else(Vec::new);
-            let filter_registry = crate::modules::ModuleRegistry::with_builtins();
 
             let activated_filters: Vec<_> = activated_filters_names
                 .into_iter()
@@ -598,7 +598,7 @@ fn rpc_rlay_experimental_neo4j_query(
                 .into_iter()
                 .filter(|entity| {
                     for filter in &activated_filters {
-                        if !filter.borrow_mut().filter(entity.clone()) {
+                        if !filter.lock().unwrap().filter(entity.clone()) {
                             return false;
                         }
                     }

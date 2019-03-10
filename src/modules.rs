@@ -1,10 +1,11 @@
 use hlua::Lua;
 use rlay_ontology::prelude::*;
 use serde_json::Value as JsonValue;
-use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fs::File;
 use std::path::Path;
+use std::sync::Arc;
+use std::sync::Mutex;
 
 #[derive(Clone)]
 pub struct LuaEntity(FormatWeb3<Entity>);
@@ -111,7 +112,7 @@ impl<'a> FilterModule<'a> {
 }
 
 pub struct ModuleRegistry<'a> {
-    filters: HashMap<String, RefCell<FilterModule<'a>>>,
+    filters: HashMap<String, Arc<Mutex<FilterModule<'a>>>>,
 }
 
 impl<'a> ModuleRegistry<'a> {
@@ -122,15 +123,15 @@ impl<'a> ModuleRegistry<'a> {
 
         _self.filters.insert(
             "whitelist_filter".to_owned(),
-            RefCell::new(crate::modules::FilterModule::from_str(include_str!(
-                "modules/whitelist_filter.lua",
+            Arc::new(Mutex::new(crate::modules::FilterModule::from_str(
+                include_str!("modules/whitelist_filter.lua",),
             ))),
         );
 
         _self
     }
 
-    pub fn filter(&self, name: &str) -> Option<&'a RefCell<FilterModule>> {
+    pub fn filter(&self, name: &str) -> Option<&Arc<Mutex<FilterModule<'a>>>> {
         self.filters.get(name)
     }
 }
