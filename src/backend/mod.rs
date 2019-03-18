@@ -12,7 +12,38 @@ mod neo4j;
 
 pub use self::ethereum::{EthereumBackend, SyncState as EthereumSyncState};
 #[cfg(feature = "backend_neo4j")]
-pub use self::neo4j::Neo4jBackend;
+pub use self::neo4j::{Neo4jBackend, SyncState as Neo4jSyncState};
+
+#[derive(Clone)]
+pub enum SyncState {
+    Ethereum(EthereumSyncState),
+    #[cfg(feature = "backend_neo4j")]
+    Neo4j(Neo4jSyncState),
+}
+
+impl SyncState {
+    pub fn as_ethereum(self) -> Option<EthereumSyncState> {
+        match self {
+            SyncState::Ethereum(sync_state) => Some(sync_state),
+            _ => None,
+        }
+    }
+
+    pub fn as_ethereum_ref(&self) -> Option<&EthereumSyncState> {
+        match self {
+            SyncState::Ethereum(ref sync_state) => Some(sync_state),
+            _ => None,
+        }
+    }
+
+    #[cfg(feature = "backend_neo4j")]
+    pub fn as_neo4j(self) -> Option<Neo4jSyncState> {
+        match self {
+            SyncState::Neo4j(sync_state) => Some(sync_state),
+            _ => None,
+        }
+    }
+}
 
 pub trait BackendFromConfig: Sized {
     type C;
@@ -63,15 +94,23 @@ impl BackendFromConfig for Backend {
 
 impl BackendFromConfigAndSyncState for Backend {
     type C = BackendConfig;
-    type S = Option<EthereumSyncState>;
+    type S = Option<SyncState>;
 
     fn from_config_and_syncstate(config: Self::C, sync_state: Self::S) -> Result<Self, Error> {
         match config {
             BackendConfig::Ethereum(config) => Ok(Backend::Ethereum(
-                EthereumBackend::from_config_and_syncstate(config, sync_state.unwrap())?,
+                EthereumBackend::from_config_and_syncstate(
+                    config,
+                    sync_state.unwrap().as_ethereum().unwrap(),
+                )?,
             )),
             #[cfg(feature = "backend_neo4j")]
-            BackendConfig::Neo4j(config) => Ok(Backend::Neo4j(Neo4jBackend::from_config(config)?)),
+            BackendConfig::Neo4j(config) => {
+                Ok(Backend::Neo4j(Neo4jBackend::from_config_and_syncstate(
+                    config,
+                    sync_state.unwrap().as_neo4j().unwrap(),
+                )?))
+            }
             #[cfg(not(feature = "backend_neo4j"))]
             BackendConfig::Neo4j(_) => {
                 Err(err_msg("Support for backend type neo4j not compiled in."))

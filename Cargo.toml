@@ -25,7 +25,6 @@ log = "0.4.6"
 env_logger = "0.5.10"
 tiny-keccak = "1.4.2"
 serde_json = { version = "1.0.22", features = ["preserve_order"] }
-# using from git, as jsonrpc-ws-server is not on crates.io
 jsonrpc-core = "10.1.0"
 jsonrpc-pubsub = "10.1.0"
 jsonrpc-http-server = "10.1.0"
@@ -39,6 +38,8 @@ dialoguer = "0.1.0"
 rusted_cypher = { git = "https://github.com/xenodata-lab/rusted-cypher", rev = "3218935b067fe41d06e2de55d0af07f6e4cb176b", optional = true }
 hlua = "0.4.1"
 toml_edit = "0.1.3"
+r2d2_cypher = { version = "0.4.0", optional = true }
+r2d2 = { version = "0.8.3", optional = true }
 
 [dev-dependencies]
 assert_cmd = "0.10.2"
@@ -47,9 +48,10 @@ assert_cmd = "0.10.2"
 # see https://github.com/ipld/rust-cid/pull/9
 cid = { git = 'https://github.com/hobofan/rust-cid', rev = '87332277d2cdb5b7cb6484c23b5711c28b44c684' }
 ethabi = { git = "https://github.com/hobofan/ethabi", rev = '42df1ca0ac5976040b9091f35875b9548c30ef41' }
+rusted_cypher = { git = "https://github.com/xenodata-lab/rusted-cypher", rev = "3218935b067fe41d06e2de55d0af07f6e4cb176b", optional = true }
 
 [features]
 default = ["transport_ws"]
 transport_ipc = []
 transport_ws = []
-backend_neo4j = ["rusted_cypher"]
+backend_neo4j = ["rusted_cypher", "r2d2", "r2d2_cypher"]

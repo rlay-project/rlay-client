@@ -153,19 +153,39 @@ pub fn proxy_handler_with_methods(
         Some(sync_state_default_eth_backend) => {
             io.add_method(
                 "rlay_getPropositionPools",
-                rpc_rlay_get_proposition_pools(sync_state_default_eth_backend.clone()),
+                rpc_rlay_get_proposition_pools(
+                    sync_state_default_eth_backend
+                        .clone()
+                        .as_ethereum()
+                        .unwrap(),
+                ),
             );
             io.add_method(
                 "rlay_experimentalKindForCid",
-                rpc_rlay_experimental_kind_for_cid(sync_state_default_eth_backend.clone()),
+                rpc_rlay_experimental_kind_for_cid(
+                    sync_state_default_eth_backend
+                        .clone()
+                        .as_ethereum()
+                        .unwrap(),
+                ),
             );
             io.add_method(
                 "rlay_experimentalListCids",
-                rpc_rlay_experimental_list_cids(sync_state_default_eth_backend.clone()),
+                rpc_rlay_experimental_list_cids(
+                    sync_state_default_eth_backend
+                        .clone()
+                        .as_ethereum()
+                        .unwrap(),
+                ),
             );
             io.add_method(
                 "rlay_experimentalListCidsIndex",
-                rpc_rlay_experimental_list_cids_index(sync_state_default_eth_backend.clone()),
+                rpc_rlay_experimental_list_cids_index(
+                    sync_state_default_eth_backend
+                        .clone()
+                        .as_ethereum()
+                        .unwrap(),
+                ),
             );
         }
         None => {
@@ -182,7 +202,7 @@ pub fn proxy_handler_with_methods(
     );
     io.add_method(
         "rlay_experimentalStoreEntity",
-        rpc_rlay_experimental_store_entity(full_config),
+        rpc_rlay_experimental_store_entity(full_config, sync_state.clone()),
     );
     io.add_method(
         "rlay_experimentalNeo4jQuery",
@@ -515,7 +535,10 @@ fn rpc_rlay_experimental_get_entity_cid() -> impl RpcMethodSimple {
     }
 }
 
-fn rpc_rlay_experimental_store_entity(config: &Config) -> impl RpcMethodSimple {
+fn rpc_rlay_experimental_store_entity(
+    config: &Config,
+    sync_state: MultiBackendSyncState,
+) -> impl RpcMethodSimple {
     let config = config.clone();
     move |params: Params| {
         if let Params::Array(params_array) = params {
@@ -532,7 +555,7 @@ fn rpc_rlay_experimental_store_entity(config: &Config) -> impl RpcMethodSimple {
                 .and_then(|n| n.as_str());
 
             let mut backend = config
-                .get_backend(backend_name)
+                .get_backend_with_syncstate(backend_name, &sync_state)
                 .map_err(failure_into_jsonrpc_err)?;
 
             let raw_cid = backend

@@ -199,6 +199,10 @@ pub mod rpc {
 }
 
 pub mod backend {
+    #[cfg(feature = "backend_neo4j")]
+    use r2d2::Pool;
+    #[cfg(feature = "backend_neo4j")]
+    use r2d2_cypher::CypherConnectionManager;
     use rustc_hex::FromHex;
     #[cfg(feature = "backend_neo4j")]
     use rusted_cypher::GraphClient;
@@ -305,6 +309,14 @@ pub mod backend {
         #[cfg(feature = "backend_neo4j")]
         pub fn client(&self) -> Result<GraphClient, ::rusted_cypher::error::GraphError> {
             GraphClient::connect(&self.uri)
+        }
+
+        #[cfg(feature = "backend_neo4j")]
+        pub fn connection_pool(&self) -> Result<Pool<CypherConnectionManager>, r2d2::Error> {
+            let manager = CypherConnectionManager {
+                url: self.uri.to_owned(),
+            };
+            Pool::builder().max_size(10).build(manager)
         }
     }
 }
