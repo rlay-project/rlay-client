@@ -45,7 +45,7 @@ impl MultiBackendSyncState {
                 self.backends.insert(
                     name,
                     SyncState::Neo4j(Neo4jSyncState {
-                        connection_pool: Arc::new(Mutex::new(_config.connection_pool().unwrap())),
+                        connection_pool: Arc::new(_config.connection_pool().unwrap()),
                     }),
                 );
             }

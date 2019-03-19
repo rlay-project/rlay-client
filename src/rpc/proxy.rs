@@ -8,7 +8,6 @@ use jsonrpc_pubsub::{PubSubHandler, PubSubMetadata, Session};
 use std::collections::{HashMap, HashSet};
 use std::default::Default;
 use std::sync::Arc;
-use tokio_core;
 use web3::futures::Future;
 
 #[derive(Debug, Default)]

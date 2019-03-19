@@ -2,6 +2,7 @@ use cid::{Cid, ToCid};
 #[allow(unused_imports)]
 use failure::{err_msg, Error};
 use r2d2::Pool;
+use r2d2::PooledConnection;
 use r2d2_cypher::CypherConnectionManager;
 use rlay_ontology::prelude::*;
 use rustc_hex::ToHex;
@@ -10,30 +11,30 @@ use rusted_cypher::cypher::Statement;
 use rusted_cypher::GraphClient;
 use serde_json::{self, Value};
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex, MutexGuard};
+use std::sync::Arc;
 
 use crate::backend::{BackendFromConfig, BackendFromConfigAndSyncState, BackendRpcMethods};
 use crate::config::backend::Neo4jBackendConfig;
 
 pub struct Neo4jBackend {
     pub config: Neo4jBackendConfig,
-    client: Option<Arc<Mutex<Pool<CypherConnectionManager>>>>,
+    client: Option<Arc<Pool<CypherConnectionManager>>>,
 }
 
 #[derive(Clone)]
 pub struct SyncState {
-    pub connection_pool: Arc<Mutex<Pool<CypherConnectionManager>>>,
+    pub connection_pool: Arc<Pool<CypherConnectionManager>>,
 }
 
 impl Neo4jBackend {
-    pub fn client(&mut self) -> MutexGuard<Pool<CypherConnectionManager>> {
+    pub fn client(&mut self) -> PooledConnection<CypherConnectionManager> {
         if let Some(ref client) = self.client {
-            return client.lock().unwrap();
+            return client.get().unwrap();
         }
 
         trace!("Creating new connection pool for backend.");
-        self.client = Some(Arc::new(Mutex::new(self.config.connection_pool().unwrap())));
-        return self.client.as_ref().unwrap().lock().unwrap();
+        self.client = Some(Arc::new(self.config.connection_pool().unwrap()));
+        return self.client.as_ref().unwrap().get().unwrap();
     }
 
     /// Convert rows that has a return statement like `RETURN labels(n),n,type(r),m` into entities
@@ -115,7 +116,7 @@ impl Neo4jBackend {
             deduped_cids,
         );
         trace!("get_entities query: \"{}\"", query);
-        let query_res = client.get().unwrap().exec(query).unwrap();
+        let query_res = client.exec(query).unwrap();
         if query_res.rows().count() == 0 {
             return Ok(vec![]);
         }
@@ -212,8 +213,7 @@ impl BackendRpcMethods for Neo4jBackend {
         }
 
         trace!("NEO4J QUERY: {}", statement_query);
-        let client_connection = client.get().unwrap();
-        let mut query = client_connection.query();
+        let mut query = client.query();
         query.add_statement(Statement::new(statement_query));
         for relationship in relationships {
             trace!("NEO4J QUERY: {}", relationship);
@@ -232,7 +232,7 @@ impl BackendRpcMethods for Neo4jBackend {
             cid
         );
         trace!("get_entity query: {:?}", query);
-        let query_res = client.get().unwrap().exec(query).unwrap();
+        let query_res = client.exec(query).unwrap();
         if query_res.rows().count() == 0 {
             return Ok(None);
         }
@@ -257,7 +257,7 @@ impl BackendRpcMethods for Neo4jBackend {
     fn neo4j_query(&mut self, query: &str) -> Result<Vec<String>, Error> {
         let client = self.client();
 
-        let query_res = client.get().unwrap().exec(query).unwrap();
+        let query_res = client.exec(query).unwrap();
         let cids: Vec<_> = query_res.rows().map(|row| row.get_n(0).unwrap()).collect();
 
         Ok(cids)

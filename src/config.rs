@@ -316,7 +316,7 @@ pub mod backend {
             let manager = CypherConnectionManager {
                 url: self.uri.to_owned(),
             };
-            Pool::builder().max_size(10).build(manager)
+            Pool::builder().max_size(20).build(manager)
         }
     }
 }
