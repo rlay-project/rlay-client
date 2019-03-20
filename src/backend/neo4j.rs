@@ -160,7 +160,7 @@ impl BackendRpcMethods for Neo4jBackend {
         {
             let mut add_relationship_value = |cid, key, value| {
                 let rel_query = format!(
-                    "MATCH (n:RlayEntity {{ cid: \"{0}\"}}) MERGE (m {{ cid: {2} }}) MERGE (n)-[r:{1}]->(m)",
+                    "MATCH (n:RlayEntity {{ cid: \"{0}\"}}) MERGE (m:RlayEntity {{ cid: {2} }}) MERGE (n)-[r:{1}]->(m)",
                     cid, key, value
                 );
                 relationships.push(rel_query);
