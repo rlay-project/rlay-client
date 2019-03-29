@@ -7,11 +7,12 @@ use tokio_core;
 use toml;
 use url::Url;
 use web3;
+use web3::futures::future::Future;
 use web3::DuplexTransport;
 
 pub use self::backend::{BackendConfig, EthereumBackendConfig, Neo4jBackendConfig};
 pub use self::rpc::RpcConfig;
-use crate::backend::{Backend, BackendFromConfig, BackendFromConfigAndSyncState};
+use crate::backend::{Backend, BackendFromConfigAndSyncState};
 use crate::sync::MultiBackendSyncState;
 
 #[derive(Debug, Deserialize, Clone)]
@@ -144,18 +145,12 @@ impl Config {
         }
     }
 
-    pub fn get_backend(&self, backend_name: Option<&str>) -> Result<Backend, Error> {
-        let config_for_name: &BackendConfig = self.get_backend_config(backend_name)?;
-
-        Backend::from_config(config_for_name.to_owned())
-    }
-
     pub fn get_backend_with_syncstate(
         &self,
         backend_name: Option<&str>,
         sync_state: &MultiBackendSyncState,
-    ) -> Result<Backend, Error> {
-        let config_for_name: &BackendConfig = self.get_backend_config(backend_name)?;
+    ) -> impl Future<Item = Backend, Error = Error> {
+        let config_for_name: &BackendConfig = self.get_backend_config(backend_name).unwrap();
         let sync_state_for_name: Option<_> = sync_state.get_backend(backend_name).ok();
 
         Backend::from_config_and_syncstate(
@@ -200,14 +195,13 @@ pub mod rpc {
 
 pub mod backend {
     #[cfg(feature = "backend_neo4j")]
-    use r2d2::Pool;
+    use bb8::Pool;
     #[cfg(feature = "backend_neo4j")]
-    use r2d2_cypher::CypherConnectionManager;
+    use bb8_cypher::CypherConnectionManager;
     use rustc_hex::FromHex;
-    #[cfg(feature = "backend_neo4j")]
-    use rusted_cypher::GraphClient;
     use std::collections::HashMap;
     use url::Url;
+    use web3::futures::future;
     use web3::types::H160;
     use web3::DuplexTransport;
 
@@ -307,16 +301,18 @@ pub mod backend {
 
     impl Neo4jBackendConfig {
         #[cfg(feature = "backend_neo4j")]
-        pub fn client(&self) -> Result<GraphClient, ::rusted_cypher::error::GraphError> {
-            GraphClient::connect(&self.uri)
-        }
-
-        #[cfg(feature = "backend_neo4j")]
-        pub fn connection_pool(&self) -> Result<Pool<CypherConnectionManager>, r2d2::Error> {
+        pub fn connection_pool(&self) -> Pool<CypherConnectionManager> {
+            let mut rt = tokio_core::reactor::Core::new().unwrap();
             let manager = CypherConnectionManager {
                 url: self.uri.to_owned(),
             };
-            Pool::builder().max_size(20).build(manager)
+            rt.run(future::lazy(|| {
+                Pool::builder()
+                    .min_idle(Some(10))
+                    .max_size(20)
+                    .build(manager)
+            }))
+            .unwrap()
         }
     }
 }
