@@ -48,7 +48,16 @@ impl Neo4jBackend {
 
         for row in rows {
             let labels: Value = row.get("labels(n)").unwrap();
-            let label = labels.as_array().unwrap()[0].clone();
+            let label = labels
+                .as_array()
+                .unwrap()
+                .into_iter()
+                // TODO: make more robust against additional labels
+                // currently only filter out the known extra label RlayEntity that is used for
+                // a index
+                .filter(|n| n.as_str().unwrap() != "RlayEntity")
+                .collect::<Vec<_>>()[0]
+                .clone();
             // build empty entity with which we can check if fields are supposed to be arrays
             let entity_kind = EntityKind::from_name(label.as_str().unwrap()).unwrap();
             let empty_entity: Value =
@@ -56,13 +65,13 @@ impl Neo4jBackend {
 
             let main_entity_cid: String = row
                 .get::<Value>("n")
-                .unwrap()
+                .expect("Unable to get value n in neo4j result set")
                 .as_object_mut()
-                .unwrap()
+                .expect("Unable to convert return neo4j return value to object")
                 .get("cid")
-                .unwrap()
+                .expect("Neo4j return value does not contain \"cid\"")
                 .as_str()
-                .unwrap()
+                .expect("Unable to convert neo4j return value n.cid to string")
                 .to_owned();
             let entity = entity_map.entry(main_entity_cid).or_insert_with(|| {
                 let mut main_entity: Value = row.get("n").unwrap();
