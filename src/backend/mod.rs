@@ -26,6 +26,7 @@ impl SyncState {
     pub fn as_ethereum(self) -> Option<EthereumSyncState> {
         match self {
             SyncState::Ethereum(sync_state) => Some(sync_state),
+            #[cfg(feature = "backend_neo4j")]
             _ => None,
         }
     }
@@ -33,6 +34,7 @@ impl SyncState {
     pub fn as_ethereum_ref(&self) -> Option<&EthereumSyncState> {
         match self {
             SyncState::Ethereum(ref sync_state) => Some(sync_state),
+            #[cfg(feature = "backend_neo4j")]
             _ => None,
         }
     }
@@ -68,7 +70,7 @@ impl Backend {
         match self {
             #[cfg(feature = "backend_neo4j")]
             Backend::Neo4j(backend) => backend.get_entities(_cids),
-            Backend::Ethereum(_) => unimplemented!(),
+            Backend::Ethereum(_) => future::lazy(|| Ok(unimplemented!())),
         }
     }
 }

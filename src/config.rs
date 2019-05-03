@@ -201,7 +201,6 @@ pub mod backend {
     use rustc_hex::FromHex;
     use std::collections::HashMap;
     use url::Url;
-    use web3::futures::future;
     use web3::types::H160;
     use web3::DuplexTransport;
 
