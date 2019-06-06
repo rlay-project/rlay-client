@@ -67,10 +67,16 @@ impl Backend {
         &mut self,
         _cids: &[String],
     ) -> impl Future<Item = Vec<Entity>, Error = Error> + Send {
+        #[cfg(feature = "backend_neo4j")]
         match self {
-            #[cfg(feature = "backend_neo4j")]
             Backend::Neo4j(backend) => backend.get_entities(_cids),
-            Backend::Ethereum(_) => future::lazy(|| Ok(unimplemented!())),
+            Backend::Ethereum(_) => unreachable!(),
+        }
+
+        #[cfg(not(feature = "backend_neo4j"))]
+        #[allow(unreachable_code)]
+        match self {
+            Backend::Ethereum(_) => future::lazy(|| Ok(unreachable!())),
         }
     }
 }
