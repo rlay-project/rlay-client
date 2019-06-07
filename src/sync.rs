@@ -11,7 +11,9 @@ use web3;
 use web3::futures::prelude::*;
 use web3::types::U256;
 
-use crate::backend::EthereumSyncState as SyncState;
+#[cfg(feature = "backend_neo4j")]
+use crate::backend::Neo4jSyncState;
+use crate::backend::{EthereumSyncState, SyncState};
 use crate::config::{BackendConfig, Config};
 use crate::payout::{
     fill_epoch_payouts, fill_epoch_payouts_cumulative, load_epoch_payouts,
@@ -32,8 +34,22 @@ impl MultiBackendSyncState {
         }
     }
 
-    pub fn add_backend(&mut self, name: String) {
-        self.backends.insert(name, SyncState::new());
+    pub fn add_backend(&mut self, name: String, config: BackendConfig) {
+        match config {
+            BackendConfig::Ethereum(_) => {
+                self.backends
+                    .insert(name, SyncState::Ethereum(EthereumSyncState::new()));
+            }
+            BackendConfig::Neo4j(_config) => {
+                #[cfg(feature = "backend_neo4j")]
+                self.backends.insert(
+                    name,
+                    SyncState::Neo4j(Neo4jSyncState {
+                        connection_pool: Arc::new(_config.connection_pool()),
+                    }),
+                );
+            }
+        }
     }
 
     pub fn backend(&self, name: &str) -> Option<SyncState> {
@@ -60,8 +76,8 @@ impl MultiBackendSyncState {
     }
 
     // #[cfg_attr(debug_assertions, deprecated(note = "Refactoring to swappable backends"))]
-    pub fn default_eth_backend(&self) -> SyncState {
-        self.backend("default_eth").unwrap()
+    pub fn default_eth_backend(&self) -> EthereumSyncState {
+        self.backend("default_eth").unwrap().as_ethereum().unwrap()
     }
 }
 
@@ -110,7 +126,7 @@ impl ComputedState {
 /// ComputedState at a regular interval.
 fn spawn_stats_loop(
     eloop: &tokio_core::reactor::Handle,
-    sync_state: SyncState,
+    sync_state: EthereumSyncState,
     computed_state: ComputedState,
 ) {
     if !log_enabled!(Debug) {
@@ -212,8 +228,8 @@ pub fn run_sync(config: &Config) {
 
     let sync_state = {
         let mut sync_state = MultiBackendSyncState::new();
-        for (backend_name, _) in config.backends.iter() {
-            sync_state.add_backend(backend_name.clone());
+        for (backend_name, config) in config.backends.iter() {
+            sync_state.add_backend(backend_name.clone(), config.clone());
         }
 
         sync_state
@@ -225,6 +241,7 @@ pub fn run_sync(config: &Config) {
         for (backend_name, sync_state) in sync_state.backends.iter() {
             match config.get_backend_config(Some(backend_name)).unwrap() {
                 BackendConfig::Ethereum(config) => {
+                    let sync_state = sync_state.as_ethereum_ref().unwrap();
                     let mut syncer = EthOntologySyncer::default();
                     let sync_ontology_fut = syncer
                         .sync_ontology(
@@ -255,6 +272,7 @@ pub fn run_sync(config: &Config) {
         for (backend_name, sync_state) in sync_state.backends.iter() {
             match config.get_backend_config(Some(backend_name)).unwrap() {
                 BackendConfig::Ethereum(config) => {
+                    let sync_state = sync_state.as_ethereum_ref().unwrap();
                     let mut syncer = EthPropositionLedgerSyncer::default();
                     let sync_proposition_ledger_fut = syncer
                         .sync_ledger(

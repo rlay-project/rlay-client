@@ -4,8 +4,9 @@ use rlay_ontology::ontology::Entity;
 use rustc_hex::{FromHex, ToHex};
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
+use web3::futures::future::{self, Future};
 
-use crate::backend::{BackendFromConfig, BackendFromConfigAndSyncState, BackendRpcMethods};
+use crate::backend::{BackendFromConfigAndSyncState, BackendRpcMethods};
 use crate::config::backend::EthereumBackendConfig;
 use crate::sync_ontology::{BlockEntityMap, EntityMap};
 use crate::sync_proposition_ledger::PropositionLedger;
@@ -15,23 +16,13 @@ pub struct EthereumBackend {
     pub sync_state: SyncState,
 }
 
-impl BackendFromConfig for EthereumBackend {
-    type C = EthereumBackendConfig;
-
-    fn from_config(config: Self::C) -> Result<Self, Error> {
-        Ok(Self {
-            config,
-            sync_state: SyncState::new(),
-        })
-    }
-}
-
 impl BackendFromConfigAndSyncState for EthereumBackend {
     type C = EthereumBackendConfig;
     type S = SyncState;
+    type R = Box<Future<Item = Self, Error = Error> + Send>;
 
-    fn from_config_and_syncstate(config: Self::C, sync_state: Self::S) -> Result<Self, Error> {
-        Ok(Self { config, sync_state })
+    fn from_config_and_syncstate(config: Self::C, sync_state: Self::S) -> Self::R {
+        Box::new(future::ok(Self { config, sync_state }))
     }
 }
 
@@ -125,13 +116,18 @@ impl OntologySyncState {
 }
 
 impl BackendRpcMethods for EthereumBackend {
-    fn get_entity(&mut self, cid: &str) -> Result<Option<Entity>, Error> {
+    fn get_entity(
+        &mut self,
+        cid: &str,
+    ) -> Box<Future<Item = Option<Entity>, Error = Error> + Send> {
         let entity_map = self.sync_state.entity_map();
         let entity_map_lock = entity_map.lock().unwrap();
 
         let cid_no_prefix = str::replace(cid, "0x", "");
         let cid_bytes = cid_no_prefix.from_hex().unwrap();
 
-        Ok(entity_map_lock.get(&cid_bytes).map(|n| n.clone()))
+        Box::new(future::ok(
+            entity_map_lock.get(&cid_bytes).map(|n| n.clone()),
+        ))
     }
 }

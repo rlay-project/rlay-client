@@ -23,6 +23,14 @@ If you encounter any problems while trying to run rlay-client you can try to use
 cargo run -- doctor
 ```
 
+### Via Docker
+
+We provide a Docker image which can be used to run `rlay-client`. I currently has the assumption that it is used with a single Neo4J backend at `127.0.0.1:7474`, which requires it to be run with `--net=host`. You can use it with another configuration by building your own Docker image based on it and overwriting the `/rlay.config.toml` file.
+
+```
+docker run rlayproject/rlay-client
+```
+
 
 ## Contributing & Contact
 

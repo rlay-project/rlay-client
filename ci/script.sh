@@ -6,6 +6,7 @@ set -ex
 main() {
     # cross build --target $TARGET
     # cross build --target $TARGET --release
+    cargo build
     cargo build --features backend_neo4j
 
     if [ ! -z $DISABLE_TESTS ]; then

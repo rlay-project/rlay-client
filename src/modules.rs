@@ -111,6 +111,7 @@ impl<'a> FilterModule<'a> {
     }
 }
 
+#[derive(Clone)]
 pub struct ModuleRegistry<'a> {
     filters: HashMap<String, Arc<Mutex<FilterModule<'a>>>>,
 }
@@ -131,7 +132,7 @@ impl<'a> ModuleRegistry<'a> {
         _self
     }
 
-    pub fn filter(&self, name: &str) -> Option<&Arc<Mutex<FilterModule<'a>>>> {
-        self.filters.get(name)
+    pub fn filter(&self, name: &str) -> Option<Arc<Mutex<FilterModule<'a>>>> {
+        self.filters.get(name).map(|n| n.to_owned())
     }
 }
