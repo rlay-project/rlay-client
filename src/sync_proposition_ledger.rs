@@ -12,14 +12,14 @@ use crate::web3_helpers::subscribe_with_history;
 
 // TODO: reevaluate Hash, ParitialEq and Eq derives as there could theoretically be collisions.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
-pub struct Proposition {
+pub struct EthProposition {
     pub proposition_cid: Vec<u8>,
     pub amount: U256,
     pub sender: Address,
     pub block_number: u64,
 }
 
-impl Proposition {
+impl EthProposition {
     pub fn from_log(log: &Log, event: &Event) -> Self {
         let raw_log = ethabi::RawLog {
             topics: log.topics.to_owned(),
@@ -47,7 +47,7 @@ impl Proposition {
     }
 }
 
-pub type PropositionLedger = Vec<Proposition>;
+pub type PropositionLedger = Vec<EthProposition>;
 
 #[derive(Fail, Debug)]
 pub enum PropositionLedgerSyncError {
@@ -76,7 +76,7 @@ impl EthPropositionLedgerSyncer {
     fn process_ledger_log(
         log: &web3::types::Log,
         signature_map: &HashMap<web3::types::H256, Event>,
-    ) -> impl Future<Item = Option<Proposition>, Error = ()> {
+    ) -> impl Future<Item = Option<EthProposition>, Error = ()> {
         debug!(
             "got PropositionLedger log: {:?} - {:?}",
             log.transaction_hash, log.log_index
@@ -87,7 +87,7 @@ impl EthPropositionLedgerSyncer {
             return Ok(None).into_future();
         }
 
-        let proposition = Proposition::from_log(log, &event);
+        let proposition = EthProposition::from_log(log, &event);
         Ok(Some(proposition)).into_future()
     }
 
@@ -144,7 +144,7 @@ impl PropositionLedgerSyncer<Box<Future<Item = (), Error = PropositionLedgerSync
                 })
                 .filter(|res| res.is_some())
                 .map(|res| res.unwrap())
-                .for_each(move |proposition: Proposition| {
+                .for_each(move |proposition: EthProposition| {
                     let mut proposition_ledger_lock = proposition_ledger_mutex
                         .lock()
                         .expect("Unable to get lock for proposition ledger");

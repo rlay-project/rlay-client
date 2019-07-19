@@ -2,10 +2,10 @@ use std::collections::HashMap;
 use std::sync::Mutex;
 use web3::types::U256;
 
-use crate::aggregation::{detect_valued_pools, ValuedBooleanPropositionPool};
+use crate::aggregation::{detect_valued_pools, WeightedMedianBooleanPropositionPool};
 use crate::payout::Payout;
 use crate::sync_ontology::EntityMap;
-use crate::sync_proposition_ledger::{Proposition, PropositionLedger};
+use crate::sync_proposition_ledger::{EthProposition, PropositionLedger};
 
 // TODO: U256 and get from RlayToken contract
 const TOKENS_PER_BLOCK: f64 = 25000000000000000000f64;
@@ -60,7 +60,7 @@ pub fn payouts_for_epoch(
 ///
 /// Returns the payouts for each individual proposition,
 /// which means that there might be two payouts for the same address.
-fn calculate_payouts(pools: &[ValuedBooleanPropositionPool]) -> Vec<Payout> {
+fn calculate_payouts(pools: &[WeightedMedianBooleanPropositionPool]) -> Vec<Payout> {
     let pool_rank_map = build_pool_rank_map(pools);
 
     let mut payouts: Vec<_> = Vec::new();
@@ -92,7 +92,7 @@ fn geometric_series_u64(rank: u64) -> f64 {
 }
 
 /// Part of payout calculation (see [calculate_payouts])
-fn build_pool_rank_map(pools: &[ValuedBooleanPropositionPool]) -> HashMap<Vec<u8>, u64> {
+fn build_pool_rank_map(pools: &[WeightedMedianBooleanPropositionPool]) -> HashMap<Vec<u8>, u64> {
     let mut pool_sizes = HashMap::new();
     for pool in pools {
         let size = pool.total_weight();
@@ -118,8 +118,8 @@ fn build_pool_rank_map(pools: &[ValuedBooleanPropositionPool]) -> HashMap<Vec<u8
 ///
 /// The sum of all factors should sum up to 1 (= the full reward paid out to the pool).
 fn calculate_proposition_in_pool_factors(
-    pool: &ValuedBooleanPropositionPool,
-) -> Vec<(&Proposition, f64)> {
+    pool: &WeightedMedianBooleanPropositionPool,
+) -> Vec<(&EthProposition, f64)> {
     let rewarded_propositions = build_rewarded_propositions(pool);
 
     let propositions_rank_age_map =
@@ -156,7 +156,9 @@ fn calculate_proposition_in_pool_factors(
 /// Build a list of stakes inside a pool that are elligable for rewards.
 ///
 /// This is a simplified version of the `Distance` factor for boolean statments.
-fn build_rewarded_propositions(pool: &ValuedBooleanPropositionPool) -> Vec<&Proposition> {
+fn build_rewarded_propositions(
+    pool: &WeightedMedianBooleanPropositionPool,
+) -> Vec<&EthProposition> {
     pool.propositions
         .iter()
         .filter(|n| pool.is_aggregated_value(n))
@@ -167,8 +169,8 @@ fn build_rewarded_propositions(pool: &ValuedBooleanPropositionPool) -> Vec<&Prop
 ///
 /// This is the `Chronology` factor for the payment function.
 fn build_propositions_rank_chronology_map(
-    propositions: Vec<&Proposition>,
-) -> HashMap<&Proposition, usize> {
+    propositions: Vec<&EthProposition>,
+) -> HashMap<&EthProposition, usize> {
     let mut stakes_rank_age = propositions;
 
     stakes_rank_age.sort_by_key(|n| n.block_number);
@@ -184,8 +186,8 @@ fn build_propositions_rank_chronology_map(
 ///
 /// This is the `Weight` factor for the payment function.
 fn build_propositions_weight_percentage_map(
-    propositions: Vec<&Proposition>,
-) -> HashMap<&Proposition, f64> {
+    propositions: Vec<&EthProposition>,
+) -> HashMap<&EthProposition, f64> {
     let rewarded_stakes_total_weight: f64 = propositions
         .iter()
         .map(|n| n.amount)

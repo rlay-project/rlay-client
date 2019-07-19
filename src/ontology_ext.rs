@@ -1,5 +1,8 @@
-use rlay_ontology::ontology;
+//! Extends the `rlay_ontology` by a few structs and traits that are helpful in the context of
+//! aggregation.
+
 use cid::{self, Cid, ToCid};
+use rlay_ontology::ontology;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Assertion {
@@ -309,6 +312,16 @@ where
     }
 }
 
+/// Allows an assertion to be turned into a "canonical" assertion.
+///
+/// Every assertion can be reduced to its canonical assertion by removing all annotations and other
+/// fields without semantic meaning.
+///
+/// - For a `ClassAssertion`/`NegativeClassAssertion`, the remaining fields are `subject`, `class`
+///
+/// - For a `DataPropertyAssertion`/`NegativeDataPropertyAssertion`
+///   and `ObjectPropertyAssertion`/`NegativeObjectPropertyAssertion`,
+///   the remaining fields are `subject`, `property`, `target`
 pub trait CanonicalAssertion {
     fn canonical_assertion(&self) -> Self;
 }
@@ -401,6 +414,7 @@ impl CanonicalAssertion for ontology::NegativeObjectPropertyAssertion {
 }
 
 pub trait CanonicalOppositeAssertion {
+    /// The entity type for a opposing assertion.
     type OppositeAssertion;
 
     fn canonical_opposite_assertion(&self) -> Self::OppositeAssertion;
@@ -509,6 +523,10 @@ impl CanonicalOppositeAssertion for ontology::NegativeObjectPropertyAssertion {
     }
 }
 
+/// Get the subject-property pair for an Assertion.
+///
+/// In the case of a `ClassAssertion`/`NegativeClassAssertion`, this is only the `subject`, as they
+/// have a implied "is a"-property.
 pub trait GetSubjectProperty {
     fn get_subject_property(&self) -> Vec<&[u8]>;
 }
@@ -604,6 +622,16 @@ impl GetSubjectProperty for ontology::NegativeObjectPropertyAssertion {
     }
 }
 
+/// Get the "target" for an Assertion.
+///
+/// When viewing an assertion as a Subject-Propery-Object triple, this would be the object.
+///
+/// - For a `ClassAssertion`/`NegativeClassAssertion`, this is the `class`
+///
+/// - For a `DataPropertyAssertion`/`NegativeDataPropertyAssertion`, this is the `target` value
+///
+/// - For a `ObjectPropertyAssertion`/`NegativeObjectPropertyAssertion`, this is the `target`
+/// object
 pub trait GetTarget {
     fn get_target(&self) -> Option<&[u8]>;
 }
