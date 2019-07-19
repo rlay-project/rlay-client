@@ -1,18 +1,19 @@
 use failure::{err_msg, Error};
+use rlay_backend::BackendFromConfigAndSyncState;
 use std::collections::HashMap;
 use std::fs::{self, File};
+use std::future::Future;
 use std::io::Read;
 use std::path::Path;
 use tokio_core;
 use toml;
 use url::Url;
 use web3;
-use web3::futures::future::Future;
 use web3::DuplexTransport;
 
 pub use self::backend::{BackendConfig, EthereumBackendConfig, Neo4jBackendConfig};
 pub use self::rpc::RpcConfig;
-use crate::backend::{Backend, BackendFromConfigAndSyncState};
+use crate::backend::Backend;
 use crate::sync::MultiBackendSyncState;
 
 #[derive(Debug, Deserialize, Clone)]
@@ -149,7 +150,7 @@ impl Config {
         &self,
         backend_name: Option<&str>,
         sync_state: &MultiBackendSyncState,
-    ) -> impl Future<Item = Backend, Error = Error> {
+    ) -> impl Future<Output = Result<Backend, Error>> {
         let config_for_name: &BackendConfig = self.get_backend_config(backend_name).unwrap();
         let sync_state_for_name: Option<_> = sync_state.get_backend(backend_name).ok();
 

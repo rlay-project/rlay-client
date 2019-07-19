@@ -1,9 +1,13 @@
 #![allow(unused_imports)]
+use ::futures::compat::Future01CompatExt;
+use ::futures::future::{self, BoxFuture, FutureExt, TryFutureExt};
 use cid::Cid;
 use failure::{err_msg, Error};
+use rlay_backend::{BackendFromConfigAndSyncState, BackendRpcMethods};
 use rlay_ontology::ontology::Entity;
 use serde_json::Value;
-use web3::futures::future::{self, Future};
+use std::future::Future;
+use std::pin::Pin;
 
 use crate::config::backend::BackendConfig;
 
@@ -48,14 +52,7 @@ impl SyncState {
     }
 }
 
-pub trait BackendFromConfigAndSyncState: Sized {
-    type C;
-    type S;
-    type R: Future<Item = Self, Error = Error> + Send;
-
-    fn from_config_and_syncstate(config: Self::C, sync_state: Self::S) -> Self::R;
-}
-
+#[derive(Clone)]
 pub enum Backend {
     Ethereum(EthereumBackend),
     #[cfg(feature = "backend_neo4j")]
@@ -66,7 +63,7 @@ impl Backend {
     pub fn get_entities(
         &mut self,
         _cids: &[String],
-    ) -> impl Future<Item = Vec<Entity>, Error = Error> + Send {
+    ) -> impl Future<Output = Result<Vec<Entity>, Error>> + Send {
         #[cfg(feature = "backend_neo4j")]
         match self {
             Backend::Neo4j(backend) => backend.get_entities(_cids),
@@ -76,7 +73,7 @@ impl Backend {
         #[cfg(not(feature = "backend_neo4j"))]
         #[allow(unreachable_code)]
         match self {
-            Backend::Ethereum(_) => future::lazy(|| Ok(unreachable!())),
+            Backend::Ethereum(_) => future::lazy(|_| Ok(unreachable!())),
         }
     }
 }
@@ -84,7 +81,7 @@ impl Backend {
 impl BackendFromConfigAndSyncState for Backend {
     type C = BackendConfig;
     type S = Option<SyncState>;
-    type R = Box<Future<Item = Self, Error = Error> + Send>;
+    type R = Pin<Box<Future<Output = Result<Self, Error>> + Send>>;
 
     fn from_config_and_syncstate(config: Self::C, sync_state: Self::S) -> Self::R {
         match config {
@@ -93,7 +90,9 @@ impl BackendFromConfigAndSyncState for Backend {
                     config,
                     sync_state.unwrap().as_ethereum().unwrap(),
                 );
-                Box::new(backend.and_then(|backend| Ok(Backend::Ethereum(backend))))
+                backend
+                    .and_then(|backend| future::ok(Backend::Ethereum(backend)))
+                    .boxed()
             }
             #[cfg(feature = "backend_neo4j")]
             BackendConfig::Neo4j(config) => {
@@ -101,46 +100,15 @@ impl BackendFromConfigAndSyncState for Backend {
                     config,
                     sync_state.unwrap().as_neo4j().unwrap(),
                 );
-                Box::new(backend.and_then(|backend| Ok(Backend::Neo4j(backend))))
+                backend
+                    .and_then(|backend| future::ok(Backend::Neo4j(backend)).into())
+                    .boxed()
             }
             #[cfg(not(feature = "backend_neo4j"))]
-            BackendConfig::Neo4j(_) => Box::new(future::err(err_msg(
-                "Support for backend type neo4j not compiled in.",
-            ))),
+            BackendConfig::Neo4j(_) => {
+                future::err(err_msg("Support for backend type neo4j not compiled in.")).boxed()
+            }
         }
-    }
-}
-
-pub trait BackendRpcMethods {
-    #[allow(unused_variables)]
-    fn store_entity(
-        &mut self,
-        entity: &Entity,
-        options_object: &Value,
-    ) -> Box<Future<Item = Cid, Error = Error> + Send> {
-        Box::new(future::err(err_msg(
-            "The requested backend does not support this RPC method.",
-        )))
-    }
-
-    #[allow(unused_variables)]
-    fn get_entity(
-        &mut self,
-        cid: &str,
-    ) -> Box<Future<Item = Option<Entity>, Error = Error> + Send> {
-        Box::new(future::err(err_msg(
-            "The requested backend does not support this RPC method.",
-        )))
-    }
-
-    #[allow(unused_variables)]
-    fn neo4j_query(
-        &mut self,
-        query: &str,
-    ) -> Box<Future<Item = Vec<String>, Error = Error> + Send> {
-        Box::new(future::err(err_msg(
-            "The requested backend does not support this RPC method.",
-        )))
     }
 }
 
@@ -150,7 +118,7 @@ impl BackendRpcMethods for Backend {
         &mut self,
         entity: &Entity,
         options_object: &Value,
-    ) -> Box<Future<Item = Cid, Error = Error> + Send> {
+    ) -> BoxFuture<Result<Cid, Error>> {
         match self {
             #[cfg(feature = "backend_neo4j")]
             Backend::Neo4j(backend) => {
@@ -163,10 +131,7 @@ impl BackendRpcMethods for Backend {
     }
 
     #[allow(unused_variables)]
-    fn get_entity(
-        &mut self,
-        cid: &str,
-    ) -> Box<Future<Item = Option<Entity>, Error = Error> + Send> {
+    fn get_entity(&mut self, cid: &str) -> BoxFuture<Result<Option<Entity>, Error>> {
         match self {
             #[cfg(feature = "backend_neo4j")]
             Backend::Neo4j(backend) => BackendRpcMethods::get_entity(backend, cid),
@@ -175,10 +140,7 @@ impl BackendRpcMethods for Backend {
     }
 
     #[allow(unused_variables)]
-    fn neo4j_query(
-        &mut self,
-        query: &str,
-    ) -> Box<Future<Item = Vec<String>, Error = Error> + Send> {
+    fn neo4j_query(&mut self, query: &str) -> BoxFuture<Result<Vec<String>, Error>> {
         match self {
             #[cfg(feature = "backend_neo4j")]
             Backend::Neo4j(backend) => BackendRpcMethods::neo4j_query(backend, query),

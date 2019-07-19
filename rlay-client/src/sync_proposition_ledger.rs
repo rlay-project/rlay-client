@@ -98,7 +98,7 @@ impl EthPropositionLedgerSyncer {
     }
 }
 
-impl PropositionLedgerSyncer<Box<Future<Item = (), Error = PropositionLedgerSyncError>>>
+impl PropositionLedgerSyncer<Box<dyn Future<Item = (), Error = PropositionLedgerSyncError>>>
     for EthPropositionLedgerSyncer
 {
     type Config = EthereumBackendConfig;
@@ -109,7 +109,7 @@ impl PropositionLedgerSyncer<Box<Future<Item = (), Error = PropositionLedgerSync
         config: Self::Config,
         proposition_ledger_mutex: Arc<Mutex<PropositionLedger>>,
         ledger_block_highwatermark_mtx: Arc<Mutex<u64>>,
-    ) -> Box<Future<Item = (), Error = PropositionLedgerSyncError>> {
+    ) -> Box<dyn Future<Item = (), Error = PropositionLedgerSyncError>> {
         let web3 = config.web3_with_handle(&eloop_handle);
 
         let ledger_contract_abi = include_str!("../data/PropositionLedger.abi");

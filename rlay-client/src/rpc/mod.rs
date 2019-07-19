@@ -1,16 +1,19 @@
 mod proxy;
 
+use ::futures::compat::Compat;
+use ::futures::future::{FutureExt, TryFutureExt};
 use ::web3::futures::prelude::*;
 use ::web3::types::H160;
 use cid::ToCid;
 use ethabi;
 use ethabi::token::Token;
 use ethabi::ParamType;
-use jsonrpc_core::futures::{future, Future};
+use jsonrpc_core::futures::Future;
 use jsonrpc_core::{self, *};
 use jsonrpc_http_server::ServerBuilder as HttpServerBuilder;
 use jsonrpc_pubsub::{PubSubHandler, Session, Subscriber, SubscriptionId};
 use jsonrpc_ws_server::{RequestContext, ServerBuilder as WsServerBuilder};
+use rlay_backend::BackendRpcMethods;
 use rlay_ontology::prelude::*;
 use rustc_hex::{FromHex, ToHex};
 use serde_json;
@@ -21,7 +24,7 @@ use url::Url;
 
 use self::proxy::ProxyHandler;
 use crate::aggregation::{detect_valued_pools, WeightedMedianBooleanPropositionPool};
-use crate::backend::{BackendRpcMethods, EthereumSyncState as SyncState};
+use crate::backend::EthereumSyncState as SyncState;
 use crate::config::{BackendConfig, Config};
 use crate::sync::MultiBackendSyncState;
 use crate::web3_helpers::HexString;
@@ -469,7 +472,9 @@ fn rpc_rlay_experimental_list_cids_index(sync_state: SyncState) -> impl RpcMetho
                                                 .collect();
                                             return values.contains(&value);
                                         }
-                                        Value::String(string_value) => return string_value == value,
+                                        Value::String(string_value) => {
+                                            return string_value == value
+                                        }
                                         _ => false,
                                     }
                                 })
@@ -494,35 +499,52 @@ fn rpc_rlay_experimental_get_entity(
 ) -> impl RpcMethodSimple {
     let config = config.clone();
     let sync_state = sync_state.clone();
+
     move |params: Params| {
-        if let Params::Array(params_array) = params {
-            let cid = params_array.get(0).unwrap().as_str().unwrap().to_owned();
+        let config = config.clone();
+        let sync_state = sync_state.clone();
+        Compat::new(
+            async move {
+                if let Params::Array(params_array) = params {
+                    let cid = params_array.get(0).unwrap().as_str().unwrap().to_owned();
 
-            let default_options = json!({});
-            let options_object: Option<Value> = params_array
-                .get(1)
-                .map(ToOwned::to_owned)
-                .or_else(|| Some(default_options));
-            let backend_name: Option<String> = options_object
-                .as_ref()
-                .and_then(|n| n.as_object())
-                .and_then(|n| n.get("backend"))
-                .and_then(|n| n.as_str().map(ToOwned::to_owned));
+                    let default_options = json!({});
+                    let options_object: Option<Value> = params_array
+                        .get(1)
+                        .map(ToOwned::to_owned)
+                        .or_else(|| Some(default_options));
+                    let backend_name: Option<String> = options_object
+                        .as_ref()
+                        .and_then(|n| n.as_object())
+                        .and_then(|n| n.get("backend"))
+                        .and_then(|n| n.as_str().map(ToOwned::to_owned));
 
-            config
-                .get_backend_with_syncstate(backend_name.as_ref().map(|x| &**x), &sync_state)
-                .map_err(failure_into_jsonrpc_err)
-                .and_then(move |mut backend| {
-                    BackendRpcMethods::get_entity(&mut backend, &cid)
+                    let mut backend = config
+                        .get_backend_with_syncstate(
+                            backend_name.as_ref().map(|x| &**x),
+                            &sync_state,
+                        )
                         .map_err(failure_into_jsonrpc_err)
-                        .and_then(|entity| {
-                            debug!("retrieved {:?}", entity.is_some());
-                            Ok(serde_json::to_value(entity.map(|n| FormatWeb3(n))).unwrap())
-                        })
-                })
-        } else {
-            unimplemented!()
-        }
+                        .await
+                        .unwrap();
+
+                    let entity: serde_json::Value =
+                        BackendRpcMethods::get_entity(&mut backend, &cid)
+                            .map_err(failure_into_jsonrpc_err)
+                            .map_ok(move |entity| {
+                                debug!("retrieved {:?}", entity.is_some());
+                                serde_json::to_value(entity.map(|n| FormatWeb3(n))).unwrap()
+                            })
+                            .await
+                            .unwrap();
+
+                    Ok(entity)
+                } else {
+                    unimplemented!()
+                }
+            }
+                .boxed(),
+        )
     }
 }
 
@@ -548,38 +570,58 @@ fn rpc_rlay_experimental_store_entity(
 ) -> impl RpcMethodSimple {
     let config = config.clone();
     move |params: Params| {
-        if let Params::Array(params_array) = params {
-            let entity_object = params_array.get(0).unwrap();
-            let web3_entity: FormatWeb3<Entity> = serde_json::from_value(entity_object.clone())
-                .map_err(|err| jsonrpc_core::Error::invalid_params(err.description()))
-                .unwrap();
-            let entity: Entity = web3_entity.0;
+        let config = config.clone();
+        let sync_state = sync_state.clone();
+        Compat::new(
+            async move {
+                if let Params::Array(params_array) = params {
+                    let entity_object = params_array.get(0).unwrap();
+                    let web3_entity: FormatWeb3<Entity> =
+                        serde_json::from_value(entity_object.clone())
+                            .map_err(|err| jsonrpc_core::Error::invalid_params(err.description()))
+                            .unwrap();
+                    let entity: Entity = web3_entity.0;
 
-            let default_options = json!({});
-            let options_object: Option<Value> = params_array
-                .get(1)
-                .map(ToOwned::to_owned)
-                .or_else(|| Some(default_options));
-            let backend_name: Option<String> = options_object
-                .as_ref()
-                .and_then(|n| n.as_object())
-                .and_then(|n| n.get("backend"))
-                .and_then(|n| n.as_str().map(ToOwned::to_owned));
+                    let default_options = json!({});
+                    let options_object: Option<Value> = params_array
+                        .get(1)
+                        .map(ToOwned::to_owned)
+                        .or_else(|| Some(default_options));
+                    let backend_name: Option<String> = options_object
+                        .as_ref()
+                        .and_then(|n| n.as_object())
+                        .and_then(|n| n.get("backend"))
+                        .and_then(|n| n.as_str().map(ToOwned::to_owned));
 
-            config
-                .get_backend_with_syncstate(backend_name.as_ref().map(|x| &**x), &sync_state)
-                .map_err(failure_into_jsonrpc_err)
-                .and_then(move |mut backend| {
-                    BackendRpcMethods::store_entity(&mut backend, &entity, &options_object.unwrap())
+                    let mut backend = config
+                        .get_backend_with_syncstate(
+                            backend_name.as_ref().map(|x| &**x),
+                            &sync_state,
+                        )
                         .map_err(failure_into_jsonrpc_err)
-                        .and_then(|raw_cid| {
-                            let cid: String = format!("0x{}", raw_cid.to_bytes().to_hex());
-                            Ok(serde_json::to_value(cid).unwrap())
-                        })
-                })
-        } else {
-            unimplemented!()
-        }
+                        .await
+                        .unwrap();
+
+                    let cid = BackendRpcMethods::store_entity(
+                        &mut backend,
+                        &entity,
+                        &options_object.unwrap(),
+                    )
+                    .map_err(failure_into_jsonrpc_err)
+                    .map_ok(|raw_cid| {
+                        let cid: String = format!("0x{}", raw_cid.to_bytes().to_hex());
+                        serde_json::to_value(cid).unwrap()
+                    })
+                    .await
+                    .unwrap();
+
+                    Ok(cid)
+                } else {
+                    unimplemented!()
+                }
+            }
+                .boxed(),
+        )
     }
 }
 
@@ -589,98 +631,86 @@ fn rpc_rlay_experimental_neo4j_query(
 ) -> impl RpcMethodSimple {
     let config = config.clone();
     let sync_state = sync_state.clone();
-    let filter_registry = crate::modules::ModuleRegistry::with_builtins();
     move |params: Params| {
-        if let Params::Array(params_array) = params {
-            let query = params_array.get(0).unwrap().as_str().unwrap().to_owned();
+        let config = config.clone();
+        let sync_state = sync_state.clone();
+        let filter_registry = crate::modules::ModuleRegistry::with_builtins();
+        Compat::new(
+            async move {
+                if let Params::Array(params_array) = params {
+                    let query = params_array.get(0).unwrap().as_str().unwrap().to_owned();
 
-            let default_options = json!({});
-            let options_object = params_array.get(1).or_else(|| Some(&default_options));
-            let backend_name: Option<String> = options_object
-                .and_then(|n| n.as_object())
-                .and_then(|n| n.get("backend"))
-                .and_then(|n| n.as_str().map(ToOwned::to_owned));
+                    let default_options = json!({});
+                    let options_object = params_array.get(1).or_else(|| Some(&default_options));
+                    let backend_name: Option<String> = options_object
+                        .and_then(|n| n.as_object())
+                        .and_then(|n| n.get("backend"))
+                        .and_then(|n| n.as_str().map(ToOwned::to_owned));
 
-            let activated_filters_names: Vec<String> = options_object
-                .and_then(|n| n.as_object())
-                .and_then(|n| n.get("filters"))
-                .and_then(|n| {
-                    n.as_array().and_then(|filters_arr| {
-                        Some(
-                            filters_arr
-                                .into_iter()
-                                .map(|n| n.as_str().unwrap().to_owned())
-                                .collect::<Vec<_>>(),
-                        )
-                    })
-                })
-                .unwrap_or_else(Vec::new);
+                    let activated_filters_names: Vec<String> = options_object
+                        .and_then(|n| n.as_object())
+                        .and_then(|n| n.get("filters"))
+                        .and_then(|n| {
+                            n.as_array().and_then(|filters_arr| {
+                                Some(
+                                    filters_arr
+                                        .into_iter()
+                                        .map(|n| n.as_str().unwrap().to_owned())
+                                        .collect::<Vec<_>>(),
+                                )
+                            })
+                        })
+                        .unwrap_or_else(Vec::new);
 
-            let config = config.clone();
-            let sync_state = sync_state.clone();
-            let filter_registry = filter_registry.clone();
-            future::ok((
-                config,
-                sync_state,
-                filter_registry,
-                query,
-                backend_name,
-                activated_filters_names,
-            ))
-            .and_then(
-                |(
-                    config,
-                    sync_state,
-                    filter_registry,
-                    query,
-                    backend_name,
-                    activated_filters_names,
-                ): (_, _, _, String, Option<String>, Vec<String>)| {
-                    config
+                    let config = config.clone();
+                    let sync_state = sync_state.clone();
+                    let filter_registry = filter_registry.clone();
+
+                    let mut backend = config
                         .get_backend_with_syncstate(
                             backend_name.as_ref().map(|x| &**x),
                             &sync_state,
                         )
                         .map_err(failure_into_jsonrpc_err)
-                        .and_then(move |mut backend| {
-                            BackendRpcMethods::neo4j_query(&mut backend, &query)
-                                .map_err(failure_into_jsonrpc_err)
-                                .and_then(move |cids| {
-                                    let activated_filters: Vec<_> = activated_filters_names
-                                        .into_iter()
-                                        .filter_map(|filter_name| {
-                                            filter_registry.filter(&filter_name.to_owned())
-                                        })
-                                        .collect();
-                                    backend
-                                        .get_entities(&cids)
-                                        .map_err(failure_into_jsonrpc_err)
-                                        .and_then(move |entities| {
-                                            let filtered_entities = entities
-                                                .into_iter()
-                                                .filter(|entity| {
-                                                    for filter in &activated_filters {
-                                                        if !filter
-                                                            .lock()
-                                                            .unwrap()
-                                                            .filter(entity.clone())
-                                                        {
-                                                            return false;
-                                                        }
-                                                    }
-                                                    return true;
-                                                })
-                                                .map(|entity| FormatWeb3(entity))
-                                                .collect::<Vec<_>>();
-                                            Ok(serde_json::to_value(filtered_entities).unwrap())
-                                        })
-                                })
+                        .await
+                        .unwrap();
+
+                    let cids: Vec<String> = BackendRpcMethods::neo4j_query(&mut backend, &query)
+                        .map_err(failure_into_jsonrpc_err)
+                        .await
+                        .unwrap();
+
+                    let activated_filters: Vec<_> = activated_filters_names
+                        .into_iter()
+                        .filter_map(|filter_name| filter_registry.filter(&filter_name.to_owned()))
+                        .collect();
+
+                    let entities = backend
+                        .get_entities(&cids)
+                        .map_err(failure_into_jsonrpc_err)
+                        .await
+                        .unwrap();
+
+                    let filtered_entities = entities
+                        .into_iter()
+                        .filter(|entity| {
+                            for filter in &activated_filters {
+                                if !filter.lock().unwrap().filter(entity.clone()) {
+                                    return false;
+                                }
+                            }
+                            return true;
                         })
-                },
-            )
-        } else {
-            unimplemented!()
-        }
+                        .map(|entity| FormatWeb3(entity))
+                        .collect::<Vec<_>>();
+
+                    Ok(serde_json::to_value(filtered_entities).unwrap())
+                } else {
+                    unimplemented!()
+                }
+            }
+                .boxed(),
+        )
     }
 }
 

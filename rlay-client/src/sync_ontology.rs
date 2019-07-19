@@ -257,7 +257,7 @@ impl EthOntologySyncer {
     }
 }
 
-impl OntologySyncer<Box<Future<Item = (), Error = ()>>> for EthOntologySyncer {
+impl OntologySyncer<Box<dyn Future<Item = (), Error = ()>>> for EthOntologySyncer {
     type Config = EthereumBackendConfig;
 
     fn sync_ontology(
@@ -268,7 +268,7 @@ impl OntologySyncer<Box<Future<Item = (), Error = ()>>> for EthOntologySyncer {
         cid_entity_kind_map_mutex: Arc<Mutex<CidEntityMap>>,
         block_entity_map_mutex: Arc<Mutex<BlockEntityMap>>,
         last_synced_block_mutex: Arc<Mutex<Option<u64>>>,
-    ) -> Box<Future<Item = (), Error = ()>> {
+    ) -> Box<dyn Future<Item = (), Error = ()>> {
         let web3 = config.web3_with_handle(&eloop_handle);
 
         let ontology_contract_abi = include_str!("../data/OntologyStorage.abi");
@@ -330,6 +330,6 @@ impl OntologySyncer<Box<Future<Item = (), Error = ()>>> for EthOntologySyncer {
                     Ok(())
                 })
                 .map_err(|_| ()),
-        ) as Box<Future<Item = (), Error = ()>>
+        ) as Box<dyn Future<Item = (), Error = ()>>
     }
 }

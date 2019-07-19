@@ -1,16 +1,20 @@
 #[allow(unused_imports)]
+use ::futures::compat::Future01CompatExt;
+use ::futures::future::{self, BoxFuture, Future as NewFuture, FutureExt};
 use failure::{err_msg, Error};
 use rlay_ontology::ontology::Entity;
 use rustc_hex::{FromHex, ToHex};
 use std::collections::BTreeMap;
+use std::future::Future;
+use std::pin::Pin;
 use std::sync::{Arc, Mutex};
-use web3::futures::future::{self, Future};
 
 use crate::backend::{BackendFromConfigAndSyncState, BackendRpcMethods};
 use crate::config::backend::EthereumBackendConfig;
 use crate::sync_ontology::{BlockEntityMap, EntityMap};
 use crate::sync_proposition_ledger::PropositionLedger;
 
+#[derive(Clone)]
 pub struct EthereumBackend {
     pub config: EthereumBackendConfig,
     pub sync_state: SyncState,
@@ -19,10 +23,10 @@ pub struct EthereumBackend {
 impl BackendFromConfigAndSyncState for EthereumBackend {
     type C = EthereumBackendConfig;
     type S = SyncState;
-    type R = Box<Future<Item = Self, Error = Error> + Send>;
+    type R = Pin<Box<Future<Output = Result<Self, Error>> + Send>>;
 
     fn from_config_and_syncstate(config: Self::C, sync_state: Self::S) -> Self::R {
-        Box::new(future::ok(Self { config, sync_state }))
+        future::ok(Self { config, sync_state }).boxed()
     }
 }
 
@@ -116,18 +120,13 @@ impl OntologySyncState {
 }
 
 impl BackendRpcMethods for EthereumBackend {
-    fn get_entity(
-        &mut self,
-        cid: &str,
-    ) -> Box<Future<Item = Option<Entity>, Error = Error> + Send> {
+    fn get_entity(&mut self, cid: &str) -> BoxFuture<Result<Option<Entity>, Error>> {
         let entity_map = self.sync_state.entity_map();
         let entity_map_lock = entity_map.lock().unwrap();
 
         let cid_no_prefix = str::replace(cid, "0x", "");
         let cid_bytes = cid_no_prefix.from_hex().unwrap();
 
-        Box::new(future::ok(
-            entity_map_lock.get(&cid_bytes).map(|n| n.clone()),
-        ))
+        future::ok(entity_map_lock.get(&cid_bytes).map(|n| n.clone())).boxed()
     }
 }

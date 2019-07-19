@@ -16,6 +16,7 @@ use std::sync::Arc;
 use crate::backend::{BackendFromConfigAndSyncState, BackendRpcMethods};
 use crate::config::backend::Neo4jBackendConfig;
 
+#[derive(Clone)]
 pub struct Neo4jBackend {
     pub config: Neo4jBackendConfig,
     client: Option<Arc<Pool<CypherConnectionManager>>>,
