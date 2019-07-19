@@ -2,16 +2,30 @@ use ::web3::types::U256;
 use cid::ToCid;
 use rlay_ontology::ontology;
 use rlay_ontology::prelude::*;
-use serde::Serializer;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use tiny_keccak::keccak256;
 
 use crate::ontology_ext::*;
-use crate::sync_proposition_ledger::Proposition;
-use crate::web3_helpers::{base58_encode, HexString};
+use crate::sync_proposition_ledger::EthProposition;
+use crate::web3_helpers::HexString;
 
 pub type PropositionSubject<'a> = &'a [u8];
+
+/// The trait should be implemented on types that express a value usable for aggregations for an assertion.
+///
+/// This can e.g. be a weight for weighted aggregations, or a boolean value that expresses whether
+/// this struct instance should be considered for aggregation.
+pub trait AssertionValue {
+    type AssertionCid;
+    type Value;
+
+    /// The CID of the assertion the value is for.
+    fn assertion_cid(&self) -> Self::AssertionCid;
+
+    /// The assertion value.
+    fn assertion_value(&self) -> Self::Value;
+}
 
 #[derive(Debug, Clone)]
 pub struct BooleanPropositionPool {
@@ -156,13 +170,6 @@ impl BooleanPropositionPool {
             });
         keccak256(&hash_data).to_vec()
     }
-
-    pub fn serialize_subject<S>(val: &Vec<u8>, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        serializer.serialize_str(&base58_encode(val))
-    }
 }
 
 impl ::serde::Serialize for BooleanPropositionPool {
@@ -216,13 +223,15 @@ impl CanonicalParts for BooleanPropositionPool {
     }
 }
 
+/// A pairing of a boolean proposition pool with valued assertions, where the aggregated value is
+/// calculated via the weighted median of the valued assertions.
 #[derive(Debug, Clone)]
-pub struct ValuedBooleanPropositionPool {
+pub struct WeightedMedianBooleanPropositionPool {
     pub pool: BooleanPropositionPool,
-    pub propositions: Vec<Proposition>,
+    pub propositions: Vec<EthProposition>,
 }
 
-impl ValuedBooleanPropositionPool {
+impl WeightedMedianBooleanPropositionPool {
     pub fn from_pool(pool: BooleanPropositionPool) -> Self {
         Self {
             pool: pool.to_complete_pool(),
@@ -318,7 +327,7 @@ impl ValuedBooleanPropositionPool {
     }
 
     // TODO: potentially broken
-    pub fn is_aggregated_value(&self, val: &Proposition) -> bool {
+    pub fn is_aggregated_value(&self, val: &EthProposition) -> bool {
         let aggregated = match self.aggregated_value() {
             None => return false,
             Some(val) => val,
@@ -337,7 +346,7 @@ impl ValuedBooleanPropositionPool {
     }
 }
 
-impl ::serde::Serialize for ValuedBooleanPropositionPool {
+impl ::serde::Serialize for WeightedMedianBooleanPropositionPool {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: ::serde::Serializer,
@@ -448,13 +457,13 @@ pub fn detect_pools(ontology_entities: &[&ontology::Entity]) -> Vec<BooleanPropo
 /// assert or negatively assert class memberships about the same subject.
 pub fn detect_valued_pools(
     ontology_entities: &[&ontology::Entity],
-    propositions: &[&Proposition],
-) -> Vec<ValuedBooleanPropositionPool> {
+    propositions: &[&EthProposition],
+) -> Vec<WeightedMedianBooleanPropositionPool> {
     let pools = detect_pools(ontology_entities);
     trace!("Built pools");
-    let mut valued_pools: Vec<ValuedBooleanPropositionPool> = pools
+    let mut valued_pools: Vec<WeightedMedianBooleanPropositionPool> = pools
         .into_iter()
-        .map(ValuedBooleanPropositionPool::from_pool)
+        .map(WeightedMedianBooleanPropositionPool::from_pool)
         .collect();
     trace!("Built valued pools");
 
@@ -464,7 +473,7 @@ pub fn detect_valued_pools(
         .collect();
     let valued_pool_arcs = original_valued_pool_arcs.clone();
     {
-        let mut pool_cids_map: HashMap<Vec<u8>, Arc<Mutex<ValuedBooleanPropositionPool>>> =
+        let mut pool_cids_map: HashMap<Vec<u8>, Arc<Mutex<WeightedMedianBooleanPropositionPool>>> =
             HashMap::new();
         for pool_arc in valued_pool_arcs {
             let pool_cids = pool_arc.lock().unwrap().pool.value_cids();

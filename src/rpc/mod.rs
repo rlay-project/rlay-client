@@ -20,7 +20,7 @@ use std::{thread, time};
 use url::Url;
 
 use self::proxy::ProxyHandler;
-use crate::aggregation::{detect_valued_pools, ValuedBooleanPropositionPool};
+use crate::aggregation::{detect_valued_pools, WeightedMedianBooleanPropositionPool};
 use crate::backend::{BackendRpcMethods, EthereumSyncState as SyncState};
 use crate::config::{BackendConfig, Config};
 use crate::sync::MultiBackendSyncState;
@@ -264,13 +264,13 @@ fn rpc_rlay_get_proposition_pools(sync_state: SyncState) -> impl RpcMethodSimple
         if let Params::Array(params_array) = params {
             if let Value::Object(ref params_map) = params_array[0] {
                 if let Some(param_subject) = params_map.get("subject") {
-                    let value = |n: &ValuedBooleanPropositionPool| {
+                    let value = |n: &WeightedMedianBooleanPropositionPool| {
                         serde_json::to_value(HexString::fmt(n.pool.subject())).unwrap()
                     };
                     pools.retain(|n| &value(n) == param_subject);
                 }
                 if let Some(param_subject_property) = params_map.get("subjectProperty") {
-                    let value = |n: &ValuedBooleanPropositionPool| {
+                    let value = |n: &WeightedMedianBooleanPropositionPool| {
                         let vals: Vec<_> = n
                             .pool
                             .subject_property()
@@ -282,7 +282,7 @@ fn rpc_rlay_get_proposition_pools(sync_state: SyncState) -> impl RpcMethodSimple
                     pools.retain(|n| &value(n) == param_subject_property);
                 }
                 if let Some(param_target) = params_map.get("target") {
-                    let value = |n: &ValuedBooleanPropositionPool| {
+                    let value = |n: &WeightedMedianBooleanPropositionPool| {
                         if n.pool.target().is_none() {
                             return serde_json::to_value(()).unwrap();
                         }
