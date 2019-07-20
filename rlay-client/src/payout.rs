@@ -1,5 +1,7 @@
 use merkle_light::hash::Hashable;
 use merkle_light::merkle2::MerkleTree;
+use rlay_backend_ethereum::sync_ontology::EntityMap;
+use rlay_backend_ethereum::sync_proposition_ledger::PropositionLedger;
 use rustc_hex::ToHex;
 use serde_json;
 use std::collections::HashMap;
@@ -17,8 +19,6 @@ use web3::Transport;
 use crate::config::Config;
 use crate::merkle::Keccak256Algorithm;
 use crate::payout_calculation::payouts_for_epoch;
-use crate::sync_ontology::EntityMap;
-use crate::sync_proposition_ledger::PropositionLedger;
 
 pub type PayoutEpochs = HashMap<u64, Vec<Payout>>;
 

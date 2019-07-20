@@ -12,9 +12,7 @@ use std::sync::Arc;
 
 use crate::config::backend::BackendConfig;
 
-mod ethereum;
-
-pub use self::ethereum::{EthereumBackend, SyncState as EthereumSyncState};
+pub use rlay_backend_ethereum::{EthereumBackend, SyncState as EthereumSyncState};
 #[cfg(feature = "backend_neo4j")]
 pub use rlay_backend_neo4j::{
     config::Neo4jBackendConfig, Neo4jBackend, SyncState as Neo4jSyncState,

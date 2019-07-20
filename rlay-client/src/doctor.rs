@@ -2,6 +2,7 @@ use console::{style, Emoji};
 use ethabi;
 use failure::{err_msg, Error};
 use futures_timer::FutureExt;
+use rlay_backend_ethereum::config::EthereumBackendConfig;
 use rustc_hex::FromHex;
 use std::collections::HashMap;
 use std::time::Duration;
@@ -10,7 +11,7 @@ use web3;
 use web3::types::H160;
 use web3::Transport;
 
-use crate::config::{BackendConfig, Config, EthereumBackendConfig};
+use crate::config::{BackendConfig, Config};
 
 pub static SUCCESS: Emoji = Emoji("✅  ", "");
 pub static FAILURE: Emoji = Emoji("❌  ", "");

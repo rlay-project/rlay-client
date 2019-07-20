@@ -1632,6 +1632,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "rlay-backend-ethereum"
+version = "0.1.0"
+dependencies = [
+ "cid 0.3.0 (git+https://github.com/hobofan/rust-cid?rev=87332277d2cdb5b7cb6484c23b5711c28b44c684)",
+ "ethabi 6.1.0 (git+https://github.com/hobofan/ethabi?rev=42df1ca0ac5976040b9091f35875b9548c30ef41)",
+ "failure 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "failure_derive 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "futures-preview 0.3.0-alpha.17 (registry+https://github.com/rust-lang/crates.io-index)",
+ "log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "multibase 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rlay-backend 0.1.0",
+ "rlay_ontology 0.2.2 (git+https://github.com/rlay-project/rlay-ontology?rev=d02a9f3781381f5d19236144a19a2a6f8ed71319)",
+ "rustc-hex 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.79 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.79 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tokio-core 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
+ "url 1.7.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "web3 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "rlay-backend-neo4j"
 version = "0.1.0"
 dependencies = [
@@ -1675,8 +1696,8 @@ dependencies = [
  "jsonrpc-ws-server 10.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "merkle_light 0.3.1 (git+https://github.com/hobofan/merkle_light?rev=f069616df909cb7a4426f6deb328bde6422a3510)",
- "multibase 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rlay-backend 0.1.0",
+ "rlay-backend-ethereum 0.1.0",
  "rlay-backend-neo4j 0.1.0",
  "rlay_ontology 0.2.2 (git+https://github.com/rlay-project/rlay-ontology?rev=d02a9f3781381f5d19236144a19a2a6f8ed71319)",
  "rustc-hex 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",

@@ -27,8 +27,6 @@ pub mod payout_calculation;
 pub mod payout_cli;
 pub mod rpc;
 pub mod sync;
-pub mod sync_ontology;
-pub mod sync_proposition_ledger;
 pub mod web3_helpers;
 
 use clap::{App, Arg, SubCommand};

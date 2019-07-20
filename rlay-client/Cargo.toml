@@ -8,6 +8,8 @@ edition = "2018"
 [dependencies]
 rlay-backend = { path = "../rlay-backend" }
 rlay-backend-neo4j = { path = "../rlay-backend-neo4j", optional = true }
+rlay-backend-ethereum = { path = "../rlay-backend-ethereum" }
+
 web3 = "0.6.0"
 cid = { git = 'https://github.com/hobofan/rust-cid', rev = '87332277d2cdb5b7cb6484c23b5711c28b44c684' }
 rlay_ontology = { git = 'https://github.com/rlay-project/rlay-ontology', rev = 'd02a9f3781381f5d19236144a19a2a6f8ed71319', features = ["web3_compat"] }
@@ -15,7 +17,6 @@ merkle_light = { git = "https://github.com/hobofan/merkle_light", rev = 'f069616
 ethabi = { git = "https://github.com/hobofan/ethabi", rev = '42df1ca0ac5976040b9091f35875b9548c30ef41' }
 rustc-hex = "1.0.0"
 tokio-core = "0.1.17"
-multibase = "0.6.0"
 clap = "2.31"
 console = "0.6.1"
 failure = "=0.1.1"
@@ -44,6 +45,6 @@ assert_cmd = "0.10.2"
 
 [features]
 default = ["transport_ws"]
-transport_ipc = []
-transport_ws = []
+transport_ipc = ["rlay-backend-ethereum/transport_ipc"]
+transport_ws = ["rlay-backend-ethereum/transport_ws"]
 backend_neo4j = ["rlay-backend-neo4j"]

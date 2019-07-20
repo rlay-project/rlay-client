@@ -1,5 +1,6 @@
 use ::web3::types::U256;
 use cid::ToCid;
+use rlay_backend_ethereum::sync_proposition_ledger::EthProposition;
 use rlay_ontology::ontology;
 use rlay_ontology::prelude::*;
 use std::collections::HashMap;
@@ -7,7 +8,6 @@ use std::sync::{Arc, Mutex};
 use tiny_keccak::keccak256;
 
 use crate::ontology_ext::*;
-use crate::sync_proposition_ledger::EthProposition;
 use crate::web3_helpers::HexString;
 
 pub type PropositionSubject<'a> = &'a [u8];

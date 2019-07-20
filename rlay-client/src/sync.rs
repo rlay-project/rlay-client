@@ -1,6 +1,10 @@
 use failure::{err_msg, Error};
 use futures_timer::Interval;
 use log::Level::Debug;
+use rlay_backend_ethereum::sync_ontology::{EthOntologySyncer, OntologySyncer};
+use rlay_backend_ethereum::sync_proposition_ledger::{
+    EthPropositionLedgerSyncer, PropositionLedgerSyncer,
+};
 use rlay_ontology::ontology::Entity;
 use rustc_hex::ToHex;
 use std::collections::HashMap;
@@ -17,8 +21,6 @@ use crate::payout::{
     fill_epoch_payouts, fill_epoch_payouts_cumulative, load_epoch_payouts,
     retrieve_epoch_start_block, store_epoch_payouts, submit_epoch_payouts, Payout, PayoutEpochs,
 };
-use crate::sync_ontology::{EthOntologySyncer, OntologySyncer};
-use crate::sync_proposition_ledger::{EthPropositionLedgerSyncer, PropositionLedgerSyncer};
 
 #[derive(Clone)]
 pub struct MultiBackendSyncState {

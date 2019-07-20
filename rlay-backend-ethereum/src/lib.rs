@@ -1,7 +1,21 @@
+extern crate failure;
+#[macro_use]
+extern crate failure_derive;
+#[macro_use]
+extern crate log;
+#[macro_use]
+extern crate serde_derive;
+
+pub mod config;
+pub mod sync_ontology;
+pub mod sync_proposition_ledger;
+mod web3_helpers;
+
 #[allow(unused_imports)]
 use ::futures::compat::Future01CompatExt;
 use ::futures::future::{self, BoxFuture, Future as NewFuture, FutureExt};
 use failure::{err_msg, Error};
+use rlay_backend::{BackendFromConfigAndSyncState, BackendRpcMethods};
 use rlay_ontology::ontology::Entity;
 use rustc_hex::{FromHex, ToHex};
 use std::collections::BTreeMap;
@@ -9,8 +23,7 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::{Arc, Mutex};
 
-use crate::backend::{BackendFromConfigAndSyncState, BackendRpcMethods};
-use crate::config::backend::EthereumBackendConfig;
+use crate::config::EthereumBackendConfig;
 use crate::sync_ontology::{BlockEntityMap, EntityMap};
 use crate::sync_proposition_ledger::PropositionLedger;
 
