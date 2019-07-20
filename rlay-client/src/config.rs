@@ -11,7 +11,7 @@ use url::Url;
 use web3;
 use web3::DuplexTransport;
 
-pub use self::backend::{BackendConfig, EthereumBackendConfig, Neo4jBackendConfig};
+pub use self::backend::{BackendConfig, EthereumBackendConfig};
 pub use self::rpc::RpcConfig;
 use crate::backend::Backend;
 use crate::sync::MultiBackendSyncState;
@@ -196,14 +196,10 @@ pub mod rpc {
 
 pub mod backend {
     #[cfg(feature = "backend_neo4j")]
-    use bb8::Pool;
-    #[cfg(feature = "backend_neo4j")]
-    use bb8_cypher::CypherConnectionManager;
+    use rlay_backend_neo4j::config::Neo4jBackendConfig;
     use rustc_hex::FromHex;
     use std::collections::HashMap;
     use url::Url;
-    #[cfg(feature = "backend_neo4j")]
-    use web3::futures::future;
     use web3::types::H160;
     use web3::DuplexTransport;
 
@@ -213,6 +209,7 @@ pub mod backend {
         #[serde(rename = "ethereum")]
         Ethereum(EthereumBackendConfig),
         #[serde(rename = "neo4j")]
+        #[cfg(feature = "backend_neo4j")]
         Neo4j(Neo4jBackendConfig),
     }
 
@@ -293,28 +290,6 @@ pub mod backend {
         };
 
             web3::Web3::new(transport)
-        }
-    }
-
-    #[derive(Debug, Deserialize, Clone)]
-    pub struct Neo4jBackendConfig {
-        pub uri: String,
-    }
-
-    impl Neo4jBackendConfig {
-        #[cfg(feature = "backend_neo4j")]
-        pub fn connection_pool(&self) -> Pool<CypherConnectionManager> {
-            let mut rt = tokio_core::reactor::Core::new().unwrap();
-            let manager = CypherConnectionManager {
-                url: self.uri.to_owned(),
-            };
-            rt.run(future::lazy(|| {
-                Pool::builder()
-                    .min_idle(Some(10))
-                    .max_size(20)
-                    .build(manager)
-            }))
-            .unwrap()
         }
     }
 }

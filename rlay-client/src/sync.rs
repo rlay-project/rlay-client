@@ -11,8 +11,6 @@ use web3;
 use web3::futures::prelude::*;
 use web3::types::U256;
 
-#[cfg(feature = "backend_neo4j")]
-use crate::backend::Neo4jSyncState;
 use crate::backend::{EthereumSyncState, SyncState};
 use crate::config::{BackendConfig, Config};
 use crate::payout::{
@@ -37,17 +35,11 @@ impl MultiBackendSyncState {
     pub fn add_backend(&mut self, name: String, config: BackendConfig) {
         match config {
             BackendConfig::Ethereum(_) => {
-                self.backends
-                    .insert(name, SyncState::Ethereum(EthereumSyncState::new()));
+                self.backends.insert(name, SyncState::new_ethereum());
             }
+            #[cfg(feature = "backend_neo4j")]
             BackendConfig::Neo4j(_config) => {
-                #[cfg(feature = "backend_neo4j")]
-                self.backends.insert(
-                    name,
-                    SyncState::Neo4j(Neo4jSyncState {
-                        connection_pool: Arc::new(_config.connection_pool()),
-                    }),
-                );
+                self.backends.insert(name, SyncState::new_neo4j(&_config));
             }
         }
     }

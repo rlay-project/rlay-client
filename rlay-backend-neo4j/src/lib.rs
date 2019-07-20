@@ -1,9 +1,22 @@
-use ::web3::futures::future::{self, Future};
+#![recursion_limit = "128"]
+#![feature(async_await)]
+
+#[macro_use]
+extern crate log;
+#[macro_use]
+extern crate failure;
+#[macro_use]
+extern crate serde_derive;
+
+pub mod config;
+
 use bb8::Pool;
 use bb8_cypher::CypherConnectionManager;
 use cid::{Cid, ToCid};
-#[allow(unused_imports)]
-use failure::{err_msg, Error};
+use failure::Error;
+use futures::compat::Future01CompatExt;
+use futures::prelude::*;
+use rlay_backend::{BackendFromConfigAndSyncState, BackendRpcMethods};
 use rlay_ontology::prelude::*;
 use rustc_hex::ToHex;
 use rusted_cypher::cypher::result::Rows;
@@ -11,10 +24,10 @@ use rusted_cypher::cypher::Statement;
 use rusted_cypher::GraphClient;
 use serde_json::{self, Value};
 use std::collections::HashMap;
+use std::future::Future;
 use std::sync::Arc;
 
-use crate::backend::{BackendFromConfigAndSyncState, BackendRpcMethods};
-use crate::config::backend::Neo4jBackendConfig;
+use crate::config::Neo4jBackendConfig;
 
 #[derive(Clone)]
 pub struct Neo4jBackend {
@@ -28,9 +41,9 @@ pub struct SyncState {
 }
 
 impl Neo4jBackend {
-    pub fn client(&mut self) -> impl Future<Item = GraphClient, Error = Error> {
+    pub fn client(&mut self) -> impl Future<Output = Result<GraphClient, Error>> {
         if let Some(ref client) = self.client {
-            return client.dedicated_connection().map_err(From::from);
+            return client.dedicated_connection().compat().map_err(From::from);
         }
 
         trace!("Creating new connection pool for backend.");
@@ -40,6 +53,7 @@ impl Neo4jBackend {
             .as_ref()
             .unwrap()
             .dedicated_connection()
+            .compat()
             .map_err(From::from);
     }
 
@@ -118,49 +132,44 @@ impl Neo4jBackend {
             .collect()
     }
 
-    pub fn get_entities(
-        &mut self,
-        cids: &[String],
-    ) -> impl Future<Item = Vec<Entity>, Error = Error> + Send {
+    pub async fn get_entities(&mut self, cids: Vec<String>) -> Result<Vec<Entity>, Error> {
         let cids: Vec<String> = cids.to_owned();
-        self.client().and_then(move |client| {
-            let deduped_cids = {
-                let mut deduped_cids = cids.to_owned();
-                deduped_cids.dedup();
-                deduped_cids
-            };
+        let client = self.client().await?;
 
-            let query = format!(
-                "MATCH (n:RlayEntity)-[r]->(m) WHERE n.cid IN {0:?} RETURN labels(n),n,type(r),m",
-                deduped_cids,
-            );
-            trace!("get_entities query: \"{}\"", query);
-            client
-                .exec(query)
-                .and_then(move |query_res| {
-                    if query_res.rows().count() == 0 {
-                        return Ok(vec![]);
-                    }
+        let deduped_cids = {
+            let mut deduped_cids = cids.to_owned();
+            deduped_cids.dedup();
+            deduped_cids
+        };
 
-                    let entities = Self::rows_to_entity(query_res.rows());
-                    debug_assert!(
-                        deduped_cids.len() == entities.len(),
-                        "{} cids provided and {} entities retrieved",
-                        deduped_cids.len(),
-                        entities.len()
-                    );
+        let query = format!(
+            "MATCH (n:RlayEntity)-[r]->(m) WHERE n.cid IN {0:?} RETURN labels(n),n,type(r),m",
+            deduped_cids,
+        );
+        trace!("get_entities query: \"{}\"", query);
 
-                    Ok(entities)
-                })
-                .map_err(From::from)
-        })
+        let query_res = client.exec(query).compat().await?;
+
+        if query_res.rows().count() == 0 {
+            return Ok(vec![]);
+        }
+
+        let entities = Self::rows_to_entity(query_res.rows());
+        debug_assert!(
+            deduped_cids.len() == entities.len(),
+            "{} cids provided and {} entities retrieved",
+            deduped_cids.len(),
+            entities.len()
+        );
+
+        Ok(entities)
     }
 }
 
 impl BackendFromConfigAndSyncState for Neo4jBackend {
     type C = Neo4jBackendConfig;
     type S = SyncState;
-    type R = Box<Future<Item = Self, Error = Error> + Send>;
+    type R = Box<dyn Future<Output = Result<Self, Error>> + Send + Unpin>;
 
     fn from_config_and_syncstate(config: Self::C, sync_state: Self::S) -> Self::R {
         Box::new(future::ok(Self {
@@ -175,7 +184,7 @@ impl BackendRpcMethods for Neo4jBackend {
         &mut self,
         entity: &Entity,
         _options_object: &Value,
-    ) -> Box<Future<Item = Cid, Error = Error> + Send> {
+    ) -> future::BoxFuture<Result<Cid, Error>> {
         let raw_cid = entity.to_cid().unwrap();
         let cid: String = format!("0x{}", raw_cid.to_bytes().to_hex());
         let entity = entity.clone();
@@ -240,21 +249,18 @@ impl BackendRpcMethods for Neo4jBackend {
                     query.add_statement(Statement::new(relationship));
                 }
                 let start = std::time::Instant::now();
-                query.send().map_err(From::from).and_then(move |_| {
+                query.send().compat().map_err(From::from).map_ok(move |_| {
                     let end = std::time::Instant::now();
                     trace!("Query duration: {:?}", end - start);
 
-                    Ok(raw_cid)
+                    raw_cid
                 })
             });
 
-        Box::new(fut)
+        fut.boxed()
     }
 
-    fn get_entity(
-        &mut self,
-        cid: &str,
-    ) -> Box<Future<Item = Option<Entity>, Error = Error> + Send> {
+    fn get_entity(&mut self, cid: &str) -> future::BoxFuture<Result<Option<Entity>, Error>> {
         let cid = cid.to_owned();
         let fut = self.client().and_then(move |client| {
             let query = format!(
@@ -264,10 +270,11 @@ impl BackendRpcMethods for Neo4jBackend {
             trace!("get_entity query: {:?}", query);
             client
                 .exec(query)
+                .compat()
                 .map_err(From::from)
                 .and_then(move |query_res| {
                     if query_res.rows().count() == 0 {
-                        return Ok(None);
+                        return future::ok(None);
                     }
 
                     let entity = Self::rows_to_entity(query_res.rows())
@@ -278,33 +285,30 @@ impl BackendRpcMethods for Neo4jBackend {
                     let retrieved_cid =
                         format!("0x{}", entity.to_cid().unwrap().to_bytes().to_hex());
                     if retrieved_cid != cid {
-                        return Err(format_err!(
+                        return future::err(format_err!(
                             "The retrieved CID did not match the requested cid: {} !+ {}",
                             cid,
                             retrieved_cid
                         ));
                     }
 
-                    Ok(Some(entity))
+                    future::ok(Some(entity))
                 })
         });
-        Box::new(fut)
+        fut.boxed()
     }
 
-    fn neo4j_query(
-        &mut self,
-        query: &str,
-    ) -> Box<Future<Item = Vec<String>, Error = Error> + Send> {
+    fn neo4j_query(&mut self, query: &str) -> future::BoxFuture<Result<Vec<String>, Error>> {
         let query = query.to_owned();
 
         let fut = self
             .client()
-            .and_then(|client| client.exec(query).map_err(From::from))
-            .and_then(|query_res| {
+            .and_then(|client| client.exec(query).compat().map_err(From::from))
+            .map_ok(|query_res| {
                 let cids: Vec<_> = query_res.rows().map(|row| row.get_n(0).unwrap()).collect();
 
-                Ok(cids)
+                cids
             });
-        Box::new(fut)
+        fut.boxed()
     }
 }

@@ -137,8 +137,8 @@ impl ProxyMiddleware {
 }
 
 impl<M: Metadata> Middleware<M> for ProxyMiddleware {
-    type Future = Box<Future<Item = Option<Response>, Error = ()> + Send>;
-    type CallFuture = Box<Future<Item = Option<Output>, Error = ()> + Send>;
+    type Future = Box<dyn Future<Item = Option<Response>, Error = ()> + Send>;
+    type CallFuture = Box<dyn Future<Item = Option<Output>, Error = ()> + Send>;
 
     fn on_request<F, X>(&self, request: Request, meta: M, process: F) -> Either<Self::Future, X>
     where

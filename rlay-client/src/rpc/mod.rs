@@ -686,10 +686,9 @@ fn rpc_rlay_experimental_neo4j_query(
                         .collect();
 
                     let entities = backend
-                        .get_entities(&cids)
+                        .get_entities(cids)
                         .map_err(failure_into_jsonrpc_err)
-                        .await
-                        .unwrap();
+                        .await?;
 
                     let filtered_entities = entities
                         .into_iter()

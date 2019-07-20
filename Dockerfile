@@ -1,9 +1,10 @@
-FROM rust:1.33.0 AS builder
+FROM rust:1.36.0 AS builder
 
 WORKDIR /usr/src/app
 COPY . .
 
-RUN cargo build \
+RUN cd rlay-client && \
+    cargo build \
       --release \
       --features backend_neo4j
 

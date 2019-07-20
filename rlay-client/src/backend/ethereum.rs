@@ -23,7 +23,7 @@ pub struct EthereumBackend {
 impl BackendFromConfigAndSyncState for EthereumBackend {
     type C = EthereumBackendConfig;
     type S = SyncState;
-    type R = Pin<Box<Future<Output = Result<Self, Error>> + Send>>;
+    type R = Pin<Box<dyn Future<Output = Result<Self, Error>> + Send>>;
 
     fn from_config_and_syncstate(config: Self::C, sync_state: Self::S) -> Self::R {
         future::ok(Self { config, sync_state }).boxed()

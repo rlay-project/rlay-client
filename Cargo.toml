@@ -2,6 +2,7 @@
 members = [
   "rlay-client",
   "rlay-backend",
+  "rlay-backend-neo4j",
 ]
 
 [patch.crates-io]

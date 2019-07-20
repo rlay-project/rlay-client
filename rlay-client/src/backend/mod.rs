@@ -1,6 +1,6 @@
 #![allow(unused_imports)]
 use ::futures::compat::Future01CompatExt;
-use ::futures::future::{self, BoxFuture, FutureExt, TryFutureExt};
+use ::futures::future::{self, BoxFuture, Either, FutureExt, TryFutureExt};
 use cid::Cid;
 use failure::{err_msg, Error};
 use rlay_backend::{BackendFromConfigAndSyncState, BackendRpcMethods};
@@ -8,16 +8,17 @@ use rlay_ontology::ontology::Entity;
 use serde_json::Value;
 use std::future::Future;
 use std::pin::Pin;
+use std::sync::Arc;
 
 use crate::config::backend::BackendConfig;
 
 mod ethereum;
-#[cfg(feature = "backend_neo4j")]
-mod neo4j;
 
 pub use self::ethereum::{EthereumBackend, SyncState as EthereumSyncState};
 #[cfg(feature = "backend_neo4j")]
-pub use self::neo4j::{Neo4jBackend, SyncState as Neo4jSyncState};
+pub use rlay_backend_neo4j::{
+    config::Neo4jBackendConfig, Neo4jBackend, SyncState as Neo4jSyncState,
+};
 
 #[derive(Clone)]
 pub enum SyncState {
@@ -27,6 +28,17 @@ pub enum SyncState {
 }
 
 impl SyncState {
+    pub fn new_ethereum() -> Self {
+        SyncState::Ethereum(EthereumSyncState::new())
+    }
+
+    #[cfg(feature = "backend_neo4j")]
+    pub fn new_neo4j(config: &Neo4jBackendConfig) -> Self {
+        SyncState::Neo4j(Neo4jSyncState {
+            connection_pool: Arc::new(config.connection_pool()),
+        })
+    }
+
     pub fn as_ethereum(self) -> Option<EthereumSyncState> {
         match self {
             SyncState::Ethereum(sync_state) => Some(sync_state),
@@ -62,18 +74,12 @@ pub enum Backend {
 impl Backend {
     pub fn get_entities(
         &mut self,
-        _cids: &[String],
-    ) -> impl Future<Output = Result<Vec<Entity>, Error>> + Send {
-        #[cfg(feature = "backend_neo4j")]
+        _cids: Vec<String>,
+    ) -> impl Future<Output = Result<Vec<Entity>, Error>> + Send + '_ {
         match self {
-            Backend::Neo4j(backend) => backend.get_entities(_cids),
-            Backend::Ethereum(_) => unreachable!(),
-        }
-
-        #[cfg(not(feature = "backend_neo4j"))]
-        #[allow(unreachable_code)]
-        match self {
-            Backend::Ethereum(_) => future::lazy(|_| Ok(unreachable!())),
+            #[cfg(feature = "backend_neo4j")]
+            Backend::Neo4j(backend) => backend.get_entities(_cids.to_vec()).boxed(),
+            Backend::Ethereum(_) => future::lazy(|_| unreachable!()).boxed(),
         }
     }
 }
@@ -81,7 +87,7 @@ impl Backend {
 impl BackendFromConfigAndSyncState for Backend {
     type C = BackendConfig;
     type S = Option<SyncState>;
-    type R = Pin<Box<Future<Output = Result<Self, Error>> + Send>>;
+    type R = Pin<Box<dyn Future<Output = Result<Self, Error>> + Send>>;
 
     fn from_config_and_syncstate(config: Self::C, sync_state: Self::S) -> Self::R {
         match config {
@@ -90,9 +96,7 @@ impl BackendFromConfigAndSyncState for Backend {
                     config,
                     sync_state.unwrap().as_ethereum().unwrap(),
                 );
-                backend
-                    .and_then(|backend| future::ok(Backend::Ethereum(backend)))
-                    .boxed()
+                backend.map_ok(|backend| Backend::Ethereum(backend)).boxed()
             }
             #[cfg(feature = "backend_neo4j")]
             BackendConfig::Neo4j(config) => {
@@ -100,13 +104,7 @@ impl BackendFromConfigAndSyncState for Backend {
                     config,
                     sync_state.unwrap().as_neo4j().unwrap(),
                 );
-                backend
-                    .and_then(|backend| future::ok(Backend::Neo4j(backend)).into())
-                    .boxed()
-            }
-            #[cfg(not(feature = "backend_neo4j"))]
-            BackendConfig::Neo4j(_) => {
-                future::err(err_msg("Support for backend type neo4j not compiled in.")).boxed()
+                backend.map_ok(|backend| Backend::Neo4j(backend)).boxed()
             }
         }
     }
