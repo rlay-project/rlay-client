@@ -1,3 +1,4 @@
+use futures01::{future::Either, Future};
 use hyper::header::HeaderValue;
 use hyper::rt::Stream;
 use hyper::Client;
@@ -7,7 +8,6 @@ use jsonrpc_pubsub::{PubSubHandler, PubSubMetadata, Session};
 use std::collections::{HashMap, HashSet};
 use std::default::Default;
 use std::sync::Arc;
-use web3::futures::{future::Either, Future};
 
 #[derive(Debug, Default)]
 pub struct ProxyHandler<M: Metadata = ()> {

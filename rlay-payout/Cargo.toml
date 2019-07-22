@@ -11,6 +11,7 @@ rlay-backend-ethereum = { path = "../rlay-backend-ethereum" }
 rlay_ontology = { git = 'https://github.com/rlay-project/rlay-ontology', rev = 'd02a9f3781381f5d19236144a19a2a6f8ed71319', features = ["web3_compat"] }
 cid = { git = 'https://github.com/hobofan/rust-cid', rev = '87332277d2cdb5b7cb6484c23b5711c28b44c684' }
 futures-preview = { version = "=0.3.0-alpha.17", features = ["compat"] }
+futures01 = { package = "futures", version = "0.1.28" }
 log = "0.4.6"
 merkle_light = { git = "https://github.com/hobofan/merkle_light", rev = 'f069616df909cb7a4426f6deb328bde6422a3510' }
 rustc-hex = "1.0.0"

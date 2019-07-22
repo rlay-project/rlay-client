@@ -1639,6 +1639,7 @@ dependencies = [
  "ethabi 6.1.0 (git+https://github.com/hobofan/ethabi?rev=42df1ca0ac5976040b9091f35875b9548c30ef41)",
  "failure 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "failure_derive 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "futures 0.1.28 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures-preview 0.3.0-alpha.17 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "multibase 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1686,6 +1687,7 @@ dependencies = [
  "ethabi 6.1.0 (git+https://github.com/hobofan/ethabi?rev=42df1ca0ac5976040b9091f35875b9548c30ef41)",
  "failure 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "failure_derive 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "futures 0.1.28 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures-preview 0.3.0-alpha.17 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures-timer 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "hlua 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1717,6 +1719,7 @@ name = "rlay-payout"
 version = "0.1.0"
 dependencies = [
  "cid 0.3.0 (git+https://github.com/hobofan/rust-cid?rev=87332277d2cdb5b7cb6484c23b5711c28b44c684)",
+ "futures 0.1.28 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures-preview 0.3.0-alpha.17 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "merkle_light 0.3.1 (git+https://github.com/hobofan/merkle_light?rev=f069616df909cb7a4426f6deb328bde6422a3510)",

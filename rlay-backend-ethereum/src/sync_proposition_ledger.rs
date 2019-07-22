@@ -1,10 +1,10 @@
 use ethabi::{self, Event};
 use failure::SyncFailure;
+use futures01::prelude::*;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use tokio_core;
 use web3;
-use web3::futures::prelude::*;
 use web3::types::{Address, BlockNumber, FilterBuilder, Log, U256};
 
 use crate::config::EthereumBackendConfig;

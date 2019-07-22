@@ -1,13 +1,13 @@
-use crate::config::Config;
-
+use futures01::future::Future;
 use rustc_hex::{FromHex, ToHex};
 use serde_derive::Deserialize;
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::{Read, Write};
 use toml_edit::{value, Document};
-use web3::futures::future::Future;
 use web3::types::Address;
+
+use crate::config::Config;
 
 fn contract_bins() -> BTreeMap<&'static str, &'static str> {
     let mut bins = BTreeMap::default();

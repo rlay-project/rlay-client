@@ -1,10 +1,10 @@
 use ethabi;
+use futures01::prelude::*;
 use multibase::{encode as base_encode, Base};
 use rustc_hex::ToHex;
 use web3::api::Eth;
 use web3::contract::tokens::Tokenize;
 use web3::contract::Options;
-use web3::futures::{self, prelude::*};
 use web3::helpers::CallFuture;
 use web3::types::{Address, BlockNumber, Bytes, CallRequest, Filter, Log};
 use web3::DuplexTransport;
@@ -61,7 +61,7 @@ pub fn subscribe_with_history(
         .join(subscribe_future)
         .into_stream()
         .and_then(|(history, subscribe_stream)| {
-            let history_stream = futures::stream::iter_ok(history);
+            let history_stream = futures01::stream::iter_ok(history);
 
             Ok(Stream::chain(history_stream, subscribe_stream))
         })

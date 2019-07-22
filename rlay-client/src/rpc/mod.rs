@@ -2,13 +2,12 @@ mod proxy;
 
 use ::futures::compat::Compat;
 use ::futures::future::{FutureExt, TryFutureExt};
-use ::web3::futures::prelude::*;
 use ::web3::types::H160;
 use cid::ToCid;
 use ethabi;
 use ethabi::token::Token;
 use ethabi::ParamType;
-use jsonrpc_core::futures::Future;
+use futures01::prelude::*;
 use jsonrpc_core::{self, *};
 use jsonrpc_http_server::ServerBuilder as HttpServerBuilder;
 use jsonrpc_pubsub::{PubSubHandler, Session, Subscriber, SubscriptionId};

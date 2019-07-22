@@ -12,6 +12,7 @@ mod ontology_ext;
 mod payout_calculation;
 mod web3_helpers;
 
+use futures01::{future, prelude::*};
 use merkle_light::hash::Hashable;
 use merkle_light::merkle2::MerkleTree;
 use rlay_backend_ethereum::sync_ontology::EntityMap;
@@ -24,7 +25,6 @@ use std::hash::Hasher;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 use web3;
-use web3::futures::{self, prelude::*};
 use web3::types::{Address, H256, U256};
 use web3::Transport;
 
@@ -294,18 +294,18 @@ pub fn submit_epoch_payouts<C: Into<PayoutConfig>>(
                             "Payout root for epoch {} does not have enough payouts to submit to smart contract",
                             epoch
                         );
-                        return futures::future::Either::A(futures::future::ok(()));
+                        return future::Either::A(future::ok(()));
                     }
                     if existing_payout_root != H256::zero() {
                         trace!(
                             "Payout root for epoch {} already present in smart contract",
                             epoch
                         );
-                        return futures::future::Either::A(futures::future::ok(()));
+                        return future::Either::A(future::ok(()));
                     }
 
                     let payout_root = Payout::build_merkle_tree(&payouts).root();
-                    futures::future::Either::B(
+                    future::Either::B(
                         contract
                             .call(
                                 "submitPayoutRoot",
@@ -322,7 +322,7 @@ pub fn submit_epoch_payouts<C: Into<PayoutConfig>>(
                 })
             })
             .collect();
-        futures::future::join_all(epoch_check_futs)
+        future::join_all(epoch_check_futs)
     })
 }
 

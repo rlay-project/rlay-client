@@ -1,6 +1,6 @@
 use assert_cmd::prelude::*;
+use futures01::future::Future;
 use std::process::Command;
-use web3::futures::future::Future;
 
 fn wait_for_docker() {
     loop {

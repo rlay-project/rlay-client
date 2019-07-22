@@ -1,4 +1,5 @@
 use failure::{err_msg, Error};
+use futures01::prelude::*;
 use futures_timer::Interval;
 use log::Level::Debug;
 use rlay_backend_ethereum::sync_ontology::{EthOntologySyncer, OntologySyncer};
@@ -17,7 +18,6 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tokio_core;
 use web3;
-use web3::futures::prelude::*;
 use web3::types::U256;
 
 use crate::backend::{EthereumSyncState, SyncState};

@@ -13,6 +13,7 @@ ethabi = { git = "https://github.com/hobofan/ethabi", rev = '42df1ca0ac5976040b9
 failure = "=0.1.1"
 failure_derive = "=0.1.1"
 futures-preview = { version = "=0.3.0-alpha.17", features = ["compat"] }
+futures01 = { package = "futures", version = "0.1.28" }
 log = "0.4.6"
 multibase = "0.6.0"
 rlay_ontology = { git = 'https://github.com/rlay-project/rlay-ontology', rev = 'd02a9f3781381f5d19236144a19a2a6f8ed71319', features = ["web3_compat"] }

@@ -1,8 +1,8 @@
-use ::web3::futures::{future::Either, prelude::*};
 use ::web3::types::{BlockNumber, FilterBuilder};
 use ::web3::Transport;
 use cid::ToCid;
 use ethabi::{self, Event};
+use futures01::{future::Either, prelude::*};
 use rlay_ontology::prelude::*;
 use rustc_hex::ToHex;
 use std::collections::{BTreeMap, HashMap, VecDeque};
