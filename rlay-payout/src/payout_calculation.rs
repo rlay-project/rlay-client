@@ -5,7 +5,7 @@ use std::sync::Mutex;
 use web3::types::U256;
 
 use crate::aggregation::{detect_valued_pools, WeightedMedianBooleanPropositionPool};
-use crate::payout::Payout;
+use crate::Payout;
 
 // TODO: U256 and get from RlayToken contract
 const TOKENS_PER_BLOCK: f64 = 25000000000000000000f64;

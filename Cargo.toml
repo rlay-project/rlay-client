@@ -4,6 +4,7 @@ members = [
   "rlay-backend",
   "rlay-backend-ethereum",
   "rlay-backend-neo4j",
+  "rlay-payout",
 ]
 
 [patch.crates-io]

@@ -1,7 +1,4 @@
 use rustc_hex::ToHex;
-use web3::Transport;
-
-use crate::config::Config;
 
 pub struct HexString<'a> {
     pub inner: &'a [u8],
@@ -32,20 +29,4 @@ impl<'a> ::serde::Serialize for HexString<'a> {
     {
         Ok(serializer.serialize_str(&Self::fmt(self.inner))?)
     }
-}
-
-pub fn rlay_token_contract(
-    config: &Config,
-    web3: &web3::Web3<impl Transport>,
-) -> web3::contract::Contract<impl Transport> {
-    let token_contract_abi = include_str!("../data/RlayToken.abi");
-    web3::contract::Contract::from_json(
-        web3.eth(),
-        config
-            .default_eth_backend_config()
-            .unwrap()
-            .contract_address("RlayToken"),
-        token_contract_abi.as_bytes(),
-    )
-    .expect("Couldn't load RlayToken contract")
 }

@@ -1,4 +1,8 @@
 use clap::ArgMatches;
+use rlay_payout::{
+    fill_epoch_payouts_cumulative, format_redeem_payout_call, load_epoch_payouts, Payout,
+    PayoutEpochs,
+};
 use rustc_hex::{FromHex, ToHex};
 use std::collections::HashMap;
 use std::num::ParseIntError;
@@ -7,7 +11,6 @@ use std::sync::Mutex;
 use web3::types::{Address, H160};
 
 use crate::config::Config;
-use crate::payout::{fill_epoch_payouts_cumulative, load_epoch_payouts, Payout, PayoutEpochs};
 
 pub enum Epoch {
     Number(u64),
@@ -73,7 +76,7 @@ pub fn show_payout(config: &Config, payout_params: PayoutParams) {
         .iter()
         .find(|n| n.address == payout_params.address)
         .expect("Could not find payout for requested address.");
-    let proof_str = crate::payout::format_redeem_payout_call(epoch, &tree, payout);
+    let proof_str = format_redeem_payout_call(epoch, &tree, payout);
     println!("Address: 0x{}", payout.address.to_hex());
     println!("Cumulative blance: {}", payout.amount.to_string());
     println!(

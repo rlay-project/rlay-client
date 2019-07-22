@@ -15,6 +15,7 @@ use jsonrpc_pubsub::{PubSubHandler, Session, Subscriber, SubscriptionId};
 use jsonrpc_ws_server::{RequestContext, ServerBuilder as WsServerBuilder};
 use rlay_backend::BackendRpcMethods;
 use rlay_ontology::prelude::*;
+use rlay_payout::aggregation::{detect_valued_pools, WeightedMedianBooleanPropositionPool};
 use rustc_hex::{FromHex, ToHex};
 use serde_json;
 use std::error::Error;
@@ -23,7 +24,6 @@ use std::{thread, time};
 use url::Url;
 
 use self::proxy::ProxyHandler;
-use crate::aggregation::{detect_valued_pools, WeightedMedianBooleanPropositionPool};
 use crate::backend::EthereumSyncState as SyncState;
 use crate::config::{BackendConfig, Config};
 use crate::sync::MultiBackendSyncState;

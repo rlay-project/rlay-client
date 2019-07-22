@@ -1,22 +1,34 @@
+#[macro_use]
+extern crate log;
+#[macro_use]
+extern crate serde_derive;
+#[macro_use]
+extern crate serde_json;
+
+pub mod aggregation;
+pub mod config;
+mod merkle;
+mod ontology_ext;
+mod payout_calculation;
+mod web3_helpers;
+
 use merkle_light::hash::Hashable;
 use merkle_light::merkle2::MerkleTree;
 use rlay_backend_ethereum::sync_ontology::EntityMap;
 use rlay_backend_ethereum::sync_proposition_ledger::PropositionLedger;
 use rustc_hex::ToHex;
-use serde_json;
 use std::collections::HashMap;
 use std::fmt::Write;
 use std::fs::{self, File};
 use std::hash::Hasher;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
-use tokio_core;
 use web3;
 use web3::futures::{self, prelude::*};
 use web3::types::{Address, H256, U256};
 use web3::Transport;
 
-use crate::config::Config;
+use crate::config::PayoutConfig;
 use crate::merkle::Keccak256Algorithm;
 use crate::payout_calculation::payouts_for_epoch;
 
@@ -83,13 +95,9 @@ impl<H: Hasher> Hashable<H> for Payout {
 }
 
 pub fn retrieve_epoch_start_block(
-    eloop_handle: &tokio_core::reactor::Handle,
-    config: &Config,
+    rlay_token_contract: web3::contract::Contract<impl Transport>,
 ) -> impl Future<Item = U256, Error = ()> {
-    let web3 = config.web3_with_handle(eloop_handle);
-    let contract = rlay_token_contract(&config, &web3);
-
-    contract
+    rlay_token_contract
         .query(
             "epochs_start",
             (),
@@ -176,25 +184,10 @@ pub fn fill_epoch_payouts_cumulative(
     }
 }
 
-fn rlay_token_contract(
-    config: &Config,
-    web3: &web3::Web3<impl Transport>,
-) -> web3::contract::Contract<impl Transport> {
-    let token_contract_abi = include_str!("../data/RlayToken.abi");
-    web3::contract::Contract::from_json(
-        web3.eth(),
-        config
-            .default_eth_backend_config()
-            .unwrap()
-            .contract_address("RlayToken"),
-        token_contract_abi.as_bytes(),
-    )
-    .expect("Couldn't load RlayToken contract")
-}
-
 /// Load epoch_payouts from files in data directory.
-pub fn load_epoch_payouts(config: Config, payout_epochs: &mut PayoutEpochs) {
-    let epoch_dir = Path::new(&config.data_path.unwrap()).join(Path::new("./epoch_payouts/"));
+pub fn load_epoch_payouts<C: Into<PayoutConfig>>(config: C, payout_epochs: &mut PayoutEpochs) {
+    let epoch_dir =
+        Path::new(&config.into().data_path.unwrap()).join(Path::new("./epoch_payouts/"));
     for epoch_file in fs::read_dir(epoch_dir).unwrap() {
         let epoch_file = epoch_file.unwrap();
         trace!("Loading epoch_payouts from file {:?}", epoch_file.path());
@@ -211,12 +204,16 @@ pub fn load_epoch_payouts(config: Config, payout_epochs: &mut PayoutEpochs) {
 }
 
 /// Store epoch_payouts to files in data directory.
-pub fn store_epoch_payouts(config: Config, payout_epochs_mtx: Arc<Mutex<PayoutEpochs>>) {
+pub fn store_epoch_payouts<C: Into<PayoutConfig>>(
+    config: C,
+    payout_epochs_mtx: Arc<Mutex<PayoutEpochs>>,
+) {
     let payout_epochs = payout_epochs_mtx
         .lock()
         .expect("Couldn't aquire lock for payout epochs");
 
-    let epoch_dir = Path::new(&config.data_path.unwrap()).join(Path::new("./epoch_payouts/"));
+    let epoch_dir =
+        Path::new(&config.into().data_path.unwrap()).join(Path::new("./epoch_payouts/"));
     ::std::fs::create_dir_all(&epoch_dir).unwrap();
 
     for (epoch_num, payouts) in payout_epochs.iter() {
@@ -242,15 +239,13 @@ pub fn store_epoch_payouts(config: Config, payout_epochs_mtx: Arc<Mutex<PayoutEp
 }
 
 /// Check if the payout merkle roots for the latest epochs has been submitted to the token contract, and submit them if neccessary.
-pub fn submit_epoch_payouts(
-    eloop_handle: &tokio_core::reactor::Handle,
-    config: Config,
+pub fn submit_epoch_payouts<C: Into<PayoutConfig>>(
+    config: C,
     payout_epochs_mtx: Arc<Mutex<PayoutEpochs>>,
     payout_epochs_cum_mtx: Arc<Mutex<PayoutEpochs>>,
+    rlay_token_contract: web3::contract::Contract<impl Transport>,
 ) -> impl Future<Error = ()> {
-    store_epoch_payouts(config.clone(), payout_epochs_mtx.clone());
-
-    let web3 = config.web3_with_handle(eloop_handle);
+    store_epoch_payouts(config, payout_epochs_mtx.clone());
 
     let payout_epochs_cum = payout_epochs_cum_mtx
         .lock()
@@ -267,8 +262,7 @@ pub fn submit_epoch_payouts(
         .collect();
 
     // Get token issuer from contract (only account that is permissioned to submit payout root)
-    let contract = rlay_token_contract(&config, &web3);
-    let contract_owner = contract
+    let contract_owner = rlay_token_contract
         .query("owner", (), None, web3::contract::Options::default(), None)
         .map_err(|err| {
             error!("{:?}", err);
@@ -280,7 +274,7 @@ pub fn submit_epoch_payouts(
         let epoch_check_futs: Vec<_> = epochs_to_check
             .into_iter()
             .map(|(epoch, payouts)| {
-                let contract = rlay_token_contract(&config, &web3);
+                let contract = rlay_token_contract.clone();
                 let payout_root = contract
                     .query(
                         "payout_roots",

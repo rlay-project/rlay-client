@@ -6,6 +6,11 @@ use rlay_backend_ethereum::sync_proposition_ledger::{
     EthPropositionLedgerSyncer, PropositionLedgerSyncer,
 };
 use rlay_ontology::ontology::Entity;
+use rlay_payout::{
+    fill_epoch_payouts, fill_epoch_payouts_cumulative, format_redeem_payout_call,
+    load_epoch_payouts, retrieve_epoch_start_block, store_epoch_payouts, submit_epoch_payouts,
+    Payout, PayoutEpochs,
+};
 use rustc_hex::ToHex;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -17,10 +22,6 @@ use web3::types::U256;
 
 use crate::backend::{EthereumSyncState, SyncState};
 use crate::config::{BackendConfig, Config};
-use crate::payout::{
-    fill_epoch_payouts, fill_epoch_payouts_cumulative, load_epoch_payouts,
-    retrieve_epoch_start_block, store_epoch_payouts, submit_epoch_payouts, Payout, PayoutEpochs,
-};
 
 #[derive(Clone)]
 pub struct MultiBackendSyncState {
@@ -162,7 +163,7 @@ fn spawn_stats_loop(
                     tree.root().to_hex()
                 );
                 for payout in payouts {
-                    let proof_str = crate::payout::format_redeem_payout_call(*epoch, &tree, payout);
+                    let proof_str = format_redeem_payout_call(*epoch, &tree, payout);
                     debug!("Payout for 0x{}: {}", payout.address.to_hex(), proof_str);
                 }
             }
@@ -198,11 +199,13 @@ fn spawn_payout_root_submission(
             ()
         })
         .for_each(move |_| {
+            let web3 = config.web3_with_handle(&submit_payouts_eloop.clone());
+            let rlay_token_contract = crate::web3_helpers::rlay_token_contract(&config, &web3);
             submit_epoch_payouts(
-                &submit_payouts_eloop,
                 config.clone(),
                 computed_state.payout_epochs.clone(),
                 computed_state.payout_epochs_cum.clone(),
+                rlay_token_contract,
             )
             .map(|_| ())
             .map_err(|err| {
@@ -306,38 +309,39 @@ pub fn run_sync(config: &Config) {
             let computed_state_calculate_payouts = computed_state.clone();
             let sync_state_calculate_payouts = sync_state.clone();
 
-            let calculate_payouts_fut =
-                retrieve_epoch_start_block(&eloop.handle().clone(), &config.clone()).and_then(
-                    move |epoch_start_block| {
-                        Interval::new(Duration::from_secs(15))
-                            .and_then(move |_| Ok(epoch_start_block))
-                            .for_each(move |epoch_start_block| {
-                                fill_epoch_payouts(
-                                    epoch_start_block,
-                                    epoch_length,
-                                    &sync_state_calculate_payouts
-                                        .default_eth_backend()
-                                        .proposition_ledger_block_highwatermark(),
-                                    &sync_state_calculate_payouts
-                                        .default_eth_backend()
-                                        .proposition_ledger(),
-                                    &computed_state_calculate_payouts.payout_epochs(),
-                                    &sync_state_calculate_payouts
-                                        .default_eth_backend()
-                                        .entity_map(),
-                                );
-                                fill_epoch_payouts_cumulative(
-                                    &computed_state_calculate_payouts.payout_epochs(),
-                                    &computed_state_calculate_payouts.payout_epochs_cum(),
-                                );
-                                Ok(())
-                            })
-                            .map_err(|err| {
-                                error!("{:?}", err);
-                                ()
-                            })
-                    },
-                );
+            let web3 = config.web3_with_handle(&eloop.handle().clone());
+            let rlay_token_contract = crate::web3_helpers::rlay_token_contract(&config, &web3);
+            let calculate_payouts_fut = retrieve_epoch_start_block(rlay_token_contract).and_then(
+                move |epoch_start_block| {
+                    Interval::new(Duration::from_secs(15))
+                        .and_then(move |_| Ok(epoch_start_block))
+                        .for_each(move |epoch_start_block| {
+                            fill_epoch_payouts(
+                                epoch_start_block,
+                                epoch_length,
+                                &sync_state_calculate_payouts
+                                    .default_eth_backend()
+                                    .proposition_ledger_block_highwatermark(),
+                                &sync_state_calculate_payouts
+                                    .default_eth_backend()
+                                    .proposition_ledger(),
+                                &computed_state_calculate_payouts.payout_epochs(),
+                                &sync_state_calculate_payouts
+                                    .default_eth_backend()
+                                    .entity_map(),
+                            );
+                            fill_epoch_payouts_cumulative(
+                                &computed_state_calculate_payouts.payout_epochs(),
+                                &computed_state_calculate_payouts.payout_epochs_cum(),
+                            );
+                            Ok(())
+                        })
+                        .map_err(|err| {
+                            error!("{:?}", err);
+                            ()
+                        })
+                },
+            );
             eloop.handle().spawn(calculate_payouts_fut);
         }
     }

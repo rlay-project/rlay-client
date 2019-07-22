@@ -5,25 +5,18 @@
 #[macro_use]
 extern crate failure;
 #[macro_use]
-extern crate failure_derive;
-#[macro_use]
 extern crate log;
 #[macro_use]
 extern crate serde_derive;
 #[macro_use]
 extern crate serde_json;
 
-pub mod aggregation;
 pub mod backend;
 pub mod config;
 pub mod deploy;
 pub mod doctor;
 pub mod init;
-pub mod merkle;
 pub mod modules;
-pub mod ontology_ext;
-pub mod payout;
-pub mod payout_calculation;
 pub mod payout_cli;
 pub mod rpc;
 pub mod sync;

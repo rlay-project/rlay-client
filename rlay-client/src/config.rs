@@ -1,6 +1,7 @@
 use failure::{err_msg, Error};
 use rlay_backend::BackendFromConfigAndSyncState;
 use rlay_backend_ethereum::config::EthereumBackendConfig;
+use rlay_payout::config::PayoutConfig;
 use std::collections::HashMap;
 use std::fs::{self, File};
 use std::future::Future;
@@ -159,6 +160,14 @@ impl Config {
             config_for_name.to_owned(),
             sync_state_for_name.map(|n| n.to_owned()),
         )
+    }
+}
+
+impl Into<PayoutConfig> for Config {
+    fn into(self) -> PayoutConfig {
+        PayoutConfig {
+            data_path: self.data_path,
+        }
     }
 }
 
