@@ -1,8 +1,6 @@
 use ethabi;
 use failure::{err_msg, Error};
-use rustc_hex::FromHex;
 use std::collections::HashMap;
-use std::time::Duration;
 use tokio_core;
 use web3;
 use web3::types::H160;

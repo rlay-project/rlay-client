@@ -1,0 +1,10 @@
+[package]
+name = "rlay-resolve"
+version = "0.1.0"
+authors = ["Maximilian Goisser <goisser94@gmail.com>"]
+license = "MIT OR Apache-2.0"
+edition = "2018"
+
+[dependencies]
+rlay_ontology = { git = 'https://github.com/rlay-project/rlay-ontology', rev = 'd02a9f3781381f5d19236144a19a2a6f8ed71319', features = ["web3_compat"] }
+futures-preview = { version = "=0.3.0-alpha.17", features = ["compat"] }

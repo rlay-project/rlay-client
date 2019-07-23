@@ -54,7 +54,7 @@ fn setup_deploy() {
         "./tests/rlay.config.toml",
     )
     .unwrap();
-    let output = Command::main_binary()
+    let output = Command::cargo_bin("rlay-client")
         .unwrap()
         .args(&[
             "deploy-contracts",
