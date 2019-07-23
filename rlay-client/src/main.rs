@@ -15,7 +15,6 @@ pub mod backend;
 pub mod cli;
 pub mod config;
 pub mod deploy;
-pub mod init;
 pub mod modules;
 pub mod payout_cli;
 pub mod rpc;
@@ -103,7 +102,7 @@ fn main() {
         let config = config::Config::from_path_opt(config_path).expect("Couldn't read config file");
         cli::run_doctor(&config);
     } else if matches.subcommand_matches("init").is_some() {
-        init::init();
+        cli::run_init();
     } else if let Some(matches) = matches.subcommand_matches("payout") {
         let config_path = matches.value_of("config_path");
         let config = config::Config::from_path_opt(config_path).expect("Couldn't read config file");

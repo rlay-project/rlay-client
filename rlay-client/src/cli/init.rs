@@ -5,7 +5,7 @@ use std::fs::File;
 use std::fs::OpenOptions;
 use std::io::prelude::*;
 
-pub fn init() {
+pub fn run_init() {
     add_rlay_config().unwrap();
 
     update_package_json();
@@ -14,7 +14,7 @@ pub fn init() {
 
 fn add_rlay_config() -> ::std::io::Result<()> {
     println!("Adding \"rlay.config.toml\".");
-    let content = include_str!("../data/rlay.config.toml.default");
+    let content = include_str!("../../data/rlay.config.toml.default");
     let mut file = File::create(env::current_dir().unwrap().join("rlay.config.toml"))?;
     file.write_all(content.as_bytes())?;
     Ok(())
@@ -29,8 +29,9 @@ fn update_package_json() {
     println!("Detected \"package.json\".");
     if !Confirmation::new(
         "Do you want to add the scripts and devDependencies to run a local Rlay testnet?",
-    ).interact()
-        .unwrap()
+    )
+    .interact()
+    .unwrap()
     {
         return;
     }
