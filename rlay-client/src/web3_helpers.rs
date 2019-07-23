@@ -1,3 +1,4 @@
+use rlay_backend_ethereum::data::RLAY_TOKEN_ABI;
 use rustc_hex::ToHex;
 use web3::Transport;
 
@@ -38,14 +39,13 @@ pub fn rlay_token_contract(
     config: &Config,
     web3: &web3::Web3<impl Transport>,
 ) -> web3::contract::Contract<impl Transport> {
-    let token_contract_abi = include_str!("../data/RlayToken.abi");
     web3::contract::Contract::from_json(
         web3.eth(),
         config
             .default_eth_backend_config()
             .unwrap()
             .contract_address("RlayToken"),
-        token_contract_abi.as_bytes(),
+        RLAY_TOKEN_ABI.as_bytes(),
     )
     .expect("Couldn't load RlayToken contract")
 }

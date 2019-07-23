@@ -13,6 +13,7 @@ use jsonrpc_http_server::ServerBuilder as HttpServerBuilder;
 use jsonrpc_pubsub::{PubSubHandler, Session, Subscriber, SubscriptionId};
 use jsonrpc_ws_server::{RequestContext, ServerBuilder as WsServerBuilder};
 use rlay_backend::BackendRpcMethods;
+use rlay_backend_ethereum::data::ONTOLOGY_STORAGE_ABI;
 use rlay_ontology::prelude::*;
 use rlay_payout::aggregation::{detect_valued_pools, WeightedMedianBooleanPropositionPool};
 use rustc_hex::{FromHex, ToHex};
@@ -355,8 +356,7 @@ fn entity_to_tokens(contract: &ethabi::Contract, mut entity: Entity) -> Vec<Toke
 fn rpc_rlay_encode_for_store() -> impl RpcMethodSimple {
     move |params: Params| {
         if let Params::Array(params_array) = params {
-            let ontology_contract_abi = include_str!("../../data/OntologyStorage.abi");
-            let contract = ethabi::Contract::load(ontology_contract_abi.as_bytes()).unwrap();
+            let contract = ethabi::Contract::load(ONTOLOGY_STORAGE_ABI.as_bytes()).unwrap();
 
             let entity_object = params_array.get(0).unwrap();
             let web3_entity: FormatWeb3<Entity> = serde_json::from_value(entity_object.clone())

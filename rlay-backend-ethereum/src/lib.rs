@@ -9,6 +9,7 @@ extern crate serde_derive;
 pub mod config;
 pub mod data;
 pub mod deploy;
+pub mod doctor;
 pub mod sync_ontology;
 pub mod sync_proposition_ledger;
 mod web3_helpers;

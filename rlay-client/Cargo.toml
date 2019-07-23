@@ -28,7 +28,6 @@ futures-preview = { version = "=0.3.0-alpha.17", features = ["compat"] }
 futures01 = { package = "futures", version = "0.1.28" }
 log = "0.4.6"
 env_logger = "0.5.10"
-tiny-keccak = "1.4.2"
 serde_json = { version = "1.0.22", features = ["preserve_order"] }
 jsonrpc-core = "10.1.0"
 jsonrpc-pubsub = "10.1.0"

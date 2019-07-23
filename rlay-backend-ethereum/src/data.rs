@@ -1,5 +1,9 @@
 use std::collections::BTreeMap;
 
+pub const ONTOLOGY_STORAGE_ABI: &'static str = include_str!("../data/OntologyStorage.abi");
+pub const PROPOSITION_LEDGER_ABI: &'static str = include_str!("../data/PropositionLedger.abi");
+pub const RLAY_TOKEN_ABI: &'static str = include_str!("../data/RlayToken.abi");
+
 pub fn contract_bins() -> BTreeMap<&'static str, &'static str> {
     let mut bins = BTreeMap::default();
     bins.insert(
