@@ -119,6 +119,6 @@ fn main() {
         let from = matches
             .value_of("from_address")
             .expect("--from is a required flag");
-        deploy::deploy_contracts(&config, from);
+        deploy::deploy_contracts_with_log(&config, from);
     }
 }

@@ -7,17 +7,18 @@ extern crate log;
 extern crate serde_derive;
 
 pub mod config;
+pub mod data;
+pub mod deploy;
 pub mod sync_ontology;
 pub mod sync_proposition_ledger;
 mod web3_helpers;
 
-#[allow(unused_imports)]
-use ::futures::compat::Future01CompatExt;
-use ::futures::future::{self, BoxFuture, Future as NewFuture, FutureExt};
-use failure::{err_msg, Error};
+use failure::Error;
+use futures::future::BoxFuture;
+use futures::prelude::*;
 use rlay_backend::{BackendFromConfigAndSyncState, BackendRpcMethods};
 use rlay_ontology::ontology::Entity;
-use rustc_hex::{FromHex, ToHex};
+use rustc_hex::FromHex;
 use std::collections::BTreeMap;
 use std::future::Future;
 use std::pin::Pin;

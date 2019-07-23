@@ -7,7 +7,7 @@ main() {
     # cross build --target $TARGET
     # cross build --target $TARGET --release
     cargo build
-    cargo build --features backend_neo4j
+    cargo build -p rlay-client --features backend_neo4j
 
     if [ ! -z $DISABLE_TESTS ]; then
         return
@@ -15,7 +15,7 @@ main() {
 
     # cross test --target $TARGET -- --test-threads=1
     # cross test --target $TARGET --release
-    cargo test -- --test-threads=1 --nocapture
+    cd rlay-client && cargo test -- --test-threads=1 --nocapture
 
     # cross run --target $TARGET
     # cross run --target $TARGET --release

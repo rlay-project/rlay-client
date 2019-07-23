@@ -72,7 +72,6 @@ pub fn check_address_abi(
     let address_code = eloop
         .run(web3.eth().code(address, None))
         .map_err(|_| err_msg("Failed to fetch contract code"))?;
-    // println!("ADDRESS CODE: {:?}", address_code.0.to_hex());
 
     let contract = ethabi::Contract::load(abi.as_bytes()).unwrap();
     for function in contract.functions() {
