@@ -15,7 +15,6 @@ pub mod backend;
 pub mod cli;
 pub mod config;
 pub mod modules;
-pub mod payout_cli;
 pub mod rpc;
 pub mod sync;
 pub mod web3_helpers;
@@ -25,7 +24,7 @@ use env_logger::Builder;
 use log::LevelFilter;
 use std::io::Write;
 
-use crate::payout_cli::PayoutParams;
+use crate::cli::PayoutParams;
 
 fn main() {
     let mut builder = Builder::from_default_env();
@@ -108,7 +107,7 @@ fn main() {
 
         if let Some(matches) = matches.subcommand_matches("show") {
             let payout_args = PayoutParams::from_matches(matches.clone());
-            payout_cli::show_payout(&config, payout_args);
+            cli::run_payout(&config, payout_args);
         }
     } else if let Some(matches) = matches.subcommand_matches("deploy-contracts") {
         let config_path = matches.value_of("config_path");

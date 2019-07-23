@@ -50,7 +50,8 @@ impl PayoutParams {
     }
 }
 
-pub fn show_payout(config: &Config, payout_params: PayoutParams) {
+/// Run payout CLI command.
+pub fn run_payout(config: &Config, payout_params: PayoutParams) {
     let mut payout_epochs: PayoutEpochs = HashMap::new();
     // Load state from storage
     load_epoch_payouts(config.clone(), &mut payout_epochs);
