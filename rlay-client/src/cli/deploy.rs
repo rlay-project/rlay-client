@@ -9,7 +9,10 @@ use toml_edit::{value, Document};
 
 use crate::config::Config;
 
-pub fn deploy_contracts_with_log(config: &Config, deployer_address: &str) {
+/// Deploy Ethereum contracts and log progress.
+///
+/// Also writes the addresses of the deployed core contracts to config file.
+pub fn run_deploy(config: &Config, deployer_address: &str) {
     let mut rt = tokio_core::reactor::Core::new().unwrap();
     let web3 = config.web3_with_handle(&rt.handle());
 
