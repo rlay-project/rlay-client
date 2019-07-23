@@ -15,6 +15,7 @@ use bb8_cypher::CypherConnectionManager;
 use cid::{Cid, ToCid};
 use failure::Error;
 use futures::compat::Future01CompatExt;
+use futures::future::BoxFuture;
 use futures::prelude::*;
 use rlay_backend::{BackendFromConfigAndSyncState, BackendRpcMethods};
 use rlay_ontology::prelude::*;
@@ -184,7 +185,7 @@ impl BackendRpcMethods for Neo4jBackend {
         &mut self,
         entity: &Entity,
         _options_object: &Value,
-    ) -> future::BoxFuture<Result<Cid, Error>> {
+    ) -> BoxFuture<Result<Cid, Error>> {
         let raw_cid = entity.to_cid().unwrap();
         let cid: String = format!("0x{}", raw_cid.to_bytes().to_hex());
         let entity = entity.clone();
@@ -260,7 +261,7 @@ impl BackendRpcMethods for Neo4jBackend {
         fut.boxed()
     }
 
-    fn get_entity(&mut self, cid: &str) -> future::BoxFuture<Result<Option<Entity>, Error>> {
+    fn get_entity(&mut self, cid: &str) -> BoxFuture<Result<Option<Entity>, Error>> {
         let cid = cid.to_owned();
         let fut = self.client().and_then(move |client| {
             let query = format!(
@@ -298,7 +299,15 @@ impl BackendRpcMethods for Neo4jBackend {
         fut.boxed()
     }
 
-    fn neo4j_query(&mut self, query: &str) -> future::BoxFuture<Result<Vec<String>, Error>> {
+    fn list_cids(&mut self, entity_kind: Option<&str>) -> BoxFuture<Result<Vec<String>, Error>> {
+        let query = match entity_kind {
+            None => "MATCH (n:RlayEntity) RETURN DISTINCT n.cid".to_owned(),
+            Some(kind) => format!("MATCH (n:RlayEntity:{}) RETURN DISTINCT n.cid", kind),
+        };
+        self.neo4j_query(&query)
+    }
+
+    fn neo4j_query(&mut self, query: &str) -> BoxFuture<Result<Vec<String>, Error>> {
         let query = query.to_owned();
 
         let fut = self

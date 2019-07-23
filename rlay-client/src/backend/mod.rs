@@ -109,7 +109,6 @@ impl BackendFromConfigAndSyncState for Backend {
 }
 
 impl BackendRpcMethods for Backend {
-    #[allow(unused_variables)]
     fn store_entity(
         &mut self,
         entity: &Entity,
@@ -126,7 +125,6 @@ impl BackendRpcMethods for Backend {
         }
     }
 
-    #[allow(unused_variables)]
     fn get_entity(&mut self, cid: &str) -> BoxFuture<Result<Option<Entity>, Error>> {
         match self {
             #[cfg(feature = "backend_neo4j")]
@@ -135,7 +133,14 @@ impl BackendRpcMethods for Backend {
         }
     }
 
-    #[allow(unused_variables)]
+    fn list_cids(&mut self, entity_kind: Option<&str>) -> BoxFuture<Result<Vec<String>, Error>> {
+        match self {
+            #[cfg(feature = "backend_neo4j")]
+            Backend::Neo4j(backend) => BackendRpcMethods::list_cids(backend, entity_kind),
+            Backend::Ethereum(backend) => BackendRpcMethods::list_cids(backend, entity_kind),
+        }
+    }
+
     fn neo4j_query(&mut self, query: &str) -> BoxFuture<Result<Vec<String>, Error>> {
         match self {
             #[cfg(feature = "backend_neo4j")]

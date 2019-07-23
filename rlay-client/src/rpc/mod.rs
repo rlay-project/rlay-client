@@ -24,7 +24,7 @@ use std::{thread, time};
 use url::Url;
 
 use self::proxy::ProxyHandler;
-use crate::backend::EthereumSyncState as SyncState;
+use crate::backend::{Backend, EthereumSyncState as SyncState};
 use crate::config::{BackendConfig, Config};
 use crate::sync::MultiBackendSyncState;
 use crate::web3_helpers::HexString;
@@ -173,15 +173,6 @@ pub fn proxy_handler_with_methods(
                 ),
             );
             io.add_method(
-                "rlay_experimentalListCids",
-                rpc_rlay_experimental_list_cids(
-                    sync_state_default_eth_backend
-                        .clone()
-                        .as_ethereum()
-                        .unwrap(),
-                ),
-            );
-            io.add_method(
                 "rlay_experimentalListCidsIndex",
                 rpc_rlay_experimental_list_cids_index(
                     sync_state_default_eth_backend
@@ -195,6 +186,10 @@ pub fn proxy_handler_with_methods(
             warn!("Running without \"default_eth\" backend. Some RPC methods might be unavailable")
         }
     }
+    io.add_method(
+        "rlay_experimentalListCids",
+        rpc_rlay_experimental_list_cids(full_config, sync_state.clone()),
+    );
     io.add_method(
         "rlay_experimentalGetEntity",
         rpc_rlay_experimental_get_entity(full_config, sync_state.clone()),
@@ -221,6 +216,24 @@ fn extract_option_backend(options_object: Option<Value>) -> Option<String> {
         .and_then(|n| n.as_object())
         .and_then(|n| n.get("backend"))
         .and_then(|n| n.as_str().map(ToOwned::to_owned))
+}
+
+fn extract_options_object(params_array: &[Value], pos: usize) -> Option<Value> {
+    let default_options = json!({});
+    params_array
+        .get(pos)
+        .map(ToOwned::to_owned)
+        .or_else(|| Some(default_options))
+}
+
+fn backend_from_backend_name(
+    config: &Config,
+    sync_state: &MultiBackendSyncState,
+    backend_name: Option<String>,
+) -> impl std::future::Future<Output = std::result::Result<Backend, jsonrpc_core::Error>> {
+    config
+        .get_backend_with_syncstate(backend_name.as_ref().map(|x| &**x), sync_state)
+        .map_err(failure_into_jsonrpc_err)
 }
 
 /// `rlay_version` RPC call.
@@ -416,36 +429,44 @@ fn rpc_rlay_experimental_kind_for_cid(sync_state: SyncState) -> impl RpcMethodSi
 /// `rlay_experimentalListCids` RPC call.
 ///
 /// List all CIDs seen via "<Entity>Stored" events.
-fn rpc_rlay_experimental_list_cids(sync_state: SyncState) -> impl RpcMethodSimple {
+fn rpc_rlay_experimental_list_cids(
+    config: &Config,
+    sync_state: MultiBackendSyncState,
+) -> impl RpcMethodSimple {
+    let config = config.clone();
+    let sync_state = sync_state.clone();
     move |params: Params| {
-        let cid_entity_kind_map = sync_state.cid_entity_kind_map();
-        let cid_entity_kind_map_lock = cid_entity_kind_map.lock().unwrap();
+        let config = config.clone();
+        let sync_state = sync_state.clone();
+        Compat::new(
+            async move {
+                let (entity_kind, backend_name): (Option<String>, Option<String>) = match params {
+                    Params::Array(params_array) => {
+                        let entity_kind: Option<String> =
+                            params_array.get(0).unwrap().as_str().map(|n| n.to_owned());
 
-        let cids: Vec<_> = match params {
-            Params::Array(params_array) => match params_array.get(0) {
-                Some(first_param) => match first_param.as_str() {
-                    Some(entity_kind) => cid_entity_kind_map_lock
-                        .iter()
-                        .filter(|(&_, ref value)| value == &entity_kind)
-                        .map(|(key, _)| format!("0x{}", key.to_hex()))
-                        .collect(),
-                    None => cid_entity_kind_map_lock
-                        .keys()
-                        .map(|n| format!("0x{}", n.to_hex()))
-                        .collect(),
-                },
-                None => cid_entity_kind_map_lock
-                    .keys()
-                    .map(|n| format!("0x{}", n.to_hex()))
-                    .collect(),
-            },
-            _ => cid_entity_kind_map_lock
-                .keys()
-                .map(|n| format!("0x{}", n.to_hex()))
-                .collect(),
-        };
+                        let options_object = extract_options_object(&params_array, 1);
+                        let backend_name = extract_option_backend(options_object);
 
-        Ok(serde_json::to_value(cids).unwrap())
+                        (entity_kind, backend_name)
+                    }
+                    _ => (None, None),
+                };
+
+                let mut backend = backend_from_backend_name(&config, &sync_state, backend_name)
+                    .await
+                    .unwrap();
+
+                let cids: Vec<String> =
+                    BackendRpcMethods::list_cids(&mut backend, entity_kind.as_ref().map(|n| &**n))
+                        .map_err(failure_into_jsonrpc_err)
+                        .await
+                        .unwrap();
+
+                Ok(serde_json::to_value(cids).unwrap())
+            }
+                .boxed(),
+        )
     }
 }
 
@@ -515,19 +536,10 @@ fn rpc_rlay_experimental_get_entity(
                 if let Params::Array(params_array) = params {
                     let cid = params_array.get(0).unwrap().as_str().unwrap().to_owned();
 
-                    let default_options = json!({});
-                    let options_object: Option<Value> = params_array
-                        .get(1)
-                        .map(ToOwned::to_owned)
-                        .or_else(|| Some(default_options));
+                    let options_object = extract_options_object(&params_array, 1);
                     let backend_name = extract_option_backend(options_object);
 
-                    let mut backend = config
-                        .get_backend_with_syncstate(
-                            backend_name.as_ref().map(|x| &**x),
-                            &sync_state,
-                        )
-                        .map_err(failure_into_jsonrpc_err)
+                    let mut backend = backend_from_backend_name(&config, &sync_state, backend_name)
                         .await
                         .unwrap();
 
@@ -585,19 +597,10 @@ fn rpc_rlay_experimental_store_entity(
                             .unwrap();
                     let entity: Entity = web3_entity.0;
 
-                    let default_options = json!({});
-                    let options_object: Option<Value> = params_array
-                        .get(1)
-                        .map(ToOwned::to_owned)
-                        .or_else(|| Some(default_options));
+                    let options_object = extract_options_object(&params_array, 1);
                     let backend_name = extract_option_backend(options_object.clone());
 
-                    let mut backend = config
-                        .get_backend_with_syncstate(
-                            backend_name.as_ref().map(|x| &**x),
-                            &sync_state,
-                        )
-                        .map_err(failure_into_jsonrpc_err)
+                    let mut backend = backend_from_backend_name(&config, &sync_state, backend_name)
                         .await
                         .unwrap();
 
@@ -663,12 +666,7 @@ fn rpc_rlay_experimental_neo4j_query(
                     let sync_state = sync_state.clone();
                     let filter_registry = filter_registry.clone();
 
-                    let mut backend = config
-                        .get_backend_with_syncstate(
-                            backend_name.as_ref().map(|x| &**x),
-                            &sync_state,
-                        )
-                        .map_err(failure_into_jsonrpc_err)
+                    let mut backend = backend_from_backend_name(&config, &sync_state, backend_name)
                         .await
                         .unwrap();
 

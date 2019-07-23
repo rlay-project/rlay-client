@@ -19,7 +19,7 @@ use futures::future::BoxFuture;
 use futures::prelude::*;
 use rlay_backend::{BackendFromConfigAndSyncState, BackendRpcMethods};
 use rlay_ontology::ontology::Entity;
-use rustc_hex::FromHex;
+use rustc_hex::{FromHex, ToHex};
 use std::collections::BTreeMap;
 use std::future::Future;
 use std::pin::Pin;
@@ -143,5 +143,23 @@ impl BackendRpcMethods for EthereumBackend {
         let cid_bytes = cid_no_prefix.from_hex().unwrap();
 
         future::ok(entity_map_lock.get(&cid_bytes).map(|n| n.clone())).boxed()
+    }
+
+    fn list_cids(&mut self, entity_kind: Option<&str>) -> BoxFuture<Result<Vec<String>, Error>> {
+        let cid_entity_kind_map = self.sync_state.cid_entity_kind_map();
+        let cid_entity_kind_map_lock = cid_entity_kind_map.lock().unwrap();
+
+        let cids = match entity_kind {
+            Some(entity_kind) => cid_entity_kind_map_lock
+                .iter()
+                .filter(|(&_, ref value)| value == &entity_kind)
+                .map(|(key, _)| format!("0x{}", key.to_hex()))
+                .collect(),
+            None => cid_entity_kind_map_lock
+                .keys()
+                .map(|n| format!("0x{}", n.to_hex()))
+                .collect(),
+        };
+        future::ok(cids).boxed()
     }
 }
