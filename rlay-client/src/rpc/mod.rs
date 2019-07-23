@@ -215,6 +215,14 @@ pub fn proxy_handler_with_methods(
     io
 }
 
+fn extract_option_backend(options_object: Option<Value>) -> Option<String> {
+    options_object
+        .as_ref()
+        .and_then(|n| n.as_object())
+        .and_then(|n| n.get("backend"))
+        .and_then(|n| n.as_str().map(ToOwned::to_owned))
+}
+
 /// `rlay_version` RPC call.
 ///
 /// Provides version information about the network and client.
@@ -512,11 +520,7 @@ fn rpc_rlay_experimental_get_entity(
                         .get(1)
                         .map(ToOwned::to_owned)
                         .or_else(|| Some(default_options));
-                    let backend_name: Option<String> = options_object
-                        .as_ref()
-                        .and_then(|n| n.as_object())
-                        .and_then(|n| n.get("backend"))
-                        .and_then(|n| n.as_str().map(ToOwned::to_owned));
+                    let backend_name = extract_option_backend(options_object);
 
                     let mut backend = config
                         .get_backend_with_syncstate(
@@ -586,11 +590,7 @@ fn rpc_rlay_experimental_store_entity(
                         .get(1)
                         .map(ToOwned::to_owned)
                         .or_else(|| Some(default_options));
-                    let backend_name: Option<String> = options_object
-                        .as_ref()
-                        .and_then(|n| n.as_object())
-                        .and_then(|n| n.get("backend"))
-                        .and_then(|n| n.as_str().map(ToOwned::to_owned));
+                    let backend_name = extract_option_backend(options_object.clone());
 
                     let mut backend = config
                         .get_backend_with_syncstate(
@@ -641,10 +641,8 @@ fn rpc_rlay_experimental_neo4j_query(
 
                     let default_options = json!({});
                     let options_object = params_array.get(1).or_else(|| Some(&default_options));
-                    let backend_name: Option<String> = options_object
-                        .and_then(|n| n.as_object())
-                        .and_then(|n| n.get("backend"))
-                        .and_then(|n| n.as_str().map(ToOwned::to_owned));
+                    let backend_name =
+                        extract_option_backend(options_object.map(|n| n.clone()).clone());
 
                     let activated_filters_names: Vec<String> = options_object
                         .and_then(|n| n.as_object())
