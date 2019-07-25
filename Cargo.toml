@@ -1,11 +1,16 @@
 [workspace]
 members = [
-  "rlay-client",
+  # Common traits and types
   "rlay-backend",
+  "rlay-resolve",
+  # Backends
   "rlay-backend-ethereum",
   "rlay-backend-neo4j",
+  # Binaries
+  "rlay-client",
+  # Other
   "rlay-payout",
-  "rlay-resolve",
+  "rlay-jsonrpc-client",
 ]
 
 [patch.crates-io]

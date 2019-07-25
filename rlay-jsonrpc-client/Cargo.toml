@@ -1,0 +1,16 @@
+[package]
+name = "rlay-jsonrpc-client"
+version = "0.1.0"
+authors = ["Maximilian Goisser <goisser94@gmail.com>"]
+license = "MIT OR Apache-2.0"
+edition = "2018"
+
+[dependencies]
+rlay-resolve = { path = "../rlay-resolve" }
+
+futures-preview = { version = "=0.3.0-alpha.17", features = ["compat"] }
+hyper_futures3 = { package = "hyper", git = "https://github.com/hyperium/hyper", rev = "db86e554d51a4675da267659f956b642a6ab013d" }
+log = "0.4.6"
+rlay_ontology = { git = 'https://github.com/rlay-project/rlay-ontology', rev = 'd02a9f3781381f5d19236144a19a2a6f8ed71319', features = ["web3_compat"] }
+serde = "=1.0.79"
+serde_json = { version = "1.0.22", features = ["preserve_order"] }
