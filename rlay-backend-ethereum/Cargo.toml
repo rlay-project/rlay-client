@@ -16,7 +16,7 @@ futures-preview = { version = "=0.3.0-alpha.17", features = ["compat"] }
 futures01 = { package = "futures", version = "0.1.28" }
 log = "0.4.6"
 multibase = "0.6.0"
-rlay_ontology = { git = 'https://github.com/rlay-project/rlay-ontology', rev = 'd02a9f3781381f5d19236144a19a2a6f8ed71319', features = ["web3_compat"] }
+rlay_ontology = { git = 'https://github.com/rlay-project/rlay-ontology', rev = '568f182b8b83584978784c01545140dfb55f86e9', features = ["web3_compat"] }
 rustc-hex = "1.0.0"
 serde = "=1.0.79"
 serde_derive = "=1.0.79"
