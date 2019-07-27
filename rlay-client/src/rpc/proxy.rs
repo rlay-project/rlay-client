@@ -1,0 +1,184 @@
+use futures01::{future::Either, Future};
+use hyper::header::HeaderValue;
+use hyper::rt::Stream;
+use hyper::Client;
+use hyper::{self, Body, Method, Request as HyperRequest};
+use jsonrpc_core::*;
+use jsonrpc_pubsub::{PubSubHandler, PubSubMetadata, Session};
+use std::collections::{HashMap, HashSet};
+use std::default::Default;
+use std::sync::Arc;
+
+#[derive(Debug, Default)]
+pub struct ProxyHandler<M: Metadata = ()> {
+    methods: HashMap<String, RemoteProcedure<M>>,
+    proxy_target_url: String,
+}
+
+// Type inference helper
+impl ProxyHandler {
+    /// Creates new `ProxyHandler` without any metadata.
+    pub fn new(proxy_target_url: &str) -> Self {
+        Self {
+            methods: HashMap::default(),
+            proxy_target_url: proxy_target_url.to_owned(),
+        }
+    }
+
+    pub fn new_with_noop(proxy_target_url: &str) -> ProxyHandler<NoopPubSubMetadata> {
+        ProxyHandler::<NoopPubSubMetadata> {
+            methods: HashMap::default(),
+            proxy_target_url: proxy_target_url.to_owned(),
+        }
+    }
+}
+
+impl<M: Metadata + Default> ProxyHandler<M> {
+    pub fn add_method<F>(&mut self, name: &str, method: F)
+    where
+        F: RpcMethodSimple,
+    {
+        self.methods.insert(
+            name.to_owned(),
+            RemoteProcedure::Method(Arc::new(move |params, _| method.call(params))),
+        );
+    }
+}
+
+#[derive(Default, Clone)]
+pub struct NoopPubSubMetadata {}
+
+impl Metadata for NoopPubSubMetadata {}
+
+impl PubSubMetadata for NoopPubSubMetadata {
+    fn session(&self) -> Option<Arc<Session>> {
+        None
+    }
+}
+
+#[derive(Default, Clone)]
+pub struct WebsocketMetadata {
+    session: Option<Arc<Session>>,
+    pub session_id: u64,
+    pub remote: Option<jsonrpc_ws_server::tokio::runtime::TaskExecutor>,
+}
+
+impl WebsocketMetadata {
+    pub fn new(
+        session: Option<Arc<Session>>,
+        session_id: u64,
+        remote: jsonrpc_ws_server::tokio::runtime::TaskExecutor,
+    ) -> Self {
+        Self {
+            session,
+            session_id,
+            remote: Some(remote),
+        }
+    }
+}
+
+impl Metadata for WebsocketMetadata {}
+
+impl PubSubMetadata for WebsocketMetadata {
+    fn session(&self) -> Option<Arc<Session>> {
+        self.session.clone()
+    }
+}
+
+impl From<ProxyHandler<NoopPubSubMetadata>> for MetaIoHandler<NoopPubSubMetadata, ProxyMiddleware> {
+    fn from(io: ProxyHandler<NoopPubSubMetadata>) -> Self {
+        let mut handler = MetaIoHandler::with_middleware(ProxyMiddleware::new(
+            io.proxy_target_url,
+            io.methods.clone().into_iter().map(|(key, _)| key).collect(),
+        ));
+
+        for (name, method) in io.methods.into_iter() {
+            handler.add_method(&name, move |params| match method.clone() {
+                RemoteProcedure::Method(method) => method.call(params, NoopPubSubMetadata {}),
+                _ => unimplemented!(),
+            });
+        }
+
+        handler
+    }
+}
+
+impl From<ProxyHandler<NoopPubSubMetadata>> for PubSubHandler<WebsocketMetadata, ProxyMiddleware> {
+    fn from(io: ProxyHandler<NoopPubSubMetadata>) -> Self {
+        let mut handler = PubSubHandler::new(MetaIoHandler::with_middleware(ProxyMiddleware::new(
+            io.proxy_target_url,
+            io.methods.clone().into_iter().map(|(key, _)| key).collect(),
+        )));
+
+        for (name, method) in io.methods.into_iter() {
+            handler.add_method(&name, move |params| match method.clone() {
+                RemoteProcedure::Method(method) => method.call(params, NoopPubSubMetadata {}),
+                _ => unimplemented!(),
+            });
+        }
+
+        handler
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct ProxyMiddleware {
+    proxy_target_url: String,
+    methods: HashSet<String>,
+}
+
+impl ProxyMiddleware {
+    pub fn new(proxy_target_url: String, methods: HashSet<String>) -> Self {
+        Self {
+            proxy_target_url,
+            methods,
+        }
+    }
+}
+
+impl<M: Metadata> Middleware<M> for ProxyMiddleware {
+    type Future = Box<dyn Future<Item = Option<Response>, Error = ()> + Send>;
+    type CallFuture = Box<dyn Future<Item = Option<Output>, Error = ()> + Send>;
+
+    fn on_request<F, X>(&self, request: Request, meta: M, process: F) -> Either<Self::Future, X>
+    where
+        F: FnOnce(Request, M) -> X + Send,
+        X: Future<Item = Option<Response>, Error = ()> + Send + 'static,
+    {
+        let mut matches_custom_method = false;
+        if let Request::Single(Call::MethodCall(call)) = &request {
+            debug!("RPC method: {}", &call.method);
+            if self.methods.contains(&call.method) {
+                matches_custom_method = true;
+            }
+            if &call.method == "rlay_subscribeEntities" {
+                matches_custom_method = true;
+            }
+        }
+
+        if matches_custom_method {
+            return Either::A(Box::new(process(request, meta)));
+        }
+
+        let client = Client::new();
+        let uri: hyper::Uri = self.proxy_target_url.parse().unwrap();
+        let proxy_payload = serde_json::to_string(&request).unwrap();
+
+        let mut req = HyperRequest::new(Body::from(proxy_payload));
+        *req.method_mut() = Method::POST;
+        *req.uri_mut() = uri.clone();
+        req.headers_mut().insert(
+            "content-type",
+            HeaderValue::from_str("application/json").unwrap(),
+        );
+
+        let post = client
+            .request(req)
+            .and_then(|res| res.into_body().concat2());
+
+        Either::A(Box::new(post.map_err(|_| ()).and_then(|body| {
+            let response: Response = serde_json::from_slice(&body).unwrap();
+            Ok(Some(response))
+        })))
+    }
+}

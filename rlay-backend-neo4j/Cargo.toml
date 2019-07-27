@@ -1,0 +1,24 @@
+[package]
+name = "rlay-backend-neo4j"
+version = "0.1.0"
+authors = ["Maximilian Goisser <goisser94@gmail.com>"]
+license = "MIT OR Apache-2.0"
+edition = "2018"
+
+[dependencies]
+rlay-backend = { path = "../rlay-backend" }
+
+bb8 = { version = "0.3.0" }
+bb8_cypher = { git = "https://github.com/hobofan/bb8-cypher", rev = 'f4cafe2aa6aacc072697bda3d58e03668482d353' }
+cid = { git = 'https://github.com/hobofan/rust-cid', rev = '87332277d2cdb5b7cb6484c23b5711c28b44c684' }
+failure = "=0.1.1"
+futures01 = { package = "futures", version = "0.1.28" }
+futures-preview = { version = "=0.3.0-alpha.17", features = ["compat"] }
+log = "0.4.6"
+rlay_ontology = { git = 'https://github.com/rlay-project/rlay-ontology', rev = '568f182b8b83584978784c01545140dfb55f86e9', features = ["web3_compat"] }
+rustc-hex = "1.0.0"
+rusted_cypher = { git = "https://github.com/hobofan/rusted-cypher", rev = '4b68788e33708ea006e087d341685e6c7875ea1d' }
+serde = "=1.0.79"
+serde_derive = "=1.0.79"
+serde_json = { version = "1.0.22", features = ["preserve_order"] }
+tokio-core = "0.1.17"
