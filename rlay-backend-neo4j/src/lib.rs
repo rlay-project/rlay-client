@@ -42,6 +42,13 @@ pub struct SyncState {
 }
 
 impl Neo4jBackend {
+    pub fn from_config(config: Neo4jBackendConfig) -> Self {
+        Self {
+            config,
+            client: None,
+        }
+    }
+
     pub fn client(&mut self) -> impl Future<Output = Result<GraphClient, Error>> {
         if let Some(ref client) = self.client {
             return client.dedicated_connection().compat().map_err(From::from);
