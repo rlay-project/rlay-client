@@ -192,7 +192,7 @@ pub mod rpc {
     }
 
     fn default_proxy_target_network_address() -> Option<String> {
-        Some("http://localhost:8545".to_owned())
+        None
     }
 
     fn default_network_address() -> String {

@@ -1,59 +1,48 @@
 use assert_cmd::prelude::*;
-use futures01::future::Future;
+use rand::Rng;
+use std::path::Path;
 use std::process::Command;
+use tempfile::NamedTempFile;
+use testcontainers::*;
 
-fn wait_for_docker() {
-    loop {
-        let (_eloop, transport) = web3::transports::Http::new("http://localhost:9545").unwrap();
-        let web3 = web3::Web3::new(transport);
-        let version_res = web3.net().version().wait();
-        match version_res {
-            Ok(_) => {
-                break;
-            }
-            Err(_) => std::thread::sleep(std::time::Duration::new(1, 0)),
-        }
-    }
+fn ganache_container() -> images::generic::GenericImage {
+    images::generic::GenericImage::new("trufflesuite/ganache-cli:v6.1.0")
+        .with_args(vec!["--seed".to_owned(), "1234".to_owned()])
+        .with_wait_for(images::generic::WaitFor::message_on_stdout(
+            "Listening on localhost:8545",
+        ))
 }
 
-#[test]
-fn setup() {
-    let output = Command::new("docker")
-        .args(&["rm", "--force", "rlay-client-ganache"])
-        .output()
-        .expect("failed to execute process");
-    println!("");
-    println!("STDOUT {}", std::str::from_utf8(&output.stdout).unwrap());
-    println!("STDERR {}", std::str::from_utf8(&output.stderr).unwrap());
+fn set_ganache_port(path: &Path, port: u32) {
+    let contents = std::fs::read_to_string(path).unwrap();
+    let new_contents = contents.replace("<GANACHE_PORT>", &port.to_string());
+    std::fs::write(path, new_contents).unwrap();
+}
 
-    let output = Command::new("docker")
-        .args(&[
-            "run",
-            "-d",
-            "--name",
-            "rlay-client-ganache",
-            "-p",
-            "9545:8545",
-            "trufflesuite/ganache-cli:v6.1.0",
-            "--seed",
-            "1234",
-        ])
-        .output()
-        .expect("failed to execute process");
-    println!("");
-    println!("STDOUT {}", std::str::from_utf8(&output.stdout).unwrap());
-    println!("STDERR {}", std::str::from_utf8(&output.stderr).unwrap());
+fn set_rpc_port(path: &Path) -> u32 {
+    let mut rng = rand::thread_rng();
+    let port = rng.gen_range(35000, 36000);
+
+    let contents = std::fs::read_to_string(path).unwrap();
+    let new_contents = contents.replace("<RPC_PORT>", &port.to_string());
+    std::fs::write(path, new_contents).unwrap();
+
+    port
 }
 
 #[test]
 fn setup_deploy() {
-    wait_for_docker();
+    let config_file = NamedTempFile::new().unwrap();
+    std::fs::copy("./tests/rlay.config.toml.test_template", config_file.path()).unwrap();
 
-    std::fs::copy(
-        "./tests/rlay.config.toml.test_template",
-        "./tests/rlay.config.toml",
-    )
-    .unwrap();
+    let docker = clients::Cli::default();
+    let ganache_node = docker.run(ganache_container());
+    set_ganache_port(
+        config_file.path(),
+        ganache_node.get_host_port(8545).unwrap(),
+    );
+    set_rpc_port(config_file.path());
+
     let output = Command::cargo_bin("rlay-client")
         .unwrap()
         .args(&[
@@ -61,7 +50,7 @@ fn setup_deploy() {
             "--from",
             "0xc02345a911471fd46c47c4d3c2e5c85f5ae93d13",
             "--config",
-            "./tests/rlay.config.toml",
+            config_file.path().to_str().unwrap(),
         ])
         .output()
         .unwrap();

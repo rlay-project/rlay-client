@@ -32,8 +32,9 @@ impl SyncState {
 
     #[cfg(feature = "backend_neo4j")]
     pub fn new_neo4j(config: &Neo4jBackendConfig) -> Self {
+        let rt = tokio_futures3::runtime::Runtime::new().unwrap();
         SyncState::Neo4j(Neo4jSyncState {
-            connection_pool: Arc::new(config.connection_pool()),
+            connection_pool: Arc::new(rt.block_on(async { config.connection_pool().await })),
         })
     }
 

@@ -1,0 +1,10 @@
+[rpc]
+disabled = false
+network_address = "http://127.0.0.1:<RPC_PORT>"
+ws_network_address = "ws://127.0.0.1:8547"
+
+[backends]
+
+[backends.myneo4j]
+type = "neo4j"
+uri = "http://neo4j:toasty123@127.0.0.1:<NEO4J_PORT>/db/data/"

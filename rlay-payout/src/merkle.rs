@@ -1,8 +1,8 @@
-use tiny_keccak::keccak256;
 use merkle_light::hash::{Algorithm, Hashable};
 use merkle_light::merkle2::MerkleTree;
 use merkle_light::proof2::Proof;
 use std::hash::Hasher;
+use tiny_keccak::keccak256;
 
 pub struct Keccak256Algorithm {
     buffer: Vec<u8>,
@@ -74,7 +74,8 @@ pub fn gen_proof_for_data<T: Ord + Eq + Clone + AsRef<[u8]>, A: Algorithm<T>, D:
     a.reset();
     let leaf_hash = a.leaf(item);
 
-    let index = tree.as_slice()
+    let index = tree
+        .as_slice()
         .iter()
         .position(|n| *n == leaf_hash)
         .unwrap();

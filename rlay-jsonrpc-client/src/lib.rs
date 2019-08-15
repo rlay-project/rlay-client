@@ -4,7 +4,7 @@
 extern crate serde_json;
 
 use futures::prelude::*;
-use hyper_futures3::{client::HttpConnector, header, Body, Client, Request};
+use hyper::{client::HttpConnector, header, Body, Client, Request};
 use rlay_ontology::ontology::Entity;
 use rlay_ontology::prelude::FormatWeb3;
 use rlay_resolve::{BoxFuture, ResolveCid};
@@ -81,6 +81,22 @@ impl RlayClient {
                 let entity: FormatWeb3<_> = serde_json::from_value(value).unwrap();
                 Ok(Some(entity.0))
             }
+            _ => Err(()),
+        }
+    }
+
+    pub async fn store_entity<E: Into<Entity>>(&self, entity: E) -> Result<String, ()> {
+        let res = self
+            .call_method(
+                "rlay_experimentalStoreEntity",
+                json! {[FormatWeb3(entity.into())]},
+            )
+            .await
+            .unwrap();
+
+        let value = res["result"].clone();
+        match value {
+            Value::String(inner) => Ok(inner.to_owned()),
             _ => Err(()),
         }
     }
