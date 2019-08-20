@@ -10,11 +10,11 @@ rlay-backend = { path = "../rlay-backend" }
 
 bb8_cypher = { git = "https://github.com/hobofan/bb8-cypher", rev = '9443f0beed9c3c354b36b20b1997eba6486d911f', features = ["l337"] }
 l337 = { git = "https://github.com/OneSignal/L3-37", rev = "6d96fefa75c748d4ac3618ab2bd9523d589b6cd2" }
-cid = { git = 'https://github.com/hobofan/rust-cid', rev = '87332277d2cdb5b7cb6484c23b5711c28b44c684' }
+cid = { package = "cid_fork_rlay", version = "0.3.1" }
 failure = "0.1.1"
 futures-preview = { version = "0.3.0-alpha.17", features = ["compat"] }
 log = "0.4.6"
-rlay_ontology = { git = 'https://github.com/rlay-project/rlay-ontology', rev = 'b3fcd5f6cce671d270b113ec6a9031e536ef0a6a', features = ["web3_compat"] }
+rlay_ontology = { version = "0.2.3", features = ["web3_compat"] }
 rustc-hex = "1.0.0"
 rusted_cypher = { git = "https://github.com/hobofan/rusted-cypher", rev = '892af3cf077ea0614f6f075e25acb3e7dc340b8c' }
 serde = "1.0.79"

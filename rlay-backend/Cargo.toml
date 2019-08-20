@@ -6,8 +6,8 @@ license = "MIT OR Apache-2.0"
 edition = "2018"
 
 [dependencies]
-cid = { git = 'https://github.com/hobofan/rust-cid', rev = '87332277d2cdb5b7cb6484c23b5711c28b44c684' }
-rlay_ontology = { git = 'https://github.com/rlay-project/rlay-ontology', rev = 'b3fcd5f6cce671d270b113ec6a9031e536ef0a6a', features = ["web3_compat"] }
+cid = { package = "cid_fork_rlay", version = "0.3.1" }
+rlay_ontology = { version = "0.2.3", features = ["web3_compat"] }
 failure = "0.1.1"
 serde_json = { version = "1.0.22", features = ["preserve_order"] }
 futures-preview = "0.3.0-alpha.17"
