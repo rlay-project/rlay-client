@@ -8,9 +8,9 @@ edition = "2018"
 [dependencies]
 rlay-resolve = { path = "../rlay-resolve" }
 
-futures-preview = { version = "=0.3.0-alpha.17", features = ["compat"] }
-hyper_futures3 = { package = "hyper", git = "https://github.com/hyperium/hyper", rev = "db86e554d51a4675da267659f956b642a6ab013d" }
+futures-preview = { version = "0.3.0-alpha.17", features = ["compat"] }
+hyper = { git = "https://github.com/hyperium/hyper", rev = "4920f5e264c57f87dc8b91e7ed9a575359cc093c" }
 log = "0.4.6"
-rlay_ontology = { git = 'https://github.com/rlay-project/rlay-ontology', rev = '568f182b8b83584978784c01545140dfb55f86e9', features = ["web3_compat"] }
-serde = "=1.0.79"
+rlay_ontology = { git = 'https://github.com/rlay-project/rlay-ontology', rev = 'b3fcd5f6cce671d270b113ec6a9031e536ef0a6a', features = ["web3_compat"] }
+serde = "1.0.79"
 serde_json = { version = "1.0.22", features = ["preserve_order"] }

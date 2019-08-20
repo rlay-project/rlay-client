@@ -7,3 +7,4 @@ website/build
 **/*.rs.bk
 
 rlay-client/tests/rlay.config.toml
+rlay-client/tests/rlay.config.neo4j.toml
