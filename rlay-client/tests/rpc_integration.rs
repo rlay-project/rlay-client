@@ -56,6 +56,48 @@ fn set_rpc_port(path: &Path) -> u32 {
 }
 
 #[test]
+fn get_health() {
+    let _ = env_logger::try_init();
+    let config_file = NamedTempFile::new().unwrap();
+    std::fs::copy(
+        "./tests/rlay.config.neo4j.toml.test_template",
+        config_file.path(),
+        )
+        .unwrap();
+
+    let rt = Runtime::new().unwrap();
+    let docker = clients::Cli::default();
+    let node = docker.run(neo4j_container());
+
+    set_neo4j_port(config_file.path(), node.get_host_port(7474).unwrap());
+    let rpc_port = set_rpc_port(config_file.path());
+    let mut child_client = Command::cargo_bin("rlay-client")
+        .unwrap()
+        .args(&["client", "--config", config_file.path().to_str().unwrap()])
+        .spawn()
+        .unwrap();
+
+    // HACK: wait for client to start up
+    std::thread::sleep(std::time::Duration::new(3, 0));
+
+    let base_url = format!("http://127.0.0.1:{}", rpc_port);
+    let rpc_result_value = rt.block_on(async {
+        let client = Client::new();
+        let res = client.get(format!("{}/health", base_url).parse().unwrap()).await.unwrap();
+
+        let body: Vec<u8> = res.into_body().try_concat().await.unwrap().to_vec();
+        let rpc_result_value: Value = serde_json::from_slice(&body).unwrap();
+        rpc_result_value
+    });
+
+    let expected_value = json!({"status": "healthy"});
+
+    assert_eq!(expected_value, rpc_result_value);
+
+    child_client.kill().unwrap();
+}
+
+#[test]
 fn store_and_get_roundtrip() {
     let _ = env_logger::try_init();
     let config_file = NamedTempFile::new().unwrap();
