@@ -125,7 +125,7 @@ async fn http_get_health () -> Result<Response<Body>, GenericError> {
     let response = Response::builder()
         .status(StatusCode::OK)
         .header(header::CONTENT_TYPE, "application/json")
-        .body(Body::from(r#"{status: "healthy"}"#))?;
+        .body(Body::from(r#"{"status": "healthy"}"#))?;
     Ok(response)
 }
 
