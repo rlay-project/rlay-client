@@ -4,7 +4,7 @@ use ::web3::types::H160;
 use cid::ToCid;
 use futures::prelude::*;
 use hyper::service::{make_service_fn, service_fn};
-use hyper::{header, Body, Request, Response, Server, StatusCode};
+use hyper::{header, Body, Request, Response, Server, StatusCode, Method};
 use rlay_backend::BackendRpcMethods;
 use rlay_ontology::prelude::*;
 use rlay_payout::aggregation::{detect_valued_pools, WeightedMedianBooleanPropositionPool};
@@ -99,7 +99,15 @@ async fn run_rpc(
         let sync_state = sync_state.clone();
         async {
             Ok::<_, GenericError>(service_fn(move |req| {
-                handle_jsonrpc(full_config.clone(), sync_state.clone(), req)
+                match (req.method(), req.uri().path()) {
+                    (&Method::GET, "/health") => {
+                        http_get_health().boxed()
+                    },
+                    _ => {
+                        handle_jsonrpc(full_config.clone(), sync_state.clone(), req).
+                            boxed()
+                    }
+                }
             }))
         }
     });
@@ -113,10 +121,18 @@ async fn run_rpc(
     Ok(())
 }
 
+async fn http_get_health () -> Result<Response<Body>, GenericError> {
+    let response = Response::builder()
+        .status(StatusCode::OK)
+        .header(header::CONTENT_TYPE, "application/json")
+        .body(Body::from(r#"{status: "healthy"}"#))?;
+    Ok(response)
+}
+
 pub fn run_rpc_with_tokio(
     full_config: &Config,
     sync_state: MultiBackendSyncState,
-) -> Result<(), GenericError> {
+    ) -> Result<(), GenericError> {
     let rt = Runtime::new().unwrap();
     rt.block_on(run_rpc(full_config, sync_state))
 }
@@ -125,7 +141,7 @@ async fn handle_jsonrpc(
     full_config: Config,
     sync_state: MultiBackendSyncState,
     req: Request<Body>,
-) -> Result<Response<Body>, GenericError> {
+    ) -> Result<Response<Body>, GenericError> {
     let config = full_config.clone();
     let body: Vec<u8> = req.into_body().try_concat().await?.to_vec();
     let body_value: Value = serde_json::from_slice(&body).unwrap();
@@ -140,13 +156,13 @@ async fn handle_jsonrpc(
         "rlay_version" => Some(rpc_rlay_version(full_config).await?),
         "rlay_experimentalStoreEntity" => Some(
             rpc_rlay_experimental_store_entity(full_config, sync_state, params.to_owned()).await?,
-        ),
+            ),
         "rlay_experimentalGetEntity" => Some(
             rpc_rlay_experimental_get_entity(full_config, sync_state, params.to_owned()).await?,
-        ),
+            ),
         "rlay_experimentalNeo4jQuery" => Some(
             rpc_rlay_experimental_neo4j_query(full_config, sync_state, params.to_owned()).await?,
-        ),
+            ),
         "rlay_experimentalListCids" => {
             Some(rpc_rlay_experimental_list_cids(full_config, sync_state, params.to_owned()).await?)
         }
@@ -158,11 +174,11 @@ async fn handle_jsonrpc(
         }
         "rlay_experimentalKindForCid" => Some(
             rpc_rlay_experimental_kind_for_cid(full_config, sync_state, params.to_owned()).await?,
-        ),
+            ),
         "rlay_experimentalListCidsIndex" => Some(
             rpc_rlay_experimental_list_cids_index(full_config, sync_state, params.to_owned())
-                .await?,
-        ),
+            .await?,
+            ),
         _ => None,
     };
 
@@ -225,12 +241,12 @@ async fn rpc_rlay_experimental_store_entity(
     config: Config,
     sync_state: MultiBackendSyncState,
     params_array: Vec<Value>,
-) -> JsonRpcResult<Value> {
+    ) -> JsonRpcResult<Value> {
     let entity_object = params_array
         .get(0)
         .ok_or(jsonrpc_core::Error::invalid_params(
-            "Mandatory parameter 'entity' missing",
-        ))?;
+                "Mandatory parameter 'entity' missing",
+                ))?;
     let web3_entity: FormatWeb3<Entity> = serde_json::from_value(entity_object.clone())
         .map_err(|err| jsonrpc_core::Error::invalid_params(err.description()))?;
     let entity: Entity = web3_entity.0;
@@ -246,7 +262,7 @@ async fn rpc_rlay_experimental_store_entity(
             let cid: String = format!("0x{}", raw_cid.to_bytes().to_hex());
             serde_json::to_value(cid).unwrap()
         })
-        .await
+    .await
         .unwrap();
 
     Ok(cid)
@@ -256,7 +272,7 @@ async fn rpc_rlay_experimental_get_entity(
     config: Config,
     sync_state: MultiBackendSyncState,
     params_array: Vec<Value>,
-) -> JsonRpcResult<Value> {
+    ) -> JsonRpcResult<Value> {
     let cid = params_array.get(0).unwrap().as_str().unwrap().to_owned();
 
     let options_object = extract_options_object(&params_array, 1);
@@ -270,7 +286,7 @@ async fn rpc_rlay_experimental_get_entity(
             debug!("retrieved {:?}", entity.is_some());
             serde_json::to_value(entity.map(|n| FormatWeb3(n))).unwrap()
         })
-        .await
+    .await
         .unwrap();
 
     Ok(entity)
@@ -280,7 +296,7 @@ async fn rpc_rlay_experimental_neo4j_query(
     config: Config,
     sync_state: MultiBackendSyncState,
     params_array: Vec<Value>,
-) -> JsonRpcResult<Value> {
+    ) -> JsonRpcResult<Value> {
     let filter_registry = crate::modules::ModuleRegistry::with_builtins();
 
     let query = params_array.get(0).unwrap().as_str().unwrap().to_owned();
@@ -296,13 +312,13 @@ async fn rpc_rlay_experimental_neo4j_query(
             n.as_array().and_then(|filters_arr| {
                 Some(
                     filters_arr
-                        .into_iter()
-                        .map(|n| n.as_str().unwrap().to_owned())
-                        .collect::<Vec<_>>(),
-                )
+                    .into_iter()
+                    .map(|n| n.as_str().unwrap().to_owned())
+                    .collect::<Vec<_>>(),
+                    )
             })
         })
-        .unwrap_or_else(Vec::new);
+    .unwrap_or_else(Vec::new);
 
     let config = config.clone();
     let sync_state = sync_state.clone();
@@ -336,7 +352,7 @@ async fn rpc_rlay_experimental_neo4j_query(
             }
             return true;
         })
-        .map(|entity| FormatWeb3(entity))
+    .map(|entity| FormatWeb3(entity))
         .collect::<Vec<_>>();
 
     Ok(serde_json::to_value(filtered_entities).unwrap())
@@ -349,7 +365,7 @@ async fn rpc_rlay_experimental_list_cids(
     config: Config,
     sync_state: MultiBackendSyncState,
     params_array: Vec<Value>,
-) -> JsonRpcResult<Value> {
+    ) -> JsonRpcResult<Value> {
     let entity_kind: Option<String> = params_array.get(0).unwrap().as_str().map(|n| n.to_owned());
 
     let options_object = extract_options_object(&params_array, 1);
@@ -359,9 +375,9 @@ async fn rpc_rlay_experimental_list_cids(
 
     let cids: Vec<String> =
         BackendRpcMethods::list_cids(&mut backend, entity_kind.as_ref().map(|n| &**n))
-            .map_err(failure_into_jsonrpc_err)
-            .await
-            .unwrap();
+        .map_err(failure_into_jsonrpc_err)
+        .await
+        .unwrap();
 
     Ok(serde_json::to_value(cids).unwrap())
 }
@@ -384,7 +400,7 @@ async fn rpc_rlay_get_proposition_pools(
     _config: Config,
     multi_sync_state: MultiBackendSyncState,
     params_array: Vec<Value>,
-) -> JsonRpcResult<Value> {
+    ) -> JsonRpcResult<Value> {
     let sync_state = multi_sync_state
         .backend("default_eth")
         .expect("Running without backend default_eth")
@@ -440,7 +456,7 @@ async fn rpc_rlay_experimental_kind_for_cid(
     _config: Config,
     multi_sync_state: MultiBackendSyncState,
     params_array: Vec<Value>,
-) -> JsonRpcResult<Value> {
+    ) -> JsonRpcResult<Value> {
     let sync_state = multi_sync_state
         .backend("default_eth")
         .expect("Running without backend default_eth")
@@ -465,7 +481,7 @@ async fn rpc_rlay_experimental_list_cids_index(
     _config: Config,
     multi_sync_state: MultiBackendSyncState,
     params_array: Vec<Value>,
-) -> JsonRpcResult<Value> {
+    ) -> JsonRpcResult<Value> {
     let sync_state = multi_sync_state
         .backend("default_eth")
         .expect("Running without backend default_eth")
@@ -479,7 +495,7 @@ async fn rpc_rlay_experimental_list_cids_index(
         params_array.get(0),
         params_array.get(1),
         params_array.get(2),
-    ) {
+        ) {
         (Some(kind), Some(field), Some(value)) => {
             match (kind.as_str(), field.as_str(), value.as_str()) {
                 (Some(kind), Some(field), Some(value)) => entity_map_lock
@@ -499,7 +515,7 @@ async fn rpc_rlay_experimental_list_cids_index(
                             _ => false,
                         }
                     })
-                    .map(|(key, _)| format!("0x{}", key.to_hex()))
+                .map(|(key, _)| format!("0x{}", key.to_hex()))
                     .collect(),
                 _ => Vec::new(),
             }
