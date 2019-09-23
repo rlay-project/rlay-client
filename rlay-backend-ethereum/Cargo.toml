@@ -8,7 +8,7 @@ edition = "2018"
 [dependencies]
 rlay-backend = { path = "../rlay-backend" }
 
-cid = { git = 'https://github.com/hobofan/rust-cid', rev = '87332277d2cdb5b7cb6484c23b5711c28b44c684' }
+cid = { package = "cid_fork_rlay", version = "0.3.1" }
 ethabi = { git = "https://github.com/hobofan/ethabi", rev = '42df1ca0ac5976040b9091f35875b9548c30ef41' }
 failure = "0.1.1"
 failure_derive = "0.1.1"
@@ -16,7 +16,7 @@ futures-preview = { version = "0.3.0-alpha.17", features = ["compat"] }
 futures01 = { package = "futures", version = "0.1.28" }
 log = "0.4.6"
 multibase = "0.6.0"
-rlay_ontology = { git = 'https://github.com/rlay-project/rlay-ontology', rev = 'b3fcd5f6cce671d270b113ec6a9031e536ef0a6a', features = ["web3_compat"] }
+rlay_ontology = { version = "0.2.3", features = ["web3_compat"] }
 rustc-hex = "1.0.0"
 serde = "1.0.79"
 serde_derive = "1.0.79"

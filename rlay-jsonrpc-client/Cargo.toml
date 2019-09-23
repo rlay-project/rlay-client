@@ -11,6 +11,6 @@ rlay-resolve = { path = "../rlay-resolve" }
 futures-preview = { version = "0.3.0-alpha.17", features = ["compat"] }
 hyper = { git = "https://github.com/hyperium/hyper", rev = "4920f5e264c57f87dc8b91e7ed9a575359cc093c" }
 log = "0.4.6"
-rlay_ontology = { git = 'https://github.com/rlay-project/rlay-ontology', rev = 'b3fcd5f6cce671d270b113ec6a9031e536ef0a6a', features = ["web3_compat"] }
+rlay_ontology = { version = "0.2.3", features = ["web3_compat"] }
 serde = "1.0.79"
 serde_json = { version = "1.0.22", features = ["preserve_order"] }
