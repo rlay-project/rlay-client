@@ -64,7 +64,6 @@ impl Neo4jBackend {
             .client
             .as_ref()
             .expect("Tried to get non-existent internal connection pool")
-            // TODO: do not use dedicated_connection
             .connection()
             .compat()
             .map_err(|_| err_msg("Failure getting connection"))
