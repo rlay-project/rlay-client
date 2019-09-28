@@ -208,8 +208,8 @@ pub mod backend {
     use rlay_backend_ethereum::config::EthereumBackendConfig;
     #[cfg(feature = "backend_neo4j")]
     use rlay_backend_neo4j::config::Neo4jBackendConfig;
-    #[cfg(feature = "backend_redis")]
-    use rlay_backend_redis::config::RedisBackendConfig;
+    #[cfg(feature = "backend_redisgraph")]
+    use rlay_backend_redisgraph::config::RedisgraphBackendConfig;
 
     #[derive(Debug, Deserialize, Clone)]
     #[serde(tag = "type")]
@@ -220,8 +220,8 @@ pub mod backend {
         #[cfg(feature = "backend_neo4j")]
         Neo4j(Neo4jBackendConfig),
         #[serde(rename = "redisgraph")]
-        #[cfg(feature = "backend_redis")]
-        Redis(RedisBackendConfig),
+        #[cfg(feature = "backend_redisgraph")]
+        Redisgraph(RedisgraphBackendConfig),
     }
 
     impl BackendConfig {

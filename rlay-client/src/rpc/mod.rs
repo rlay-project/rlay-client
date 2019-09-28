@@ -18,7 +18,6 @@ use url::Url;
 use self::proxy::proxy_rpc_call;
 use crate::backend::Backend;
 use crate::config::{BackendConfig, Config};
-use crate::helpers::CompatBlockOn;
 use crate::sync::MultiBackendSyncState;
 use crate::web3_helpers::HexString;
 
@@ -130,10 +129,7 @@ pub fn run_rpc_with_tokio(
     sync_state: MultiBackendSyncState,
 ) -> Result<(), GenericError> {
     let mut rt = Runtime::new().unwrap();
-    rt.block_on_with_01(run_rpc(full_config, sync_state))
-    // let mut rt = futures::executor::ThreadPool::new().unwrap();
-    // rt.run(async { run_rpc(full_config, sync_state).await })
-    // rt.block_on_with_01(run_rpc(full_config, sync_state))
+    rt.block_on(run_rpc(full_config, sync_state))
 }
 
 async fn handle_jsonrpc(

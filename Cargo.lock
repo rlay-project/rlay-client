@@ -1864,7 +1864,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "rlay-backend-redis"
+name = "rlay-backend-redisgraph"
 version = "0.1.0"
 dependencies = [
  "cid_fork_rlay 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1911,7 +1911,7 @@ dependencies = [
  "rlay-backend 0.1.0",
  "rlay-backend-ethereum 0.1.0",
  "rlay-backend-neo4j 0.1.0",
- "rlay-backend-redis 0.1.0",
+ "rlay-backend-redisgraph 0.1.0",
  "rlay-jsonrpc-client 0.1.0",
  "rlay-payout 0.1.0",
  "rlay_ontology 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1921,10 +1921,8 @@ dependencies = [
  "serde_json 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)",
  "tempfile 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "testcontainers 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "tokio 0.1.22 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio 0.2.0-alpha.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio-core 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
- "tokio-executor 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "toml 0.4.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "toml_edit 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "url 1.7.2 (registry+https://github.com/rust-lang/crates.io-index)",

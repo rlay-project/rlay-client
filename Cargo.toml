@@ -6,7 +6,7 @@ members = [
   # Backends
   "rlay-backend-ethereum",
   "rlay-backend-neo4j",
-  "rlay-backend-redis",
+  "rlay-backend-redisgraph",
   # Binaries
   "rlay-client",
   # Other

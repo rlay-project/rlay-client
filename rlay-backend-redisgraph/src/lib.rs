@@ -21,17 +21,17 @@ use rlay_ontology::prelude::*;
 use rustc_hex::ToHex;
 use serde_json::Value;
 
-use crate::config::RedisBackendConfig;
+use crate::config::RedisgraphBackendConfig;
 use crate::parse::GetQueryRelationship;
 
 #[derive(Clone)]
-pub struct RedisBackend {
-    pub config: RedisBackendConfig,
+pub struct RedisgraphBackend {
+    pub config: RedisgraphBackendConfig,
     client: Option<SharedConnection>,
 }
 
-impl RedisBackend {
-    pub fn from_config(config: RedisBackendConfig) -> Self {
+impl RedisgraphBackend {
+    pub fn from_config(config: RedisgraphBackendConfig) -> Self {
         Self {
             config,
             client: None,
@@ -272,8 +272,8 @@ impl RedisBackend {
     }
 }
 
-impl BackendFromConfigAndSyncState for RedisBackend {
-    type C = RedisBackendConfig;
+impl BackendFromConfigAndSyncState for RedisgraphBackend {
+    type C = RedisgraphBackendConfig;
     type S = SyncState;
     type R = Box<dyn Future<Output = Result<Self, Error>> + Send + Unpin>;
 
@@ -290,7 +290,7 @@ pub struct SyncState {
     pub connection_pool: Option<SharedConnection>,
 }
 
-impl BackendRpcMethods for RedisBackend {
+impl BackendRpcMethods for RedisgraphBackend {
     fn store_entity(
         &mut self,
         entity: &Entity,

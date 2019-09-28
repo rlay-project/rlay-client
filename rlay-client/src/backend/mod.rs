@@ -11,16 +11,15 @@ use std::pin::Pin;
 use std::sync::Arc;
 
 use crate::config::backend::BackendConfig;
-use crate::helpers::CompatBlockOn;
 
 pub use rlay_backend_ethereum::{EthereumBackend, SyncState as EthereumSyncState};
 #[cfg(feature = "backend_neo4j")]
 pub use rlay_backend_neo4j::{
     config::Neo4jBackendConfig, Neo4jBackend, SyncState as Neo4jSyncState,
 };
-#[cfg(feature = "backend_redis")]
-pub use rlay_backend_redis::{
-    config::RedisBackendConfig, RedisBackend, SyncState as RedisSyncState,
+#[cfg(feature = "backend_redisgraph")]
+pub use rlay_backend_redisgraph::{
+    config::RedisgraphBackendConfig, RedisgraphBackend, SyncState as RedisgraphSyncState,
 };
 
 #[derive(Clone)]
@@ -28,8 +27,8 @@ pub enum SyncState {
     Ethereum(EthereumSyncState),
     #[cfg(feature = "backend_neo4j")]
     Neo4j(Neo4jSyncState),
-    #[cfg(feature = "backend_redis")]
-    Redis(RedisSyncState),
+    #[cfg(feature = "backend_redisgraph")]
+    Redisgraph(RedisgraphSyncState),
 }
 
 impl SyncState {
@@ -45,9 +44,9 @@ impl SyncState {
         })
     }
 
-    #[cfg(feature = "backend_redis")]
-    pub fn new_redis(_config: &RedisBackendConfig) -> Self {
-        SyncState::Redis(RedisSyncState {
+    #[cfg(feature = "backend_redisgraph")]
+    pub fn new_redisgraph(_config: &RedisgraphBackendConfig) -> Self {
+        SyncState::Redisgraph(RedisgraphSyncState {
             connection_pool: None,
         })
     }
@@ -76,10 +75,10 @@ impl SyncState {
         }
     }
 
-    #[cfg(feature = "backend_redis")]
-    pub fn as_redis(self) -> Option<RedisSyncState> {
+    #[cfg(feature = "backend_redisgraph")]
+    pub fn as_redisgraph(self) -> Option<RedisgraphSyncState> {
         match self {
-            SyncState::Redis(sync_state) => Some(sync_state),
+            SyncState::Redisgraph(sync_state) => Some(sync_state),
             _ => None,
         }
     }
@@ -90,8 +89,8 @@ pub enum Backend {
     Ethereum(EthereumBackend),
     #[cfg(feature = "backend_neo4j")]
     Neo4j(Neo4jBackend),
-    #[cfg(feature = "backend_redis")]
-    Redis(RedisBackend),
+    #[cfg(feature = "backend_redisgraph")]
+    Redisgraph(RedisgraphBackend),
 }
 
 impl Backend {
@@ -102,8 +101,8 @@ impl Backend {
         match self {
             #[cfg(feature = "backend_neo4j")]
             Backend::Neo4j(backend) => backend.get_entities(_cids.to_vec()).boxed(),
-            #[cfg(feature = "backend_redis")]
-            Backend::Redis(backend) => backend.get_entities(_cids.to_vec()).boxed(),
+            #[cfg(feature = "backend_redisgraph")]
+            Backend::Redisgraph(backend) => backend.get_entities(_cids.to_vec()).boxed(),
             Backend::Ethereum(_) => future::lazy(|_| unreachable!()).boxed(),
         }
     }
@@ -131,13 +130,15 @@ impl BackendFromConfigAndSyncState for Backend {
                 );
                 backend.map_ok(|backend| Backend::Neo4j(backend)).boxed()
             }
-            #[cfg(feature = "backend_redis")]
-            BackendConfig::Redis(config) => {
-                let backend = RedisBackend::from_config_and_syncstate(
+            #[cfg(feature = "backend_redisgraph")]
+            BackendConfig::Redisgraph(config) => {
+                let backend = RedisgraphBackend::from_config_and_syncstate(
                     config,
-                    sync_state.unwrap().as_redis().unwrap(),
+                    sync_state.unwrap().as_redisgraph().unwrap(),
                 );
-                backend.map_ok(|backend| Backend::Redis(backend)).boxed()
+                backend
+                    .map_ok(|backend| Backend::Redisgraph(backend))
+                    .boxed()
             }
         }
     }
@@ -154,8 +155,8 @@ impl BackendRpcMethods for Backend {
             Backend::Neo4j(backend) => {
                 BackendRpcMethods::store_entity(backend, entity, options_object)
             }
-            #[cfg(feature = "backend_redis")]
-            Backend::Redis(backend) => {
+            #[cfg(feature = "backend_redisgraph")]
+            Backend::Redisgraph(backend) => {
                 BackendRpcMethods::store_entity(backend, entity, options_object)
             }
             Backend::Ethereum(backend) => {
@@ -168,8 +169,8 @@ impl BackendRpcMethods for Backend {
         match self {
             #[cfg(feature = "backend_neo4j")]
             Backend::Neo4j(backend) => BackendRpcMethods::get_entity(backend, cid),
-            #[cfg(feature = "backend_redis")]
-            Backend::Redis(backend) => BackendRpcMethods::get_entity(backend, cid),
+            #[cfg(feature = "backend_redisgraph")]
+            Backend::Redisgraph(backend) => BackendRpcMethods::get_entity(backend, cid),
             Backend::Ethereum(backend) => BackendRpcMethods::get_entity(backend, cid),
         }
     }
@@ -178,8 +179,8 @@ impl BackendRpcMethods for Backend {
         match self {
             #[cfg(feature = "backend_neo4j")]
             Backend::Neo4j(backend) => BackendRpcMethods::list_cids(backend, entity_kind),
-            #[cfg(feature = "backend_redis")]
-            Backend::Redis(backend) => BackendRpcMethods::list_cids(backend, entity_kind),
+            #[cfg(feature = "backend_redisgraph")]
+            Backend::Redisgraph(backend) => BackendRpcMethods::list_cids(backend, entity_kind),
             Backend::Ethereum(backend) => BackendRpcMethods::list_cids(backend, entity_kind),
         }
     }
@@ -188,8 +189,8 @@ impl BackendRpcMethods for Backend {
         match self {
             #[cfg(feature = "backend_neo4j")]
             Backend::Neo4j(backend) => BackendRpcMethods::neo4j_query(backend, query),
-            #[cfg(feature = "backend_redis")]
-            Backend::Redis(backend) => BackendRpcMethods::neo4j_query(backend, query),
+            #[cfg(feature = "backend_redisgraph")]
+            Backend::Redisgraph(backend) => BackendRpcMethods::neo4j_query(backend, query),
             Backend::Ethereum(backend) => BackendRpcMethods::neo4j_query(backend, query),
         }
     }

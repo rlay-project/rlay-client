@@ -1,10 +1,9 @@
 #![recursion_limit = "128"]
 #![feature(async_await)]
 
-use futures::prelude::*;
 use redis::FromRedisValue;
 use rlay_backend::BackendRpcMethods;
-use rlay_backend_redis::*;
+use rlay_backend_redisgraph::*;
 use rlay_ontology::prelude::*;
 use rustc_hex::{FromHex, ToHex};
 use serde_json::Value;
@@ -27,11 +26,11 @@ fn store_entity_returns_correct_cid() {
 
     let connection_string = format!("redis://127.0.0.1:{}", node.get_host_port(6379).unwrap());
 
-    let backend_config = config::RedisBackendConfig {
+    let backend_config = config::RedisgraphBackendConfig {
         uri: connection_string,
         graph_name: "rlaygraph".to_owned(),
     };
-    let mut backend = RedisBackend::from_config(backend_config);
+    let mut backend = RedisgraphBackend::from_config(backend_config);
 
     let insert_cid = rt
         .block_on(backend.store_entity(&Annotation::default().into(), &Value::Null))
@@ -54,11 +53,11 @@ fn multiple_store_produces_correct_number_of_nodes() {
 
     let connection_string = format!("redis://127.0.0.1:{}", node.get_host_port(6379).unwrap());
 
-    let backend_config = config::RedisBackendConfig {
+    let backend_config = config::RedisgraphBackendConfig {
         uri: connection_string.clone(),
         graph_name: "rlaygraph".to_owned(),
     };
-    let mut backend = RedisBackend::from_config(backend_config);
+    let mut backend = RedisgraphBackend::from_config(backend_config);
     let mut backend2 = backend.clone();
 
     rt.block_on(backend.store_entity(&Annotation::default().into(), &Value::Null))
@@ -88,11 +87,11 @@ fn store_and_get_roundtrip_works() {
 
     let connection_string = format!("redis://127.0.0.1:{}", node.get_host_port(6379).unwrap());
 
-    let backend_config = config::RedisBackendConfig {
+    let backend_config = config::RedisgraphBackendConfig {
         uri: connection_string,
         graph_name: "rlaygraph".to_owned(),
     };
-    let mut backend = RedisBackend::from_config(backend_config);
+    let mut backend = RedisgraphBackend::from_config(backend_config);
     let mut backend2 = backend.clone();
 
     let inserted_entity: Entity = Annotation::default().into();
@@ -125,11 +124,11 @@ fn get_entity_leaf_node_returns_none() {
 
     let connection_string = format!("redis://127.0.0.1:{}", node.get_host_port(6379).unwrap());
 
-    let backend_config = config::RedisBackendConfig {
+    let backend_config = config::RedisgraphBackendConfig {
         uri: connection_string,
         graph_name: "rlaygraph".to_owned(),
     };
-    let mut backend = RedisBackend::from_config(backend_config);
+    let mut backend = RedisgraphBackend::from_config(backend_config);
 
     let mut inserted_ann = Annotation::default();
     let leaf_cid: Vec<u8> =
