@@ -10,21 +10,20 @@ rlay-backend = { path = "../rlay-backend" }
 
 cid = { package = "cid_fork_rlay", version = "0.3.1" }
 failure = "0.1.5"
-futures-preview = { version = "0.3.0-alpha.17", features = ["compat"] }
-futures01 = { package = "futures", version = "0.1.28" }
-l337 = { git = "https://github.com/OneSignal/L3-37", rev = "6d96fefa75c748d4ac3618ab2bd9523d589b6cd2" }
-l337-redis = { git = "https://github.com/OneSignal/L3-37", rev = "6d96fefa75c748d4ac3618ab2bd9523d589b6cd2" }
+futures-preview = { version = "0.3.0-alpha.17" }
 log = "0.4.6"
-redis = "0.9.0"
+redis = { git = "https://github.com/Marwes/redis-rs", rev = "84348b6d7325cf9432c3f83c7434971fd200ad3e" }
 rlay_ontology = { version = "0.2.3", features = ["web3_compat"] }
 rustc-hex = "1.0.0"
 serde = "=1.0.79"
 serde_derive = "=1.0.79"
 serde_json = { version = "1.0.22", features = ["preserve_order"] }
 tokio-core = "0.1.17"
+itertools = "0.8.0"
 
 [dev-dependencies]
 testcontainers = "0.7"
 env_logger = "0.6.2"
 tokio_01 = { package = "tokio", version = "0.1.22" }
+tokio_executor_01 = { package = "tokio-executor", version = "0.1.8" }
 tokio = "0.2.0-alpha.2"

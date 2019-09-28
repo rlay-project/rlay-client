@@ -44,6 +44,10 @@ impl MultiBackendSyncState {
             BackendConfig::Neo4j(_config) => {
                 self.backends.insert(name, SyncState::new_neo4j(&_config));
             }
+            #[cfg(feature = "backend_redis")]
+            BackendConfig::Redis(_config) => {
+                self.backends.insert(name, SyncState::new_redis(&_config));
+            }
         }
     }
 

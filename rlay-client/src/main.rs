@@ -14,6 +14,7 @@ extern crate serde_json;
 pub mod backend;
 pub mod cli;
 pub mod config;
+pub mod helpers;
 pub mod modules;
 pub mod rpc;
 pub mod sync;

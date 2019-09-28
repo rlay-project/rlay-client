@@ -8,7 +8,7 @@ type StdError = Box<dyn std::error::Error>;
 
 #[derive(Debug)]
 pub struct GetQueryRelationship {
-    n_id: u64,
+    pub n_id: u64,
     n_value: JsonValue,
     relationship: String,
     m_cid: String,
@@ -112,7 +112,11 @@ impl GetQueryRelationship {
     }
 
     /// Construct a single Entity from all the relationships
-    pub fn merge_into_entity(relationships: Vec<Self>) -> Result<Entity, StdError> {
+    pub fn merge_into_entity(relationships: Vec<Self>) -> Result<Option<Entity>, StdError> {
+        trace!("Relationships to merge into entity: {:?}", &relationships);
+        if relationships.len() == 0 {
+            return Ok(None);
+        }
         let mut entity = relationships
             .first()
             .unwrap()
@@ -140,8 +144,8 @@ impl GetQueryRelationship {
                     continue;
                 }
                 Some(true) => {
-                    if !entity[rel_type].is_array() {
-                        entity[rel_type] = JsonValue::Array(Vec::new());
+                    if !entity.contains_key(rel_type) {
+                        entity.insert(rel_type.clone(), JsonValue::Array(Vec::new()));
                     }
                     entity[rel_type]
                         .as_array_mut()
@@ -156,6 +160,6 @@ impl GetQueryRelationship {
 
         let web3_entity: FormatWeb3<Entity> =
             serde_json::from_value(JsonValue::Object(entity)).unwrap();
-        Ok(web3_entity.0)
+        Ok(Some(web3_entity.0))
     }
 }

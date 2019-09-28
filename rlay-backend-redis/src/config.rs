@@ -1,6 +1,4 @@
-use futures::compat::Future01CompatExt;
-use l337::{Config, Pool};
-use l337_redis::RedisConnectionManager;
+use redis::{aio::SharedConnection, Client};
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct RedisBackendConfig {
@@ -9,18 +7,8 @@ pub struct RedisBackendConfig {
 }
 
 impl RedisBackendConfig {
-    pub async fn connection_pool(&self) -> Pool<RedisConnectionManager> {
-        let manager = RedisConnectionManager::new(self.uri.as_str()).unwrap();
-
-        Pool::new(
-            manager,
-            Config {
-                min_size: 3,
-                max_size: 30,
-            },
-        )
-        .compat()
-        .await
-        .unwrap()
+    pub async fn connection_pool(&self) -> SharedConnection {
+        let client = Client::open(self.uri.as_str()).unwrap();
+        client.get_shared_async_connection().await.unwrap()
     }
 }

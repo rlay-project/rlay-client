@@ -7,8 +7,9 @@ edition = "2018"
 
 [dependencies]
 rlay-backend = { path = "../rlay-backend" }
-rlay-backend-neo4j = { path = "../rlay-backend-neo4j", optional = true }
 rlay-backend-ethereum = { path = "../rlay-backend-ethereum" }
+rlay-backend-neo4j = { path = "../rlay-backend-neo4j", optional = true }
+rlay-backend-redis = { path = "../rlay-backend-redis", optional = true }
 rlay-payout = { path = "../rlay-payout" }
 
 web3 = "0.6.0"
@@ -32,6 +33,8 @@ serde_json = { version = "1.0.22", features = ["preserve_order"] }
 jsonrpc-core = "13.0.0"
 hyper = { git = "https://github.com/hyperium/hyper", rev = "4920f5e264c57f87dc8b91e7ed9a575359cc093c" }
 tokio_futures3 = { package = "tokio", version = "0.2.0-alpha.1" }
+tokio_01 = { package = "tokio", version = "0.1.22", optional = true }
+tokio_executor_01 = { package = "tokio-executor", version = "0.1.8", optional = true }
 url = "1.7.1"
 failure_derive = "0.1.1"
 dialoguer = "0.1.0"
@@ -47,7 +50,8 @@ tempfile = "3.1"
 rand = "0.7"
 
 [features]
-default = ["transport_ws", "backend_neo4j"]
+default = ["transport_ws", "backend_neo4j", "backend_redis"]
 transport_ipc = ["rlay-backend-ethereum/transport_ipc"]
 transport_ws = ["rlay-backend-ethereum/transport_ws"]
 backend_neo4j = ["rlay-backend-neo4j"]
+backend_redis = ["rlay-backend-redis", "tokio_01", "tokio_executor_01"]

@@ -121,6 +121,8 @@ pub fn run_doctor(config: &Config) {
             }
             #[cfg(feature = "backend_neo4j")]
             BackendConfig::Neo4j(_) => {}
+            #[cfg(feature = "backend_redis")]
+            BackendConfig::Redis(_) => {}
         }
     }
 }
