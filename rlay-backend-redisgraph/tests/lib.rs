@@ -35,7 +35,6 @@ fn store_entity_returns_correct_cid() {
     let insert_cid = rt
         .block_on(backend.store_entity(&Annotation::default().into(), &Value::Null))
         .unwrap();
-    // let insert_cid: cid::Cid = unimplemented!();
     let expected_cid: Vec<u8> =
         "019580031b2088868a58d3aac6d2558a29b3b8cacf3c9788364f57a3470158283121a15dcae0"
             .from_hex()
@@ -109,6 +108,45 @@ fn store_and_get_roundtrip_works() {
     assert_eq!(
         inserted_entity, retrieved_entity,
         "inserted and retrieved entity don't match"
+    );
+}
+
+#[test]
+fn cypher_query_works() {
+    let _ = env_logger::try_init();
+    let rt = Runtime::new().unwrap();
+    let docker = clients::Cli::default();
+    let node = docker.run(redis_container());
+
+    let connection_string = format!("redis://127.0.0.1:{}", node.get_host_port(6379).unwrap());
+
+    let backend_config = config::RedisgraphBackendConfig {
+        uri: connection_string,
+        graph_name: "rlaygraph".to_owned(),
+    };
+    let mut backend = RedisgraphBackend::from_config(backend_config);
+    let mut backend2 = backend.clone();
+
+    let inserted_entity: Entity = Annotation::default().into();
+    let inserted_entity2 = inserted_entity.clone();
+    rt.block_on(backend2.store_entity(&inserted_entity2, &Value::Null))
+        .unwrap();
+
+    let retrieved_cids = rt
+        .block_on(backend.neo4j_query("MATCH (n:RlayEntity) RETURN n.cid"))
+        .unwrap();
+
+    assert_eq!(
+        retrieved_cids
+            .into_iter()
+            .collect::<std::collections::BTreeSet<_>>(),
+        vec![
+            "0x".to_owned(),
+            "0x019580031b2088868a58d3aac6d2558a29b3b8cacf3c9788364f57a3470158283121a15dcae0"
+                .to_owned()
+        ]
+        .into_iter()
+        .collect::<std::collections::BTreeSet<_>>()
     );
 }
 

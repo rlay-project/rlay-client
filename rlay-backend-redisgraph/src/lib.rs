@@ -22,7 +22,7 @@ use rustc_hex::ToHex;
 use serde_json::Value;
 
 use crate::config::RedisgraphBackendConfig;
-use crate::parse::GetQueryRelationship;
+use crate::parse::{CidList, GetQueryRelationship};
 
 #[derive(Clone)]
 pub struct RedisgraphBackend {
@@ -159,12 +159,15 @@ impl RedisgraphBackend {
             .query_async(&mut client)
             .await
             .ok();
-        // let cids: Vec<_> = query_res.rows().map(|row| row.get_n(0).unwrap()).collect();
-        let cids = vec![];
         dbg!(&query_res);
-        // TODO
+        if let None = query_res {
+            return Ok(vec![]);
+        }
+        let query_res = query_res.unwrap();
+        let results_with_meta = Vec::<redis::Value>::from_redis_value(&query_res).unwrap();
 
-        Ok(cids)
+        let parsed = CidList::parse(results_with_meta[1].clone()).unwrap();
+        Ok(parsed.inner)
     }
 
     async fn store_entity(&mut self, entity: Entity) -> Result<Cid, Error> {
@@ -189,7 +192,6 @@ impl RedisgraphBackend {
                 {
                     let rel_query = format!(
                         "MATCH (n:RlayEntity {{ cid: '{source_cid}'}}),(m:RlayEntity {{ cid: '{target_value}' }}) CREATE (n)-[r:{relationship}]->(m)",
-                        // "MERGE (n:RlayEntity {{ cid: '{source_cid}'}})-[r:{relationship}]->(m:RlayEntity {{ cid: '{target_value}' }})",
                         source_cid = source_cid,
                         target_value = target_value,
                         relationship = key

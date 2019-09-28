@@ -163,3 +163,24 @@ impl GetQueryRelationship {
         Ok(Some(web3_entity.0))
     }
 }
+
+#[derive(Debug)]
+pub struct CidList {
+    pub inner: Vec<String>,
+}
+
+impl CidList {
+    pub fn parse(rel_result: RedisValue) -> Result<Self, StdError> {
+        let val_inner = Vec::<RedisValue>::from_redis_value(&rel_result)?;
+        let cids: Result<Vec<String>, _> = val_inner
+            .into_iter()
+            .map(|n| {
+                let bulk = Vec::<RedisValue>::from_redis_value(&n)?;
+                let cid = String::from_redis_value(&bulk[0]);
+                cid
+            })
+            .collect();
+
+        Ok(Self { inner: cids? })
+    }
+}
