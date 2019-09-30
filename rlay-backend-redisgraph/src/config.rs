@@ -8,6 +8,7 @@ pub struct RedisgraphBackendConfig {
 
 impl RedisgraphBackendConfig {
     pub async fn connection_pool(&self) -> SharedConnection {
+        trace!("Creating new Redis connection");
         let client = Client::open(self.uri.as_str()).unwrap();
         client.get_shared_async_connection().await.unwrap()
     }
