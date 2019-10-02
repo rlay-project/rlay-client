@@ -35,7 +35,11 @@ impl MultiBackendSyncState {
         }
     }
 
-    pub fn add_backend(&mut self, name: String, config: BackendConfig) {
+    /// Creates backends without connection pools.
+    ///
+    /// Required because the connection pool needs to be created by the same reactor
+    /// as the RPC.
+    pub fn add_backend_empty(&mut self, name: String, config: BackendConfig) {
         match config {
             BackendConfig::Ethereum(_) => {
                 self.backends.insert(name, SyncState::new_ethereum());
@@ -47,7 +51,28 @@ impl MultiBackendSyncState {
             #[cfg(feature = "backend_redisgraph")]
             BackendConfig::Redisgraph(_config) => {
                 self.backends
-                    .insert(name, SyncState::new_redisgraph(&_config));
+                    .insert(name, SyncState::new_redisgraph_empty(&_config));
+            }
+        }
+    }
+
+    /// Creates backends with connection pools.
+    ///
+    /// Required because the connection pool needs to be created by the same reactor
+    /// as the RPC.
+    pub async fn add_backend_conn(&mut self, name: String, config: BackendConfig) {
+        match config {
+            BackendConfig::Ethereum(_) => {
+                self.backends.insert(name, SyncState::new_ethereum());
+            }
+            #[cfg(feature = "backend_neo4j")]
+            BackendConfig::Neo4j(_config) => {
+                self.backends.insert(name, SyncState::new_neo4j(&_config));
+            }
+            #[cfg(feature = "backend_redisgraph")]
+            BackendConfig::Redisgraph(_config) => {
+                self.backends
+                    .insert(name, SyncState::new_redisgraph(&_config).await);
             }
         }
     }
@@ -231,7 +256,7 @@ pub fn run_sync(config: &Config) {
     let sync_state = {
         let mut sync_state = MultiBackendSyncState::new();
         for (backend_name, config) in config.backends.iter() {
-            sync_state.add_backend(backend_name.clone(), config.clone());
+            sync_state.add_backend_empty(backend_name.clone(), config.clone());
         }
 
         sync_state

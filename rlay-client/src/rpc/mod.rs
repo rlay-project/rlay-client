@@ -80,7 +80,7 @@ fn failure_into_jsonrpc_err(err: ::failure::Error) -> jsonrpc_core::Error {
 
 async fn run_rpc(
     full_config: &Config,
-    sync_state: MultiBackendSyncState,
+    _sync_state: MultiBackendSyncState,
 ) -> Result<(), GenericError> {
     let addr = full_config
         .rpc
@@ -93,6 +93,17 @@ async fn run_rpc(
         .unwrap();
 
     let full_config = full_config.clone();
+    let mut sync_state = MultiBackendSyncState::new();
+    let sync_state = {
+        let mut sync_state = MultiBackendSyncState::new();
+        for (backend_name, config) in full_config.backends.iter() {
+            sync_state
+                .add_backend_conn(backend_name.clone(), config.clone())
+                .await;
+        }
+
+        sync_state
+    };
 
     let new_service = make_service_fn(move |_| {
         let full_config = full_config.clone();

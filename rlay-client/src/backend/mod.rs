@@ -45,9 +45,17 @@ impl SyncState {
     }
 
     #[cfg(feature = "backend_redisgraph")]
-    pub fn new_redisgraph(_config: &RedisgraphBackendConfig) -> Self {
+    pub fn new_redisgraph_empty(config: &RedisgraphBackendConfig) -> Self {
+        let rt = tokio_futures3::runtime::Runtime::new().unwrap();
         SyncState::Redisgraph(RedisgraphSyncState {
             connection_pool: None,
+        })
+    }
+
+    #[cfg(feature = "backend_redisgraph")]
+    pub async fn new_redisgraph(config: &RedisgraphBackendConfig) -> Self {
+        SyncState::Redisgraph(RedisgraphSyncState {
+            connection_pool: Some(config.connection_pool().await),
         })
     }
 

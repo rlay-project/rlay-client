@@ -165,6 +165,9 @@ impl RedisgraphBackend {
         }
         let query_res = query_res.unwrap();
         let results_with_meta = Vec::<redis::Value>::from_redis_value(&query_res).unwrap();
+        if results_with_meta.len() < 2 {
+            return Ok(vec![]);
+        }
 
         let parsed = CidList::parse(results_with_meta[1].clone()).unwrap();
         Ok(parsed.inner)
@@ -247,14 +250,14 @@ impl RedisgraphBackend {
             let mut client = self.client().await?;
 
             let mut pipe = redis::pipe();
-            pipe.cmd("MULTI").ignore();
+            // pipe.cmd("MULTI").ignore();
             for query in &transaction_queries {
                 pipe.cmd("GRAPH.QUERY")
                     .arg(&self.config.graph_name)
                     .arg(query)
                     .ignore();
             }
-            pipe.cmd("EXEC").ignore();
+            // pipe.cmd("EXEC").ignore();
 
             match pipe
                 .query_async::<_, Option<redis::Value>>(&mut client)
