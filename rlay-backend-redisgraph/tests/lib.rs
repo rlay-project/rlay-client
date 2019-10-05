@@ -1,5 +1,4 @@
 #![recursion_limit = "128"]
-#![feature(async_await)]
 
 use redis::FromRedisValue;
 use rlay_backend::BackendRpcMethods;

@@ -46,7 +46,7 @@ impl MultiBackendSyncState {
             }
             #[cfg(feature = "backend_neo4j")]
             BackendConfig::Neo4j(_config) => {
-                self.backends.insert(name, SyncState::new_neo4j(&_config));
+                self.backends.insert(name, SyncState::new_neo4j_empty(&_config));
             }
             #[cfg(feature = "backend_redisgraph")]
             BackendConfig::Redisgraph(_config) => {
@@ -67,7 +67,7 @@ impl MultiBackendSyncState {
             }
             #[cfg(feature = "backend_neo4j")]
             BackendConfig::Neo4j(_config) => {
-                self.backends.insert(name, SyncState::new_neo4j(&_config));
+                self.backends.insert(name, SyncState::new_neo4j(&_config).await);
             }
             #[cfg(feature = "backend_redisgraph")]
             BackendConfig::Redisgraph(_config) => {
