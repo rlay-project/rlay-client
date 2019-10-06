@@ -3,7 +3,7 @@ rlay_data
 website/node_modules
 website/build
 
-/target
+target
 **/*.rs.bk
 
 rlay-client/tests/rlay.config.toml
