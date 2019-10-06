@@ -31,10 +31,8 @@ log = "0.4.6"
 env_logger = "0.5.10"
 serde_json = { version = "1.0.22", features = ["preserve_order"] }
 jsonrpc-core = "13.0.0"
-hyper = { git = "https://github.com/hyperium/hyper", rev = "4920f5e264c57f87dc8b91e7ed9a575359cc093c" }
+hyper = { version = "0.13.0-alpha.4" }
 tokio_futures3 = { package = "tokio", version = "0.2.0-alpha.1" }
-# tokio_01 = { package = "tokio", version = "0.1.22", optional = true }
-# tokio_executor_01 = { package = "tokio-executor", version = "0.1.8", optional = true }
 url = "1.7.1"
 failure_derive = "0.1.1"
 dialoguer = "0.1.0"

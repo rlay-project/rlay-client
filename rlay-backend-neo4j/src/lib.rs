@@ -1,5 +1,4 @@
 #![recursion_limit = "128"]
-#![feature(async_await)]
 
 #[macro_use]
 extern crate log;
@@ -38,7 +37,7 @@ pub struct Neo4jBackend {
 
 #[derive(Clone)]
 pub struct SyncState {
-    pub connection_pool: Arc<Pool<CypherConnectionManager>>,
+    pub connection_pool: Option<Arc<Pool<CypherConnectionManager>>>,
 }
 
 impl Neo4jBackend {
@@ -302,7 +301,7 @@ impl BackendFromConfigAndSyncState for Neo4jBackend {
     fn from_config_and_syncstate(config: Self::C, sync_state: Self::S) -> Self::R {
         Box::new(future::ok(Self {
             config,
-            client: Some(sync_state.connection_pool.clone()),
+            client: sync_state.connection_pool.clone(),
         }))
     }
 }

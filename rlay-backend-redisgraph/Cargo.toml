@@ -10,9 +10,9 @@ rlay-backend = { path = "../rlay-backend" }
 
 cid = { package = "cid_fork_rlay", version = "0.3.1" }
 failure = "0.1.5"
-futures-preview = { version = "0.3.0-alpha.17" }
+futures-preview = { version = "0.3.0-alpha.19" }
 log = "0.4.6"
-redis = { git = "https://github.com/Marwes/redis-rs", rev = "84348b6d7325cf9432c3f83c7434971fd200ad3e" }
+redis = { git = "https://github.com/hobofan/redis-rs", rev = "9d12e65ef3a2974f84654037ace7c21234ebeeec" }
 rlay_ontology = { version = "0.2.3", features = ["web3_compat"] }
 rustc-hex = "1.0.0"
 serde = "=1.0.79"
@@ -26,4 +26,4 @@ testcontainers = "0.7"
 env_logger = "0.6.2"
 tokio_01 = { package = "tokio", version = "0.1.22" }
 tokio_executor_01 = { package = "tokio-executor", version = "0.1.8" }
-tokio = "0.2.0-alpha.2"
+tokio = "0.2.0-alpha.6"

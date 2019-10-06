@@ -8,19 +8,19 @@ edition = "2018"
 [dependencies]
 rlay-backend = { path = "../rlay-backend" }
 
-bb8_cypher = { git = "https://github.com/hobofan/bb8-cypher", rev = '9443f0beed9c3c354b36b20b1997eba6486d911f', features = ["l337"] }
+bb8_cypher = { git = "https://github.com/hobofan/bb8-cypher", rev = '67466309d4f49dcab2b890ec34a2d475b9d51a9a', features = ["l337"] }
 l337 = { git = "https://github.com/OneSignal/L3-37", rev = "6d96fefa75c748d4ac3618ab2bd9523d589b6cd2" }
 cid = { package = "cid_fork_rlay", version = "0.3.1" }
 failure = "0.1.1"
-futures-preview = { version = "0.3.0-alpha.17", features = ["compat"] }
+futures-preview = { version = "0.3.0-alpha.19", features = ["compat"] }
 log = "0.4.6"
 rlay_ontology = { version = "0.2.3", features = ["web3_compat"] }
 rustc-hex = "1.0.0"
-rusted_cypher = { git = "https://github.com/hobofan/rusted-cypher", rev = '892af3cf077ea0614f6f075e25acb3e7dc340b8c' }
+rusted_cypher = { git = "https://github.com/hobofan/rusted-cypher", rev = 'ab30cdb6b9a0ff7ef0299ee02fa5cb41a0eb3c0d' }
 serde = "1.0.79"
 serde_derive = "1.0.79"
 serde_json = { version = "1.0.22", features = ["preserve_order"] }
-tokio = "0.2.0-alpha.2"
+tokio = "0.2.0-alpha.4"
 err-ctx = "0.2.3"
 
 [dev-dependencies]

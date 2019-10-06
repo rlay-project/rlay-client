@@ -37,16 +37,21 @@ impl SyncState {
     }
 
     #[cfg(feature = "backend_neo4j")]
-    pub fn new_neo4j(config: &Neo4jBackendConfig) -> Self {
-        let rt = tokio_futures3::runtime::Runtime::new().unwrap();
+    pub fn new_neo4j_empty(config: &Neo4jBackendConfig) -> Self {
         SyncState::Neo4j(Neo4jSyncState {
-            connection_pool: Arc::new(rt.block_on(async { config.connection_pool().await })),
+            connection_pool: None
+        })
+    }
+
+    #[cfg(feature = "backend_neo4j")]
+    pub async fn new_neo4j(config: &Neo4jBackendConfig) -> Self {
+        SyncState::Neo4j(Neo4jSyncState {
+            connection_pool: Some(Arc::new(async { config.connection_pool().await }.await)),
         })
     }
 
     #[cfg(feature = "backend_redisgraph")]
     pub fn new_redisgraph_empty(config: &RedisgraphBackendConfig) -> Self {
-        let rt = tokio_futures3::runtime::Runtime::new().unwrap();
         SyncState::Redisgraph(RedisgraphSyncState {
             connection_pool: None,
         })
