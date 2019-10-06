@@ -70,10 +70,7 @@ impl RlayClient {
         match value {
             Value::Null => Ok(None),
             Value::Object(obj) => {
-                let mut value_obj = obj.to_owned();
-                // TODO: cid needs to be removed because it won't be parsed correctly otherwise
-                // deserializing should be more robust in rlay_ontology
-                value_obj.remove("cid");
+                let value_obj = obj.to_owned();
                 let value = Value::Object(value_obj);
 
                 let entity: FormatWeb3<_> = serde_json::from_value(value).unwrap();
