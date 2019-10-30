@@ -231,12 +231,21 @@ impl Neo4jBackend {
         let mut relationships = Vec::new();
         {
             let mut add_relationship_value = |cid, key, value| {
-                let rel_query = format!(
-                            "MATCH (n:RlayEntity {{ cid: \"{0}\"}}) MERGE (m:RlayEntity {{ cid: {2} }}) MERGE (n)-[r:{1}]->(m)",
-                            cid, key, value
-                        );
+                let rel_query_main = format!(
+                    "MATCH (n:RlayEntity {{ cid: {{cid1}} }}) MERGE (m:RlayEntity {{ cid: {{cid2}} }}) MERGE (n)-[r:{0}]->(m)",
+                    key
+                );
+                let rel_query = Statement::new(rel_query_main)
+                    .with_param("cid1", &cid).unwrap()
+                    .with_param("cid2", value).unwrap();
                 relationships.push(rel_query);
             };
+
+            struct StatementQueryPart {
+                query_sub: String,
+                param_key: String,
+                param_val: String,
+            }
 
             for (key, value) in val {
                 if key == "cid" || key == "type" {
@@ -246,11 +255,19 @@ impl Neo4jBackend {
                     || kind_name == "NegativeDataPropertyAssertion")
                     && key == "target"
                 {
-                    values.push(format!("n.{0} = {1}", key, value));
+                    values.push(StatementQueryPart {
+                        query_sub: "n.target = {datapropVal}".to_owned(),
+                        param_key: "datapropVal".to_owned(),
+                        param_val: value.as_str().unwrap().to_owned()
+                    });
                     continue;
                 }
                 if kind_name == "Annotation" && key == "value" {
-                    values.push(format!("n.{0} = {1}", key, value));
+                    values.push(StatementQueryPart {
+                        query_sub: "n.value = {annotationVal}".to_owned(),
+                        param_key: "annotationVal".to_owned(),
+                        param_val: value.as_str().unwrap().to_owned()
+                    });
                     continue;
                 }
                 if let Value::Array(array_val) = value {
@@ -265,23 +282,34 @@ impl Neo4jBackend {
             }
         }
 
-        let mut statement_query = format!(
-            "MERGE (n:RlayEntity {{cid: \"{1}\"}}) SET n:{0}",
-            kind_name, cid
+        let mut statement_query_main = format!(
+            "MERGE (n:RlayEntity {{cid: {{cid}} }}) SET n:{0}",
+            kind_name
         );
+        let mut statement_query = Statement::new(&statement_query_main)
+            .with_param("cid", &cid)?;
+
         if !values.is_empty() {
-            statement_query.push_str(", ");
-            statement_query.push_str(&values.join(", "));
+            for value in values.iter() {
+                statement_query_main.push_str(", ");
+                statement_query_main.push_str(&value.query_sub);
+            }
+            statement_query = Statement::new(&statement_query_main)
+                .with_param("cid", &cid)?;
+            for value in values.iter() {
+                statement_query = statement_query.clone()
+                    .with_param(&value.param_key, &value.param_val).unwrap()
+            }
         }
 
         let (mut transaction, _) = client.transaction().begin().await?;
 
         // let mut query = client.query();
-        trace!("NEO4J QUERY: {}", statement_query);
-        transaction.add_statement(Statement::new(statement_query));
+        trace!("NEO4J QUERY: {:?}", statement_query);
+        transaction.add_statement(statement_query);
         for relationship in relationships {
-            trace!("NEO4J QUERY: {}", relationship);
-            transaction.add_statement(Statement::new(relationship));
+            trace!("NEO4J QUERY: {:?}", relationship);
+            transaction.add_statement(relationship);
         }
 
         let start = std::time::Instant::now();
