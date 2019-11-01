@@ -227,28 +227,17 @@ impl Neo4jBackend {
         let kind_name: &str = entity.kind().into();
         let entity_val = serde_json::to_value(FormatWeb3(entity.clone())).unwrap();
         let val = entity_val.as_object().unwrap();
-        let mut values = Vec::new();
         let mut relationships = Vec::new();
         {
-            struct StatementQueryPart {
-                query_sub: String,
-                param_key: String,
-                param_val: String,
+            #[derive(Serialize, Deserialize, Debug)]
+            struct RelationshipQueryPart {
+                cid: String,
+                kind_name: String
             }
 
-            let add_relationship_value = |cid, key, i| {
-                let rel_query_main = format!(
-                    "MERGE ({0}{1}:RlayEntity {{ cid: ${0}{1}cid }}) MERGE (n)-[:{0}]->({0}{1})",
-                    key, i
-                );
-                return StatementQueryPart {
-                    query_sub: rel_query_main,
-                    param_key: format!("{0}{1}cid", key, i),
-                    param_val: cid
-                };
-            };
-
-            for (i, (key, value)) in val.iter().enumerate() {
+            // fetch the parts of the payload that should become relationships
+            // aka. those that are not self-referencing CIDs
+            for (key, value) in val.iter() {
                 if key == "cid" || key == "type" {
                     continue;
                 }
@@ -256,86 +245,145 @@ impl Neo4jBackend {
                     || kind_name == "NegativeDataPropertyAssertion")
                     && key == "target"
                 {
-                    values.push(StatementQueryPart {
-                        query_sub: "n.target = $datapropVal".to_owned(),
-                        param_key: "datapropVal".to_owned(),
-                        param_val: value.as_str().unwrap().to_owned()
-                    });
                     continue;
                 }
                 if kind_name == "Annotation" && key == "value" {
-                    values.push(StatementQueryPart {
-                        query_sub: "n.value = $annotationVal".to_owned(),
-                        param_key: "annotationVal".to_owned(),
-                        param_val: value.as_str().unwrap().to_owned()
-                    });
                     continue;
                 }
                 if let Value::Array(array_val) = value {
                     for _ in array_val {
-                        relationships.push(add_relationship_value(cid.clone(), key, i));
+                        relationships.push(RelationshipQueryPart{
+                            cid: cid.clone(),
+                            kind_name: key.clone()
+                        });
                     }
                     continue;
                 }
                 if let Value::String(_) = value {
-                    relationships.push(add_relationship_value(cid.clone(), key, i));
+                    relationships.push(RelationshipQueryPart{
+                        cid: cid.clone(),
+                        kind_name: key.clone()
+                    });
                 }
             }
         }
 
-        let mut statement_query_main = format!(
-            "MERGE (n:RlayEntity {{cid: $cid }}) SET n:{0}",
-            kind_name
+        let statement_query_main = format!("
+            UNWIND $entities as entity
+            MERGE (n:RlayEntity {{cid: entity.cid }})
+            SET (CASE WHEN entity.type = 'Annotation' THEN n END).value = entity.value
+            SET (CASE WHEN entity.type = 'DataPropertyAssertion' THEN n END).target = entity.target
+            SET (CASE WHEN entity.type = 'NegativeDataPropertyAssertion' THEN n END).target = entity.target
+            WITH n, entity
+            CALL apoc.create.addLabels(n, [entity.type]) YIELD node
+            UNWIND $relationships as relationship
+                MERGE (m:RlayEntity {{ cid: relationship.cid }})
+                WITH n, m, relationship
+                CALL apoc.merge.relationship(n, relationship.kind_name, {{}}, {{}}, m) YIELD rel
+            RETURN n.cid",
         );
 
-        if !values.is_empty() {
-            for value in values.iter() {
-                statement_query_main.push_str(", ");
-                statement_query_main.push_str(&value.query_sub);
-            }
-        }
+        let statement_query = Statement::new(&statement_query_main)
+            .with_param("entities", &vec![val])?
+            .with_param("relationships", &relationships)?;
 
-        if !relationships.is_empty() {
-            for relationship in relationships.iter() {
-                statement_query_main.push_str("\n ");
-                statement_query_main.push_str(&relationship.query_sub);
-            }
-        }
-
-        let mut statement_query = Statement::new(&statement_query_main)
-            .with_param("cid", &cid)?;
-
-        if !values.is_empty() {
-            for value in values.iter() {
-                statement_query = statement_query.clone()
-                    .with_param(&value.param_key, &value.param_val).unwrap()
-            }
-        }
-
-        if !relationships.is_empty() {
-            for relationship in relationships.iter() {
-                statement_query = statement_query.clone()
-                    .with_param(&relationship.param_key, &relationship.param_val).unwrap()
-            }
-        }
-
-        //let (mut transaction, _) = client.transaction().begin().await?;
-
-        // let mut query = client.query();
         trace!("NEO4J QUERY: {:?}", statement_query);
         let start = std::time::Instant::now();
         client.exec(statement_query).await?;
-        /*
-        for relationship in relationships {
-            trace!("NEO4J QUERY: {:?}", relationship);
-            client.exec(relationship).await?;
-        }
-        */
         let end = std::time::Instant::now();
-        //transaction.commit().await?;
         trace!("Query duration: {:?}", end - start);
 
         Ok(raw_cid)
+    }
+
+    async fn store_entities(&mut self, entities: Vec<Entity>) -> Result<Vec<Cid>, Error> {
+        let mut _entities = Vec::new();
+        let client = self.client().await?;
+
+        for entity in entities.iter() {
+            let raw_cid = entity.to_cid().unwrap();
+            let cid: String = format!("0x{}", raw_cid.to_bytes().to_hex());
+
+
+            let kind_name: &str = entity.kind().into();
+            let entity_val = serde_json::to_value(FormatWeb3(entity.clone())).unwrap();
+            let mut val = entity_val.as_object().unwrap().to_owned();
+            let mut relationships = Vec::new();
+            {
+                #[derive(Serialize, Deserialize, Debug)]
+                struct RelationshipQueryPart {
+                    cid: String,
+                    kind_name: String
+                }
+
+                // fetch the parts of the payload that should become relationships
+                // aka. those that are not self-referencing CIDs
+                for (key, value) in val.iter() {
+                    if key == "cid" || key == "type" {
+                        continue;
+                    }
+                    if (kind_name == "DataPropertyAssertion"
+                        || kind_name == "NegativeDataPropertyAssertion")
+                        && key == "target"
+                    {
+                        continue;
+                    }
+                    if kind_name == "Annotation" && key == "value" {
+                        continue;
+                    }
+                    if let Value::Array(array_val) = value {
+                        for _ in array_val {
+                            relationships.push(RelationshipQueryPart{
+                                cid: cid.clone(),
+                                kind_name: key.clone()
+                            });
+                        }
+                        continue;
+                    }
+                    if let Value::String(_) = value {
+                        relationships.push(RelationshipQueryPart{
+                            cid: cid.clone(),
+                            kind_name: key.clone()
+                        });
+                    }
+                }
+            }
+            val["relationships"] = serde_json::Value::Array(
+                relationships
+                    .iter()
+                    .map(serde_json::to_value)
+                    .map(|r| r.unwrap())
+                    .collect::<Vec<_>>()
+            );
+            _entities.push(val);
+        }
+
+        let statement_query_main = format!("
+            UNWIND $entities as entity
+            MERGE (n:RlayEntity {{cid: entity.cid }})
+            SET (CASE WHEN entity.type = 'Annotation' THEN n END).value = entity.value
+            SET (CASE WHEN entity.type = 'DataPropertyAssertion' THEN n END).target = entity.target
+            SET (CASE WHEN entity.type = 'NegativeDataPropertyAssertion' THEN n END).target = entity.target
+            WITH n, entity
+            CALL apoc.create.addLabels(n, [entity.type]) YIELD node
+            UNWIND entity.relationships as relationship
+                MERGE (m:RlayEntity {{ cid: relationship.cid }})
+                WITH n, m, relationship
+                CALL apoc.merge.relationship(n, relationship.kind_name, {{}}, {{}}, m) YIELD rel
+            RETURN n.cid",
+        );
+
+        let statement_query = Statement::new(&statement_query_main)
+            .with_param("entities", &_entities)?;
+
+        trace!("NEO4J QUERY: {:?}", statement_query);
+        let start = std::time::Instant::now();
+        client.exec(statement_query).await?;
+        let end = std::time::Instant::now();
+        trace!("Query duration: {:?}", end - start);
+
+
+        Ok(entities.iter().map(|entity| entity.to_cid().unwrap()).collect())
     }
 }
 
