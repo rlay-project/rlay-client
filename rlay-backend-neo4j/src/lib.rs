@@ -220,7 +220,7 @@ impl Neo4jBackend {
 
     async fn store_entity(&mut self, entity: Entity) -> Result<Cid, Error> {
         let raw_cid = entity.to_cid().unwrap();
-        let cid: String = format!("0x{}", raw_cid.to_bytes().to_hex());
+        format!("0x{}", raw_cid.to_bytes().to_hex());
 
         let client = self.client().await?;
 
@@ -251,9 +251,9 @@ impl Neo4jBackend {
                     continue;
                 }
                 if let Value::Array(array_val) = value {
-                    for _ in array_val {
+                    for array_val_cid in array_val {
                         relationships.push(RelationshipQueryPart{
-                            cid: cid.clone(),
+                            cid: array_val_cid.as_str().unwrap().to_string(),
                             kind_name: key.clone()
                         });
                     }
@@ -261,7 +261,7 @@ impl Neo4jBackend {
                 }
                 if let Value::String(_) = value {
                     relationships.push(RelationshipQueryPart{
-                        cid: cid.clone(),
+                        cid: value.as_str().unwrap().to_string(),
                         kind_name: key.clone()
                     });
                 }
@@ -269,13 +269,12 @@ impl Neo4jBackend {
         }
 
         let statement_query_main = format!("
-            UNWIND $entities as entity
-            MERGE (n:RlayEntity {{cid: entity.cid }})
-            SET (CASE WHEN entity.type = 'Annotation' THEN n END).value = entity.value
-            SET (CASE WHEN entity.type = 'DataPropertyAssertion' THEN n END).target = entity.target
-            SET (CASE WHEN entity.type = 'NegativeDataPropertyAssertion' THEN n END).target = entity.target
-            WITH n, entity
-            CALL apoc.create.addLabels(n, [entity.type]) YIELD node
+            MERGE (n:RlayEntity {{cid: $entity.cid }})
+            SET (CASE WHEN $entity.type = 'Annotation' THEN n END).value = $entity.value
+            SET (CASE WHEN $entity.type = 'DataPropertyAssertion' THEN n END).target = $entity.target
+            SET (CASE WHEN $entity.type = 'NegativeDataPropertyAssertion' THEN n END).target = $entity.target
+            WITH n
+            CALL apoc.create.addLabels(n, [$entity.type]) YIELD node
             UNWIND $relationships as relationship
                 MERGE (m:RlayEntity {{ cid: relationship.cid }})
                 WITH n, m, relationship
@@ -284,7 +283,7 @@ impl Neo4jBackend {
         );
 
         let statement_query = Statement::new(&statement_query_main)
-            .with_param("entities", &vec![val])?
+            .with_param("entity", &val)?
             .with_param("relationships", &relationships)?;
 
         trace!("NEO4J QUERY: {:?}", statement_query);
