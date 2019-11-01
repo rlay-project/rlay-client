@@ -272,13 +272,15 @@ impl Neo4jBackend {
                     continue;
                 }
                 if let Value::Array(array_val) = value {
-                    for _ in array_val {
-                        relationships.push(add_relationship_value(cid.clone(), key, i));
+                    for (k, _) in array_val.iter().enumerate() {
+                        relationships.push(
+                            add_relationship_value(cid.clone(), key, format!("_{0}_{1}_", i, k))
+                        );
                     }
                     continue;
                 }
                 if let Value::String(_) = value {
-                    relationships.push(add_relationship_value(cid.clone(), key, i));
+                    relationships.push(add_relationship_value(cid.clone(), key, i.to_string()));
                 }
             }
         }
