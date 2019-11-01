@@ -230,24 +230,25 @@ impl Neo4jBackend {
         let mut values = Vec::new();
         let mut relationships = Vec::new();
         {
-            let mut add_relationship_value = |cid, key, value| {
-                let rel_query_main = format!(
-                    "MATCH (n:RlayEntity {{ cid: {{cid1}} }}) MERGE (m:RlayEntity {{ cid: {{cid2}} }}) MERGE (n)-[r:{0}]->(m)",
-                    key
-                );
-                let rel_query = Statement::new(rel_query_main)
-                    .with_param("cid1", &cid).unwrap()
-                    .with_param("cid2", value).unwrap();
-                relationships.push(rel_query);
-            };
-
             struct StatementQueryPart {
                 query_sub: String,
                 param_key: String,
                 param_val: String,
             }
 
-            for (key, value) in val {
+            let add_relationship_value = |cid, key, i| {
+                let rel_query_main = format!(
+                    "MERGE ({0}{1}:RlayEntity {{ cid: ${0}{1}cid }}) MERGE (n)-[:{0}]->({0}{1})",
+                    key, i
+                );
+                return StatementQueryPart {
+                    query_sub: rel_query_main,
+                    param_key: format!("{0}{1}cid", key, i),
+                    param_val: cid
+                };
+            };
+
+            for (i, (key, value)) in val.iter().enumerate() {
                 if key == "cid" || key == "type" {
                     continue;
                 }
@@ -256,7 +257,7 @@ impl Neo4jBackend {
                     && key == "target"
                 {
                     values.push(StatementQueryPart {
-                        query_sub: "n.target = {datapropVal}".to_owned(),
+                        query_sub: "n.target = $datapropVal".to_owned(),
                         param_key: "datapropVal".to_owned(),
                         param_val: value.as_str().unwrap().to_owned()
                     });
@@ -264,57 +265,74 @@ impl Neo4jBackend {
                 }
                 if kind_name == "Annotation" && key == "value" {
                     values.push(StatementQueryPart {
-                        query_sub: "n.value = {annotationVal}".to_owned(),
+                        query_sub: "n.value = $annotationVal".to_owned(),
                         param_key: "annotationVal".to_owned(),
                         param_val: value.as_str().unwrap().to_owned()
                     });
                     continue;
                 }
                 if let Value::Array(array_val) = value {
-                    for relationship_value in array_val {
-                        add_relationship_value(cid.clone(), key, relationship_value);
+                    for _ in array_val {
+                        relationships.push(add_relationship_value(cid.clone(), key, i));
                     }
                     continue;
                 }
                 if let Value::String(_) = value {
-                    add_relationship_value(cid.clone(), key, value);
+                    relationships.push(add_relationship_value(cid.clone(), key, i));
                 }
             }
         }
 
         let mut statement_query_main = format!(
-            "MERGE (n:RlayEntity {{cid: {{cid}} }}) SET n:{0}",
+            "MERGE (n:RlayEntity {{cid: $cid }}) SET n:{0}",
             kind_name
         );
-        let mut statement_query = Statement::new(&statement_query_main)
-            .with_param("cid", &cid)?;
 
         if !values.is_empty() {
             for value in values.iter() {
                 statement_query_main.push_str(", ");
                 statement_query_main.push_str(&value.query_sub);
             }
-            statement_query = Statement::new(&statement_query_main)
-                .with_param("cid", &cid)?;
+        }
+
+        if !relationships.is_empty() {
+            for relationship in relationships.iter() {
+                statement_query_main.push_str("\n ");
+                statement_query_main.push_str(&relationship.query_sub);
+            }
+        }
+
+        let mut statement_query = Statement::new(&statement_query_main)
+            .with_param("cid", &cid)?;
+
+        if !values.is_empty() {
             for value in values.iter() {
                 statement_query = statement_query.clone()
                     .with_param(&value.param_key, &value.param_val).unwrap()
             }
         }
 
-        let (mut transaction, _) = client.transaction().begin().await?;
+        if !relationships.is_empty() {
+            for relationship in relationships.iter() {
+                statement_query = statement_query.clone()
+                    .with_param(&relationship.param_key, &relationship.param_val).unwrap()
+            }
+        }
+
+        //let (mut transaction, _) = client.transaction().begin().await?;
 
         // let mut query = client.query();
         trace!("NEO4J QUERY: {:?}", statement_query);
-        transaction.add_statement(statement_query);
+        let start = std::time::Instant::now();
+        client.exec(statement_query).await?;
+        /*
         for relationship in relationships {
             trace!("NEO4J QUERY: {:?}", relationship);
-            transaction.add_statement(relationship);
+            client.exec(relationship).await?;
         }
-
-        let start = std::time::Instant::now();
-        transaction.commit().await?;
+        */
         let end = std::time::Instant::now();
+        //transaction.commit().await?;
         trace!("Query duration: {:?}", end - start);
 
         Ok(raw_cid)
