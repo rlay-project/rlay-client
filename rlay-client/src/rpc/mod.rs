@@ -163,6 +163,9 @@ async fn handle_jsonrpc(
         "rlay_experimentalStoreEntity" => Some(
             rpc_rlay_experimental_store_entity(full_config, sync_state, params.to_owned()).await?,
         ),
+        "rlay_experimentalStoreEntities" => Some(
+            rpc_rlay_experimental_store_entities(full_config, sync_state, params.to_owned()).await?,
+        ),
         "rlay_experimentalGetEntity" => Some(
             rpc_rlay_experimental_get_entity(full_config, sync_state, params.to_owned()).await?,
         ),
@@ -272,6 +275,48 @@ async fn rpc_rlay_experimental_store_entity(
         .unwrap();
 
     Ok(cid)
+}
+
+async fn rpc_rlay_experimental_store_entities(
+    config: Config,
+    sync_state: MultiBackendSyncState,
+    params_array: Vec<Value>,
+) -> JsonRpcResult<Value> {
+    let entity_objects = params_array
+        .get(0)
+        .ok_or(jsonrpc_core::Error::invalid_params(
+            "Mandatory parameter 'entities' missing",
+        ))
+        .unwrap()
+        .as_array().unwrap();
+
+    let entities: Vec<Entity> = entity_objects
+        .iter()
+        .map(|entity_object| {
+            let web3_entities: FormatWeb3<Entity> = serde_json::from_value(entity_object.clone())
+                .map_err(|err| jsonrpc_core::Error::invalid_params(err.description()))
+                .unwrap();
+            return web3_entities.0
+        })
+        .collect();
+
+    let options_object = extract_options_object(&params_array, 1);
+    let backend_name = extract_option_backend(options_object.clone());
+
+    let mut backend = backend_from_backend_name(&config, &sync_state, backend_name).await?;
+
+    let cids = BackendRpcMethods::store_entities(&mut backend, &entities, &options_object.unwrap())
+        .map_err(failure_into_jsonrpc_err)
+        .map_ok(|raw_cids| {
+            return raw_cids.iter().map(|raw_cid| {
+                let cid: String = format!("0x{}", raw_cid.to_bytes().to_hex());
+                serde_json::to_value(cid).unwrap()
+            })
+            .collect();
+        })
+        .await?;
+
+    Ok(cids)
 }
 
 async fn rpc_rlay_experimental_get_entity(

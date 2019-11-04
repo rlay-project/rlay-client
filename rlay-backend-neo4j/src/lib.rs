@@ -347,13 +347,14 @@ impl Neo4jBackend {
                     }
                 }
             }
-            val["relationships"] = serde_json::Value::Array(
+
+            val.insert("relationships".to_string(), serde_json::Value::Array(
                 relationships
                     .iter()
                     .map(serde_json::to_value)
                     .map(|r| r.unwrap())
-                    .collect::<Vec<_>>()
-            );
+                    .collect()
+            ));
             _entities.push(val);
         }
 
@@ -406,6 +407,14 @@ impl BackendRpcMethods for Neo4jBackend {
         _options_object: &Value,
     ) -> BoxFuture<Result<Cid, Error>> {
         Box::pin(self.store_entity(entity.to_owned()))
+    }
+
+    fn store_entities(
+        &mut self,
+        entities: &Vec<Entity>,
+        _options_object: &Value,
+    ) -> BoxFuture<Result<Vec<Cid>, Error>> {
+        Box::pin(self.store_entities(entities.to_owned()))
     }
 
     fn get_entity(&mut self, cid: &str) -> BoxFuture<Result<Option<Entity>, Error>> {
