@@ -331,9 +331,9 @@ impl Neo4jBackend {
                         continue;
                     }
                     if let Value::Array(array_val) = value {
-                        for _ in array_val {
+                        for array_val_cid in array_val {
                             relationships.push(RelationshipQueryPart{
-                                cid: cid.clone(),
+                                cid: array_val_cid.as_str().unwrap().to_string(),
                                 kind_name: key.clone()
                             });
                         }
@@ -341,7 +341,7 @@ impl Neo4jBackend {
                     }
                     if let Value::String(_) = value {
                         relationships.push(RelationshipQueryPart{
-                            cid: cid.clone(),
+                            cid: value.as_str().unwrap().to_string(),
                             kind_name: key.clone()
                         });
                     }
