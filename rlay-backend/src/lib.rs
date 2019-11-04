@@ -27,6 +27,18 @@ pub trait BackendRpcMethods {
     }
 
     #[allow(unused_variables)]
+    fn store_entities(
+        &mut self,
+        entities: &Vec<Entity>,
+        options_object: &Value,
+    ) -> BoxFuture<Result<Vec<Cid>, Error>> {
+        err(err_msg(
+            "The requested backend does not support this RPC method.",
+        ))
+        .boxed()
+    }
+
+    #[allow(unused_variables)]
     fn get_entity(&mut self, cid: &str) -> BoxFuture<Result<Option<Entity>, Error>> {
         err(err_msg(
             "The requested backend does not support this RPC method.",

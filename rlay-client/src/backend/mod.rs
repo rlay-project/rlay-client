@@ -178,6 +178,26 @@ impl BackendRpcMethods for Backend {
         }
     }
 
+    fn store_entities(
+        &mut self,
+        entities: &Vec<Entity>,
+        options_object: &Value,
+    ) -> BoxFuture<Result<Vec<Cid>, Error>> {
+        match self {
+            #[cfg(feature = "backend_neo4j")]
+            Backend::Neo4j(backend) => {
+                BackendRpcMethods::store_entities(backend, entities, options_object)
+            }
+            #[cfg(feature = "backend_redisgraph")]
+            Backend::Redisgraph(backend) => {
+                BackendRpcMethods::store_entities(backend, entities, options_object)
+            }
+            Backend::Ethereum(backend) => {
+                BackendRpcMethods::store_entities(backend, entities, options_object)
+            }
+        }
+    }
+
     fn get_entity(&mut self, cid: &str) -> BoxFuture<Result<Option<Entity>, Error>> {
         match self {
             #[cfg(feature = "backend_neo4j")]
