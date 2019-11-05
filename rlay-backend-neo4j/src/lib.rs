@@ -279,7 +279,7 @@ impl Neo4jBackend {
                 MERGE (m:RlayEntity {{ cid: relationship.cid }})
                 WITH n, m, relationship
                 CALL apoc.merge.relationship(n, relationship.kind_name, {{}}, {{}}, m) YIELD rel
-            RETURN n.cid",
+            RETURN DISTINCT $entity.cid",
         );
 
         let statement_query = Statement::new(&statement_query_main)
@@ -300,10 +300,6 @@ impl Neo4jBackend {
         let client = self.client().await?;
 
         for entity in entities.iter() {
-            let raw_cid = entity.to_cid().unwrap();
-            let cid: String = format!("0x{}", raw_cid.to_bytes().to_hex());
-
-
             let kind_name: &str = entity.kind().into();
             let entity_val = serde_json::to_value(FormatWeb3(entity.clone())).unwrap();
             let mut val = entity_val.as_object().unwrap().to_owned();
@@ -370,7 +366,7 @@ impl Neo4jBackend {
                 MERGE (m:RlayEntity {{ cid: relationship.cid }})
                 WITH n, m, relationship
                 CALL apoc.merge.relationship(n, relationship.kind_name, {{}}, {{}}, m) YIELD rel
-            RETURN n.cid",
+            RETURN DISTINCT entity.cid",
         );
 
         let statement_query = Statement::new(&statement_query_main)
