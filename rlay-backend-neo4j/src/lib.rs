@@ -219,140 +219,12 @@ impl Neo4jBackend {
     }
 
     async fn store_entity(&mut self, entity: Entity) -> Result<Cid, Error> {
-        let raw_cid = entity.to_cid().unwrap();
-        format!("0x{}", raw_cid.to_bytes().to_hex());
-
-        let client = self.client().await?;
-
-        let kind_name: &str = entity.kind().into();
-        let entity_val = serde_json::to_value(FormatWeb3(entity.clone())).unwrap();
-        let val = entity_val.as_object().unwrap();
-        let mut relationships = Vec::new();
-        {
-            #[derive(Serialize, Deserialize, Debug)]
-            struct RelationshipQueryPart {
-                cid: String,
-                kind_name: String
-            }
-
-            // fetch the parts of the payload that should become relationships
-            // aka. those that are not self-referencing CIDs
-            for (key, value) in val.iter() {
-                if key == "cid" || key == "type" {
-                    continue;
-                }
-                if (kind_name == "DataPropertyAssertion"
-                    || kind_name == "NegativeDataPropertyAssertion")
-                    && key == "target"
-                {
-                    continue;
-                }
-                if kind_name == "Annotation" && key == "value" {
-                    continue;
-                }
-                if let Value::Array(array_val) = value {
-                    for array_val_cid in array_val {
-                        relationships.push(RelationshipQueryPart{
-                            cid: array_val_cid.as_str().unwrap().to_string(),
-                            kind_name: key.clone()
-                        });
-                    }
-                    continue;
-                }
-                if let Value::String(_) = value {
-                    relationships.push(RelationshipQueryPart{
-                        cid: value.as_str().unwrap().to_string(),
-                        kind_name: key.clone()
-                    });
-                }
-            }
-        }
-
-        let statement_query_main = format!("
-            MERGE (n:RlayEntity {{cid: $entity.cid }})
-            SET (CASE WHEN $entity.type = 'Annotation' THEN n END).value = $entity.value
-            SET (CASE WHEN $entity.type = 'DataPropertyAssertion' THEN n END).target = $entity.target
-            SET (CASE WHEN $entity.type = 'NegativeDataPropertyAssertion' THEN n END).target = $entity.target
-            FOREACH ( ignore in CASE $entity.type WHEN 'Class' THEN [1] ELSE [] END | SET n:Class )
-            FOREACH ( ignore in CASE $entity.type WHEN 'ObjectIntersectionOf' THEN [1] ELSE [] END | SET n:ObjectIntersectionOf )
-            FOREACH ( ignore in CASE $entity.type WHEN 'ObjectUnionOf' THEN [1] ELSE [] END | SET n:ObjectUnionOf )
-            FOREACH ( ignore in CASE $entity.type WHEN 'ObjectComplementOf' THEN [1] ELSE [] END | SET n:ObjectComplementOf )
-            FOREACH ( ignore in CASE $entity.type WHEN 'ObjectOneOf' THEN [1] ELSE [] END | SET n:ObjectOneOf )
-            FOREACH ( ignore in CASE $entity.type WHEN 'ObjectSomeValuesFrom' THEN [1] ELSE [] END | SET n:ObjectSomeValuesFrom )
-            FOREACH ( ignore in CASE $entity.type WHEN 'ObjectAllValuesFrom' THEN [1] ELSE [] END | SET n:ObjectAllValuesFrom )
-            FOREACH ( ignore in CASE $entity.type WHEN 'ObjectHasValue' THEN [1] ELSE [] END | SET n:ObjectHasValue )
-            FOREACH ( ignore in CASE $entity.type WHEN 'ObjectHasSelf' THEN [1] ELSE [] END | SET n:ObjectHasSelf )
-            FOREACH ( ignore in CASE $entity.type WHEN 'ObjectMinCardinality' THEN [1] ELSE [] END | SET n:ObjectMinCardinality )
-            FOREACH ( ignore in CASE $entity.type WHEN 'ObjectMaxCardinality' THEN [1] ELSE [] END | SET n:ObjectMaxCardinality )
-            FOREACH ( ignore in CASE $entity.type WHEN 'ObjectExactCardinality' THEN [0] ELSE [] END | SET n:ObjectExactCardinality )
-            FOREACH ( ignore in CASE $entity.type WHEN 'DataSomeValuesFrom' THEN [1] ELSE [] END | SET n:DataSomeValuesFrom )
-            FOREACH ( ignore in CASE $entity.type WHEN 'DataAllValuesFrom' THEN [1] ELSE [] END | SET n:DataAllValuesFrom )
-            FOREACH ( ignore in CASE $entity.type WHEN 'DataHasValue' THEN [1] ELSE [] END | SET n:DataHasValue )
-            FOREACH ( ignore in CASE $entity.type WHEN 'DataMinCardinality' THEN [1] ELSE [] END | SET n:DataMinCardinality )
-            FOREACH ( ignore in CASE $entity.type WHEN 'DataMaxCardinality' THEN [1] ELSE [] END | SET n:DataMaxCardinality )
-            FOREACH ( ignore in CASE $entity.type WHEN 'DataExactCardinality' THEN [1] ELSE [] END | SET n:DataExactCardinality )
-            FOREACH ( ignore in CASE $entity.type WHEN 'ObjectProperty' THEN [1] ELSE [] END | SET n:ObjectProperty )
-            FOREACH ( ignore in CASE $entity.type WHEN 'InverseObjectProperty' THEN [0] ELSE [] END | SET n:InverseObjectProperty )
-            FOREACH ( ignore in CASE $entity.type WHEN 'DataProperty' THEN [1] ELSE [] END | SET n:DataProperty )
-            FOREACH ( ignore in CASE $entity.type WHEN 'Annotation' THEN [1] ELSE [] END | SET n:Annotation )
-            FOREACH ( ignore in CASE $entity.type WHEN 'Individual' THEN [1] ELSE [] END | SET n:Individual )
-            FOREACH ( ignore in CASE $entity.type WHEN 'AnnotationProperty' THEN [1] ELSE [] END | SET n:AnnotationProperty )
-            FOREACH ( ignore in CASE $entity.type WHEN 'ClassAssertion' THEN [1] ELSE [] END | SET n:ClassAssertion )
-            FOREACH ( ignore in CASE $entity.type WHEN 'NegativeClassAssertion' THEN [1] ELSE [] END | SET n:NegativeClassAssertion )
-            FOREACH ( ignore in CASE $entity.type WHEN 'ObjectPropertyAssertion' THEN [1] ELSE [] END | SET n:ObjectPropertyAssertion )
-            FOREACH ( ignore in CASE $entity.type WHEN 'NegativeObjectPropertyAssertion' THEN [1] ELSE [] END | SET n:NegativeObjectPropertyAssertion )
-            FOREACH ( ignore in CASE $entity.type WHEN 'DataPropertyAssertion' THEN [1] ELSE [] END | SET n:DataPropertyAssertion )
-            FOREACH ( ignore in CASE $entity.type WHEN 'NegativeDataPropertyAssertion' THEN [1] ELSE [] END | SET n:NegativeDataPropertyAssertion )
-            FOREACH ( ignore in CASE $entity.type WHEN 'AnnotationAssertion' THEN [1] ELSE [] END | SET n:AnnotationAssertion )
-            FOREACH ( ignore in CASE $entity.type WHEN 'NegativeAnnotationAssertion' THEN [1] ELSE [] END | SET n:NegativeAnnotationAssertion )
-            FOREACH ( ignore in CASE $entity.type WHEN 'Literal' THEN [1] ELSE [] END | SET n:Literal )
-            FOREACH ( ignore in CASE $entity.type WHEN 'Datatype' THEN [1] ELSE [] END | SET n:Datatype )
-            FOREACH ( ignore in CASE $entity.type WHEN 'DataIntersectionOf' THEN [1] ELSE [] END | SET n:DataIntersectionOf )
-            FOREACH ( ignore in CASE $entity.type WHEN 'DataUnionOf' THEN [1] ELSE [] END | SET n:DataUnionOf )
-            FOREACH ( ignore in CASE $entity.type WHEN 'DataComplementOf' THEN [1] ELSE [] END | SET n:DataComplementOf )
-            FOREACH ( ignore in CASE $entity.type WHEN 'DataOneOf' THEN [1] ELSE [] END | SET n:DataOneOf )
-            WITH n
-            UNWIND $relationships as relationship
-                MERGE (m:RlayEntity {{ cid: relationship.cid }})
-                FOREACH ( ignore in CASE relationship.kind_name WHEN 'annotations' THEN [1] ELSE [] END | MERGE (n)-[:annotations]->(m) )
-                FOREACH ( ignore in CASE relationship.kind_name WHEN 'superClassExpression' THEN [0] ELSE [] END | MERGE (n)-[:superClassExpression]->(m) )
-                FOREACH ( ignore in CASE relationship.kind_name WHEN 'complementOf' THEN [1] ELSE [] END | MERGE (n)-[:complementOf]->(m) )
-                FOREACH ( ignore in CASE relationship.kind_name WHEN 'superObjectPropertyExpression' THEN [0] ELSE [] END | MERGE (n)-[:superObjectPropertyExpression]->(m) )
-                FOREACH ( ignore in CASE relationship.kind_name WHEN 'superDataPropertyExpression' THEN [1] ELSE [] END | MERGE (n)-[:superDataPropertyExpression]->(m) )
-                FOREACH ( ignore in CASE relationship.kind_name WHEN 'domain' THEN [1] ELSE [] END | MERGE (n)-[:domain]->(m) )
-                FOREACH ( ignore in CASE relationship.kind_name WHEN 'range' THEN [1] ELSE [] END | MERGE (n)-[:range]->(m) )
-                FOREACH ( ignore in CASE relationship.kind_name WHEN 'property' THEN [0] ELSE [] END | MERGE (n)-[:property]->(m) )
-                FOREACH ( ignore in CASE relationship.kind_name WHEN 'value' THEN [1] ELSE [] END | MERGE (n)-[:value]->(m) )
-                FOREACH ( ignore in CASE relationship.kind_name WHEN 'class_assertions' THEN [0] ELSE [] END | MERGE (n)-[:class_assertions]->(m) )
-                FOREACH ( ignore in CASE relationship.kind_name WHEN 'negative_class_assertions' THEN [1] ELSE [] END | MERGE (n)-[:negative_class_assertions]->(m) )
-                FOREACH ( ignore in CASE relationship.kind_name WHEN 'object_property_assertions' THEN [1] ELSE [] END | MERGE (n)-[:object_property_assertions]->(m) )
-                FOREACH ( ignore in CASE relationship.kind_name WHEN 'negative_object_property_assertions' THEN [1] ELSE [] END | MERGE (n)-[:negative_object_property_assertions]->(m) )
-                FOREACH ( ignore in CASE relationship.kind_name WHEN 'data_property_assertions' THEN [0] ELSE [] END | MERGE (n)-[:data_property_assertions]->(m) )
-                FOREACH ( ignore in CASE relationship.kind_name WHEN 'negative_data_property_assertions' THEN [1] ELSE [] END | MERGE (n)-[:negative_data_property_assertions]->(m) )
-                FOREACH ( ignore in CASE relationship.kind_name WHEN 'subject' THEN [1] ELSE [] END | MERGE (n)-[:subject]->(m) )
-                FOREACH ( ignore in CASE relationship.kind_name WHEN 'class' THEN [1] ELSE [] END | MERGE (n)-[:class]->(m) )
-                FOREACH ( ignore in CASE relationship.kind_name WHEN 'target' THEN [1] ELSE [] END | MERGE (n)-[:target]->(m) )
-                FOREACH ( ignore in CASE relationship.kind_name WHEN 'datatype' THEN [1] ELSE [] END | MERGE (n)-[:datatype]->(m) )
-                FOREACH ( ignore in CASE relationship.kind_name WHEN 'datatypes' THEN [1] ELSE [] END | MERGE (n)-[:datatypes]->(m) )
-                FOREACH ( ignore in CASE relationship.kind_name WHEN 'values' THEN [1] ELSE [] END | MERGE (n)-[:values]->(m) )
-            RETURN DISTINCT $entity.cid",
-        );
-
-        let statement_query = Statement::new(&statement_query_main)
-            .with_param("entity", &val)?
-            .with_param("relationships", &relationships)?;
-
-        trace!("NEO4J QUERY: {:?}", statement_query);
-        let start = std::time::Instant::now();
-        client.exec(statement_query).await?;
-        let end = std::time::Instant::now();
-        trace!("Query duration: {:?}", end - start);
-
-        Ok(raw_cid)
+        let cids = self.store_entities(vec![entity]).await?;
+        Ok(cids[0].clone())
     }
 
     async fn store_entities(&mut self, entities: Vec<Entity>) -> Result<Vec<Cid>, Error> {
-        let mut _entities = Vec::new();
+        let mut entity_objects = Vec::new();
         let client = self.client().await?;
 
         for entity in entities.iter() {
@@ -407,7 +279,7 @@ impl Neo4jBackend {
                     .map(|r| r.unwrap())
                     .collect()
             ));
-            _entities.push(val);
+            entity_objects.push(val);
         }
 
         let statement_query_main = format!("
@@ -482,7 +354,7 @@ impl Neo4jBackend {
         );
 
         let statement_query = Statement::new(&statement_query_main)
-            .with_param("entities", &_entities)?;
+            .with_param("entities", &entity_objects)?;
 
         trace!("NEO4J QUERY: {:?}", statement_query);
         let start = std::time::Instant::now();
