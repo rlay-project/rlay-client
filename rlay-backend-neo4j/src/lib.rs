@@ -145,34 +145,8 @@ impl Neo4jBackend {
     }
 
     async fn get_entity(&mut self, cid: String) -> Result<Option<Entity>, Error> {
-        let client = self.client().err_into::<Error>().await?;
-
-        let query = format!(
-            "MATCH (n:RlayEntity {{ cid: \"{0}\" }})-[r]->(m) RETURN labels(n),n,type(r),m",
-            cid
-        );
-        trace!("get_entity query: {:?}", query);
-
-        let query_res = client.exec(query).await?;
-        if query_res.rows().count() == 0 {
-            return Ok(None);
-        }
-
-        let entity = Self::rows_to_entity(query_res.rows())
-            .get(0)
-            .unwrap()
-            .to_owned();
-
-        let retrieved_cid = format!("0x{}", entity.to_cid().unwrap().to_bytes().to_hex());
-        if retrieved_cid != cid {
-            return Err(format_err!(
-                "The retrieved CID did not match the requested cid: {} !+ {}",
-                cid,
-                retrieved_cid
-            ));
-        }
-
-        Ok(Some(entity))
+        let entities = self.get_entities(vec![cid]).await?;
+        Ok(Some(entities[0].clone()))
     }
 
     pub async fn get_entities(&mut self, cids: Vec<String>) -> Result<Vec<Entity>, Error> {
@@ -185,13 +159,17 @@ impl Neo4jBackend {
             deduped_cids
         };
 
-        let query = format!(
-            "MATCH (n:RlayEntity)-[r]->(m) WHERE n.cid IN {0:?} RETURN labels(n),n,type(r),m",
-            deduped_cids,
+        let query = format!("
+            MATCH (n:RlayEntity)-[r]->(m) WHERE n.cid IN $cids RETURN labels(n),n,type(r),m"
         );
-        trace!("get_entities query: \"{}\"", query);
+        let statement_query = Statement::new(&query)
+            .with_param("cids", &deduped_cids)?;
 
-        let query_res = client.exec(query).await?;
+        trace!("NEO4J QUERY: {:?}", statement_query);
+        let start = std::time::Instant::now();
+        let query_res = client.exec(statement_query).await?;
+        let end = std::time::Instant::now();
+        trace!("Query duration: {:?}", end - start);
 
         if query_res.rows().count() == 0 {
             return Ok(vec![]);
