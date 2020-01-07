@@ -146,7 +146,7 @@ impl Neo4jBackend {
 
     async fn get_entity(&mut self, cid: String) -> Result<Option<Entity>, Error> {
         let entities = self.get_entities(vec![cid]).await?;
-        Ok(entities.get(0).map(|n| n.clone()))
+        Ok(entities.get(0).map(|n| n.to_owned()))
     }
 
     pub async fn get_entities(&mut self, cids: Vec<String>) -> Result<Vec<Entity>, Error> {
@@ -160,7 +160,9 @@ impl Neo4jBackend {
         };
 
         let query = format!("
-            MATCH (n:RlayEntity)-[r]->(m) WHERE n.cid IN $cids RETURN labels(n),n,type(r),m"
+            UNWIND $cids AS cid
+            MATCH (n:RlayEntity {{cid: cid}})-[r]->(m)
+            RETURN labels(n),n,type(r),m"
         );
         let statement_query = Statement::new(&query)
             .with_param("cids", &deduped_cids)?;
