@@ -88,4 +88,19 @@ pub trait BackendRpcMethods:
     + BackendRpcMethodListCids
     + BackendRpcMethodNeo4jQuery
 {
+    #[allow(unused_variables)]
+    fn resolve_entity(&mut self, cid: &str) -> BoxFuture<Result<Option<Entity>, Error>> {
+        err(err_msg(
+            "The requested backend does not support this RPC method.",
+        ))
+        .boxed()
+    }
+
+    #[allow(unused_variables)]
+    fn resolve_entities(&mut self, cids: Vec<String>) -> BoxFuture<Result<Vec<Entity>, Error>> {
+        err(err_msg(
+            "The requested backend does not support this RPC method.",
+        ))
+        .boxed()
+    }
 }
