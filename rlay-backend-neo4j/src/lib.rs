@@ -146,7 +146,7 @@ impl Neo4jBackend {
 
     async fn get_entity(&mut self, cid: String) -> Result<Option<Entity>, Error> {
         let entities = self.get_entities(vec![cid]).await?;
-        Ok(Some(entities[0].clone()))
+        Ok(entities.get(0).map(|n| n.clone()))
     }
 
     pub async fn get_entities(&mut self, cids: Vec<String>) -> Result<Vec<Entity>, Error> {
@@ -377,6 +377,10 @@ impl BackendRpcMethods for Neo4jBackend {
 
     fn get_entity(&mut self, cid: &str) -> BoxFuture<Result<Option<Entity>, Error>> {
         Box::pin(self.get_entity(cid.to_owned()))
+    }
+
+    fn get_entities(&mut self, cids: Vec<String>) -> BoxFuture<Result<Vec<Entity>, Error>> {
+        Box::pin(self.get_entities(cids))
     }
 
     fn list_cids(&mut self, entity_kind: Option<&str>) -> BoxFuture<Result<Vec<String>, Error>> {

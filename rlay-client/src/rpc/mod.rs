@@ -169,6 +169,9 @@ async fn handle_jsonrpc(
         "rlay_experimentalGetEntity" => Some(
             rpc_rlay_experimental_get_entity(full_config, sync_state, params.to_owned()).await?,
         ),
+        "rlay_experimentalGetEntities" => Some(
+            rpc_rlay_experimental_get_entities(full_config, sync_state, params.to_owned()).await?,
+        ),
         "rlay_experimentalNeo4jQuery" => Some(
             rpc_rlay_experimental_neo4j_query(full_config, sync_state, params.to_owned()).await?,
         ),
@@ -341,6 +344,39 @@ async fn rpc_rlay_experimental_get_entity(
         .unwrap();
 
     Ok(entity)
+}
+
+async fn rpc_rlay_experimental_get_entities(
+    config: Config,
+    sync_state: MultiBackendSyncState,
+    params_array: Vec<Value>,
+) -> JsonRpcResult<Value> {
+    let cid_array = params_array.get(0).unwrap().as_array().unwrap().to_owned();
+
+    let cids: Vec<String> = cid_array
+        .iter()
+        .map(|cid_value| {
+            return cid_value.as_str().unwrap().to_owned();
+        })
+        .collect();
+
+    let options_object = extract_options_object(&params_array, 1);
+    let backend_name = extract_option_backend(options_object);
+
+    let mut backend = backend_from_backend_name(&config, &sync_state, backend_name).await?;
+
+    let result: serde_json::Value = BackendRpcMethods::get_entities(&mut backend, cids)
+        .map_err(failure_into_jsonrpc_err)
+        .map_ok(|raw_entities| {
+            return raw_entities.iter().map(|raw_entity| {
+                serde_json::to_value(FormatWeb3(raw_entity)).unwrap()
+            })
+            .collect();
+        })
+        .await
+        .unwrap();
+
+    Ok(result)
 }
 
 async fn rpc_rlay_experimental_neo4j_query(

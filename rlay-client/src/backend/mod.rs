@@ -106,21 +106,6 @@ pub enum Backend {
     Redisgraph(RedisgraphBackend),
 }
 
-impl Backend {
-    pub fn get_entities(
-        &mut self,
-        _cids: Vec<String>,
-    ) -> impl Future<Output = Result<Vec<Entity>, Error>> + Send + '_ {
-        match self {
-            #[cfg(feature = "backend_neo4j")]
-            Backend::Neo4j(backend) => backend.get_entities(_cids.to_vec()).boxed(),
-            #[cfg(feature = "backend_redisgraph")]
-            Backend::Redisgraph(backend) => backend.get_entities(_cids.to_vec()).boxed(),
-            Backend::Ethereum(_) => future::lazy(|_| unreachable!()).boxed(),
-        }
-    }
-}
-
 impl BackendFromConfigAndSyncState for Backend {
     type C = BackendConfig;
     type S = Option<SyncState>;
@@ -205,6 +190,19 @@ impl BackendRpcMethods for Backend {
             #[cfg(feature = "backend_redisgraph")]
             Backend::Redisgraph(backend) => BackendRpcMethods::get_entity(backend, cid),
             Backend::Ethereum(backend) => BackendRpcMethods::get_entity(backend, cid),
+        }
+    }
+
+    fn get_entities(
+        &mut self,
+        cids: Vec<String>,
+    ) -> BoxFuture<Result<Vec<Entity>, Error>> {
+        match self {
+            #[cfg(feature = "backend_neo4j")]
+            Backend::Neo4j(backend) => BackendRpcMethods::get_entities(backend, cids),
+            #[cfg(feature = "backend_redisgraph")]
+            Backend::Redisgraph(backend) => BackendRpcMethods::get_entities(backend, cids),
+            Backend::Ethereum(backend) => BackendRpcMethods::get_entities(backend, cids),
         }
     }
 
