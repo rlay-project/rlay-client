@@ -97,6 +97,7 @@ impl Neo4jBackend {
                 .as_str()
                 .expect("Unable to convert neo4j return value n.cid to string")
                 .to_owned();
+
             let entity = entity_map.entry(main_entity_cid).or_insert_with(|| {
                 let mut main_entity: Value = row.get("n").unwrap();
                 main_entity["type"] = label;
@@ -141,6 +142,158 @@ impl Neo4jBackend {
             .collect()
     }
 
+    fn pattern_object_to_cid(object: &Value) -> String {
+        let self_value: Value = object["self"].clone();
+
+        self_value
+            .clone()
+            .as_object_mut()
+            .expect("Unable to convert return neo4j return value to object")
+            .get("cid")
+            .expect("Neo4j return value does not contain \"cid\"")
+            .as_str()
+            .expect("Unable to convert neo4j return value n.cid to string")
+            .to_owned()
+    }
+
+    fn pattern_object_to_label(object: &Value) -> Option<String> {
+        let self_labels: Value = object["self_labels"].clone();
+
+        let parsed_labels = self_labels
+            .as_array()
+            .unwrap()
+            .into_iter()
+            // TODO: make more robust against additional labels
+            // currently only filter out the known extra label RlayEntity that is used for
+            // a index
+            .filter(|n| n.as_str().unwrap() != "RlayEntity")
+            .collect::<Vec<_>>();
+
+        match parsed_labels.len() > 0 {
+            true => Some(parsed_labels[0].clone().as_str().unwrap().to_owned()),
+            false => None,
+        }
+    }
+
+    fn pattern_object_to_relationship_cid_tuple(object: &Value) -> (String, String) {
+        let rel_type_value: Value = object["rel_type"].clone();
+        let rel_type = rel_type_value.as_str().unwrap().to_owned();
+        let cid = Self::pattern_object_to_cid(object);
+        (rel_type, cid)
+    }
+
+    fn pattern_objects_to_relationship_cid_tuples(objects: &Value) -> Vec<(String, String)> {
+        let mut tuples: Vec<(String, String)> = vec![];
+        if objects.is_array() {
+            tuples = objects
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|pattern_object| {
+                    Self::pattern_object_to_relationship_cid_tuple(pattern_object)
+                })
+                .collect();
+        }
+        tuples
+    }
+
+    /// Convert a "pattern comprehension" object (part of a row - see query for details) to entity
+    fn pattern_object_to_entity(object: &Value) -> Option<Entity> {
+        let self_value: Value = object["self"].clone();
+        let properties: Value = object["properties"].clone();
+
+        let self_label_option = Self::pattern_object_to_label(object);
+        let self_label = match self_label_option {
+            // it is a leaf node that can not be turned into an entity
+            None => return None,
+            Some(val) => val,
+        };
+        let rel_cid_tuples = Self::pattern_objects_to_relationship_cid_tuples(&properties);
+
+        let mut entity = self_value;
+        entity["type"] = self_label.clone().into();
+        entity.as_object_mut().unwrap().remove("cid");
+
+        // build empty entity with which we can check if fields are supposed to be arrays
+        let entity_kind = EntityKind::from_name(self_label.as_str()).unwrap();
+        let empty_entity: Value =
+            serde_json::to_value(FormatWeb3(entity_kind.empty_entity())).unwrap();
+
+        for rel_cid_tuple in &rel_cid_tuples {
+            match empty_entity[rel_cid_tuple.0.as_str()] {
+                Value::Array(_) => {
+                    if !entity[rel_cid_tuple.0.as_str()].is_array() {
+                        entity[rel_cid_tuple.0.as_str()] = Value::Array(Vec::new());
+                    }
+                    entity[rel_cid_tuple.0.as_str()]
+                        .as_array_mut()
+                        .unwrap()
+                        .push(rel_cid_tuple.1.as_str().into());
+                }
+                Value::String(_) => {
+                    entity[rel_cid_tuple.0.as_str()] = rel_cid_tuple.1.as_str().into();
+                }
+                Value::Null => {
+                    entity[rel_cid_tuple.0.as_str()] = rel_cid_tuple.1.as_str().into();
+                }
+                _ => unimplemented!(),
+            }
+        }
+
+        let web3_entity: FormatWeb3<Entity> = serde_json::from_value(entity).unwrap();
+        Some(web3_entity.0)
+    }
+
+    /// Convert a "pattern comprehension" object (part of a row - see query for details) to entity
+    fn pattern_object_to_entities(object: &Value) -> Vec<Entity> {
+        let entity = Self::pattern_object_to_entity(object);
+
+        let properties: Value = object["properties"].clone();
+        let mut property_entities = Self::pattern_objects_to_entities(&properties);
+
+        let assertions: Value = object["assertions"].clone();
+        let mut assertion_entities = Self::pattern_objects_to_entities(&assertions);
+
+        let mut entity_vec: Vec<Entity> = vec![];
+        match entity {
+            None => (),
+            Some(entity) => entity_vec.push(entity),
+        }
+        entity_vec.append(&mut property_entities);
+        entity_vec.append(&mut assertion_entities);
+        entity_vec
+    }
+
+    /// Convert a list of "pattern comprehension" objects to entities
+    /// see usage in pattern_object_to_entities (recursive usage)
+    fn pattern_objects_to_entities(objects: &Value) -> Vec<Entity> {
+        let mut entities: Vec<Entity> = vec![];
+        if objects.is_array() {
+            entities = objects
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|pattern_object| Self::pattern_object_to_entities(pattern_object))
+                .fold(vec![], |mut all_entities, entities| {
+                    all_entities.extend(entities);
+                    all_entities
+                });
+        }
+        entities
+    }
+
+    /// Convert "pattern comprehension" rows to entities
+    fn pattern_rows_to_entities(rows: Rows) -> Vec<Entity> {
+        rows.map(|row| {
+            let data: Value = row.get("data").unwrap();
+            Self::pattern_object_to_entities(&data)
+        })
+        .fold(vec![], |mut all_entities, entities| {
+            all_entities.extend(entities);
+            all_entities
+        })
+    }
+
     async fn get_entity(&mut self, cid: String) -> Result<Option<Entity>, Error> {
         let entities = self.get_entities(vec![cid]).await?;
         Ok(entities.get(0).map(|n| n.to_owned()))
@@ -176,6 +329,78 @@ impl Neo4jBackend {
 
         let entities = Self::rows_to_entity(query_res.rows());
         trace!("get_entities retrieved {} entities", entities.len());
+        debug_assert!(
+            deduped_cids.len() == entities.len(),
+            "{} cids provided and {} entities retrieved",
+            deduped_cids.len(),
+            entities.len()
+        );
+
+        Ok(entities)
+    }
+
+    async fn resolve_entity(&mut self, cid: String) -> Result<Option<Entity>, Error> {
+        let entities = self.resolve_entities(vec![cid]).await?;
+        Ok(entities.get(0).map(|n| n.clone()))
+    }
+
+    pub async fn resolve_entities(&mut self, cids: Vec<String>) -> Result<Vec<Entity>, Error> {
+        let cids: Vec<String> = cids.to_owned();
+        let client = self.client().await?;
+
+        let deduped_cids = {
+            let mut deduped_cids = cids.to_owned();
+            deduped_cids.dedup();
+            deduped_cids
+        };
+
+        let query = format!(
+            "
+            UNWIND $cids AS cid
+            MATCH (n0:RlayEntity {{cid: cid}})
+            RETURN n0 {{
+                self: n0,
+                self_labels: labels(n0),
+                properties: [(n0)-[r0]->(n1) | {{
+                    rel_type: type(r0),
+                    self: n1,
+                    self_labels: labels(n1),
+                    properties: [(n1)-[r1]->(n2) | {{
+                        rel_type: type(r1),
+                        self: n2,
+                        self_labels: labels(n2)
+                    }}],
+                    assertions: CASE single(x IN labels(n0) WHERE x = 'Individuals') WHEN TRUE
+                        THEN [(n1)<-[r1]-(n2) | {{
+                            rel_type: type(r1),
+                            self: n2,
+                            self_labels: labels(n2)
+                        }}]
+                        END
+                    }}],
+                assertions: CASE single(x IN labels(n0) WHERE x = 'Individuals') WHEN TRUE
+                    THEN [(n0)<-[r0]-(n1) | {{
+                        rel_type: type(r0),
+                        self: n1,
+                        self_labels: labels(n1)
+                    }}]
+                    END
+            }} as data"
+        );
+        let statement_query = Statement::new(&query).with_param("cids", &deduped_cids)?;
+
+        trace!("NEO4J QUERY: {:?}", statement_query);
+        let start = std::time::Instant::now();
+        let query_res = client.exec(statement_query).await?;
+        let end = std::time::Instant::now();
+        trace!("Query duration: {:?}", end - start);
+
+        if query_res.rows().count() == 0 {
+            return Ok(vec![]);
+        }
+
+        let entities = Self::pattern_rows_to_entities(query_res.rows());
+        trace!("resolve_entities retrieved {} entities", entities.len());
         debug_assert!(
             deduped_cids.len() == entities.len(),
             "{} cids provided and {} entities retrieved",
@@ -429,4 +654,12 @@ impl BackendRpcMethodNeo4jQuery for Neo4jBackend {
     }
 }
 
-impl BackendRpcMethods for Neo4jBackend {}
+impl BackendRpcMethods for Neo4jBackend {
+    fn resolve_entity(&mut self, cid: &str) -> BoxFuture<Result<Option<Entity>, Error>> {
+        Box::pin(self.resolve_entity(cid.to_owned()))
+    }
+
+    fn resolve_entities(&mut self, cids: Vec<String>) -> BoxFuture<Result<Vec<Entity>, Error>> {
+        Box::pin(self.resolve_entities(cids))
+    }
+}

@@ -1,5 +1,6 @@
 use lazy_static::lazy_static;
 use nonparallel::nonparallel;
+use rlay_backend::rpc::*;
 use rlay_backend::BackendRpcMethods;
 use rlay_backend_neo4j::*;
 use rlay_ontology::prelude::*;
@@ -76,6 +77,41 @@ fn store_and_get_roundtrip_works() {
 
     let retrieved_entity = rt
         .block_on(backend.get_entity(&formatted_cid))
+        .unwrap()
+        .unwrap();
+
+    assert_eq!(
+        inserted_entity, retrieved_entity,
+        "inserted and retrieved entity don't match"
+    );
+}
+
+#[test]
+#[nonparallel(MUT_A)]
+fn resolve_entity_works() {
+    let _ = env_logger::try_init();
+    let mut rt = Runtime::new().unwrap();
+    let docker = clients::Cli::default();
+    let node = docker.run(neo4j_container());
+
+    let connection_string = format!(
+        "http://127.0.0.1:{}/db/data/",
+        node.get_host_port(7474).unwrap()
+    );
+
+    let backend_config = config::Neo4jBackendConfig {
+        uri: connection_string,
+    };
+    let mut backend = Neo4jBackend::from_config(backend_config);
+
+    let inserted_entity = Annotation::default().into();
+    let inserted_cid = rt
+        .block_on(backend.store_entity(&inserted_entity, &Value::Null))
+        .unwrap();
+    let formatted_cid: String = format!("0x{}", inserted_cid.to_bytes().to_hex());
+
+    let retrieved_entity = rt
+        .block_on(backend.resolve_entity(&formatted_cid))
         .unwrap()
         .unwrap();
 
