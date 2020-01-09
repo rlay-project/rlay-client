@@ -6,6 +6,7 @@ use rlay_backend::rpc::*;
 use rlay_backend::BackendFromConfigAndSyncState;
 use rlay_ontology::ontology::Entity;
 use serde_json::Value;
+use std::collections::HashMap;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -126,4 +127,28 @@ impl BackendRpcMethodGetEntities for Backend {
     }
 }
 
-impl BackendRpcMethods for Backend {}
+impl BackendRpcMethods for Backend {
+    fn resolve_entity(
+        &mut self,
+        cid: &str,
+    ) -> BoxFuture<Result<HashMap<String, Vec<Entity>>, Error>> {
+        match self {
+            #[cfg(feature = "backend_neo4j")]
+            Backend::Neo4j(backend) => BackendRpcMethods::resolve_entity(backend, cid),
+            #[cfg(feature = "backend_redisgraph")]
+            Backend::Redisgraph(backend) => BackendRpcMethods::resolve_entity(backend, cid),
+        }
+    }
+
+    fn resolve_entities(
+        &mut self,
+        cids: Vec<String>,
+    ) -> BoxFuture<Result<HashMap<String, Vec<Entity>>, Error>> {
+        match self {
+            #[cfg(feature = "backend_neo4j")]
+            Backend::Neo4j(backend) => BackendRpcMethods::resolve_entities(backend, cids),
+            #[cfg(feature = "backend_redisgraph")]
+            Backend::Redisgraph(backend) => BackendRpcMethods::resolve_entities(backend, cids),
+        }
+    }
+}

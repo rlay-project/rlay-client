@@ -39,6 +39,8 @@ pub struct SyncState {
     pub connection_pool: Option<Arc<Pool<CypherConnectionManager>>>,
 }
 
+type ResolvedEntities = HashMap<String, Vec<Entity>>;
+
 impl Neo4jBackend {
     pub fn from_config(config: Neo4jBackendConfig) -> Self {
         Self {
@@ -200,7 +202,7 @@ impl Neo4jBackend {
     /// Convert a "pattern comprehension" object (part of a row - see query for details) to entity
     fn pattern_object_to_entity(object: &Value) -> Option<Entity> {
         let self_value: Value = object["self"].clone();
-        let properties: Value = object["properties"].clone();
+        let children: Value = object["children"].clone();
 
         let self_label_option = Self::pattern_object_to_label(object);
         let self_label = match self_label_option {
@@ -208,7 +210,12 @@ impl Neo4jBackend {
             None => return None,
             Some(val) => val,
         };
-        let rel_cid_tuples = Self::pattern_objects_to_relationship_cid_tuples(&properties);
+        let rel_cid_tuples = Self::pattern_objects_to_relationship_cid_tuples(&children);
+        match rel_cid_tuples[..] {
+            // it is not fully resolved so we do not return an entity
+            [] => return None,
+            _ => (),
+        }
 
         let mut entity = self_value;
         entity["type"] = self_label.clone().into();
@@ -240,7 +247,10 @@ impl Neo4jBackend {
             }
         }
 
-        let web3_entity: FormatWeb3<Entity> = serde_json::from_value(entity).unwrap();
+        let web3_entity: FormatWeb3<Entity> = match serde_json::from_value(entity) {
+            Err(_) => return None,
+            Ok(v) => v,
+        };
         Some(web3_entity.0)
     }
 
@@ -248,19 +258,15 @@ impl Neo4jBackend {
     fn pattern_object_to_entities(object: &Value) -> Vec<Entity> {
         let entity = Self::pattern_object_to_entity(object);
 
-        let properties: Value = object["properties"].clone();
-        let mut property_entities = Self::pattern_objects_to_entities(&properties);
-
-        let assertions: Value = object["assertions"].clone();
-        let mut assertion_entities = Self::pattern_objects_to_entities(&assertions);
+        let children: Value = object["children"].clone();
+        let mut children_entities = Self::pattern_objects_to_entities(&children);
 
         let mut entity_vec: Vec<Entity> = vec![];
         match entity {
             None => (),
             Some(entity) => entity_vec.push(entity),
         }
-        entity_vec.append(&mut property_entities);
-        entity_vec.append(&mut assertion_entities);
+        entity_vec.append(&mut children_entities);
         entity_vec
     }
 
@@ -282,16 +288,15 @@ impl Neo4jBackend {
         entities
     }
 
-    /// Convert "pattern comprehension" rows to entities
-    fn pattern_rows_to_entities(rows: Rows) -> Vec<Entity> {
-        rows.map(|row| {
+    /// Convert "pattern comprehension" rows to resolved entities hash map
+    fn pattern_rows_to_resolve_entities(rows: Rows) -> ResolvedEntities {
+        let mut resolve_entities_map = HashMap::<String, Vec<Entity>>::new();
+        for row in rows {
+            let cid: String = row.get("cid").unwrap();
             let data: Value = row.get("data").unwrap();
-            Self::pattern_object_to_entities(&data)
-        })
-        .fold(vec![], |mut all_entities, entities| {
-            all_entities.extend(entities);
-            all_entities
-        })
+            resolve_entities_map.insert(cid, Self::pattern_object_to_entities(&data));
+        }
+        resolve_entities_map
     }
 
     async fn get_entity(&mut self, cid: String) -> Result<Option<Entity>, Error> {
@@ -339,12 +344,11 @@ impl Neo4jBackend {
         Ok(entities)
     }
 
-    async fn resolve_entity(&mut self, cid: String) -> Result<Option<Entity>, Error> {
-        let entities = self.resolve_entities(vec![cid]).await?;
-        Ok(entities.get(0).map(|n| n.clone()))
+    async fn resolve_entity(&mut self, cid: String) -> Result<ResolvedEntities, Error> {
+        self.resolve_entities(vec![cid]).await
     }
 
-    pub async fn resolve_entities(&mut self, cids: Vec<String>) -> Result<Vec<Entity>, Error> {
+    pub async fn resolve_entities(&mut self, cids: Vec<String>) -> Result<ResolvedEntities, Error> {
         let cids: Vec<String> = cids.to_owned();
         let client = self.client().await?;
 
@@ -358,33 +362,45 @@ impl Neo4jBackend {
             "
             UNWIND $cids AS cid
             MATCH (n0:RlayEntity {{cid: cid}})
-            RETURN n0 {{
+            RETURN
+            cid as cid,
+            {{
                 self: n0,
                 self_labels: labels(n0),
-                properties: [(n0)-[r0]->(n1) | {{
+                children: [(n0)-[r0]->(n1) | {{
                     rel_type: type(r0),
                     self: n1,
                     self_labels: labels(n1),
-                    properties: [(n1)-[r1]->(n2) | {{
+                    children: [(n1)-[r1]->(n2) | {{
                         rel_type: type(r1),
                         self: n2,
-                        self_labels: labels(n2)
-                    }}],
-                    assertions: CASE single(x IN labels(n0) WHERE x = 'Individuals') WHEN TRUE
-                        THEN [(n1)<-[r1]-(n2) | {{
-                            rel_type: type(r1),
-                            self: n2,
-                            self_labels: labels(n2)
-                        }}]
-                        END
-                    }}],
-                assertions: CASE single(x IN labels(n0) WHERE x = 'Individuals') WHEN TRUE
-                    THEN [(n0)<-[r0]-(n1) | {{
-                        rel_type: type(r0),
-                        self: n1,
-                        self_labels: labels(n1)
+                        self_labels: labels(n2),
+                        children: CASE single(x IN labels(n2) WHERE x = 'Individual' AND n2 <> n0) WHEN TRUE
+                            THEN [(n2)-[r2]->(n3) | {{
+                                rel_type: type(r2),
+                                self: n3,
+                                self_labels: labels(n3)
+                            }}]
+                            END
                     }}]
-                    END
+                }}] +
+                [(n0)<-[r0:subject]-(n1) | {{
+                    rel_type: type(r0),
+                    self: n1,
+                    self_labels: labels(n1),
+                    children: [(n1)-[r1]->(n2) | {{
+                        rel_type: type(r1),
+                        self: n2,
+                        self_labels: labels(n2),
+                        children: CASE single(x IN labels(n2) WHERE x = 'Individual' AND n2 <> n0) WHEN TRUE
+                            THEN [(n2)-[r2]->(n3) | {{
+                                rel_type: type(r2),
+                                self: n3,
+                                self_labels: labels(n3)
+                            }}]
+                            END
+                    }}]
+                }}]
             }} as data"
         );
         let statement_query = Statement::new(&query).with_param("cids", &deduped_cids)?;
@@ -395,18 +411,8 @@ impl Neo4jBackend {
         let end = std::time::Instant::now();
         trace!("Query duration: {:?}", end - start);
 
-        if query_res.rows().count() == 0 {
-            return Ok(vec![]);
-        }
-
-        let entities = Self::pattern_rows_to_entities(query_res.rows());
+        let entities = Self::pattern_rows_to_resolve_entities(query_res.rows());
         trace!("resolve_entities retrieved {} entities", entities.len());
-        debug_assert!(
-            deduped_cids.len() == entities.len(),
-            "{} cids provided and {} entities retrieved",
-            deduped_cids.len(),
-            entities.len()
-        );
 
         Ok(entities)
     }
@@ -655,11 +661,17 @@ impl BackendRpcMethodNeo4jQuery for Neo4jBackend {
 }
 
 impl BackendRpcMethods for Neo4jBackend {
-    fn resolve_entity(&mut self, cid: &str) -> BoxFuture<Result<Option<Entity>, Error>> {
+    fn resolve_entity(
+        &mut self,
+        cid: &str,
+    ) -> BoxFuture<Result<HashMap<String, Vec<Entity>>, Error>> {
         Box::pin(self.resolve_entity(cid.to_owned()))
     }
 
-    fn resolve_entities(&mut self, cids: Vec<String>) -> BoxFuture<Result<Vec<Entity>, Error>> {
+    fn resolve_entities(
+        &mut self,
+        cids: Vec<String>,
+    ) -> BoxFuture<Result<HashMap<String, Vec<Entity>>, Error>> {
         Box::pin(self.resolve_entities(cids))
     }
 }

@@ -4,6 +4,7 @@ use failure::{err_msg, Error};
 use futures::future::{err, BoxFuture, FutureExt};
 use rlay_ontology::ontology::Entity;
 use serde_json::Value;
+use std::collections::HashMap;
 
 #[delegatable_trait]
 pub trait BackendRpcMethodGetEntity {
@@ -89,7 +90,10 @@ pub trait BackendRpcMethods:
     + BackendRpcMethodNeo4jQuery
 {
     #[allow(unused_variables)]
-    fn resolve_entity(&mut self, cid: &str) -> BoxFuture<Result<Option<Entity>, Error>> {
+    fn resolve_entity(
+        &mut self,
+        cid: &str,
+    ) -> BoxFuture<Result<HashMap<String, Vec<Entity>>, Error>> {
         err(err_msg(
             "The requested backend does not support this RPC method.",
         ))
@@ -97,7 +101,10 @@ pub trait BackendRpcMethods:
     }
 
     #[allow(unused_variables)]
-    fn resolve_entities(&mut self, cids: Vec<String>) -> BoxFuture<Result<Vec<Entity>, Error>> {
+    fn resolve_entities(
+        &mut self,
+        cids: Vec<String>,
+    ) -> BoxFuture<Result<HashMap<String, Vec<Entity>>, Error>> {
         err(err_msg(
             "The requested backend does not support this RPC method.",
         ))
