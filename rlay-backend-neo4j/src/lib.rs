@@ -262,50 +262,21 @@ impl Neo4jBackend {
             entity_objects.push(val);
         }
 
+        let sub_query_labels = EntityKind::variants().iter().map(|variant| {
+            format!(
+                "FOREACH ( ignore in CASE entity.type WHEN '{}' THEN [1] ELSE [] END | SET n:{} )",
+                variant, variant)
+        })
+        .collect::<Vec<String>>()
+        .join("\n");
+
         let statement_query_main = format!("
             UNWIND $entities as entity
             MERGE (n:RlayEntity {{cid: entity.cid }})
             SET (CASE WHEN entity.type = 'Annotation' THEN n END).value = entity.value
             SET (CASE WHEN entity.type = 'DataPropertyAssertion' THEN n END).target = entity.target
             SET (CASE WHEN entity.type = 'NegativeDataPropertyAssertion' THEN n END).target = entity.target
-            FOREACH ( ignore in CASE entity.type WHEN 'Class' THEN [1] ELSE [] END | SET n:Class )
-            FOREACH ( ignore in CASE entity.type WHEN 'ObjectIntersectionOf' THEN [1] ELSE [] END | SET n:ObjectIntersectionOf )
-            FOREACH ( ignore in CASE entity.type WHEN 'ObjectUnionOf' THEN [1] ELSE [] END | SET n:ObjectUnionOf )
-            FOREACH ( ignore in CASE entity.type WHEN 'ObjectComplementOf' THEN [1] ELSE [] END | SET n:ObjectComplementOf )
-            FOREACH ( ignore in CASE entity.type WHEN 'ObjectOneOf' THEN [1] ELSE [] END | SET n:ObjectOneOf )
-            FOREACH ( ignore in CASE entity.type WHEN 'ObjectSomeValuesFrom' THEN [1] ELSE [] END | SET n:ObjectSomeValuesFrom )
-            FOREACH ( ignore in CASE entity.type WHEN 'ObjectAllValuesFrom' THEN [1] ELSE [] END | SET n:ObjectAllValuesFrom )
-            FOREACH ( ignore in CASE entity.type WHEN 'ObjectHasValue' THEN [1] ELSE [] END | SET n:ObjectHasValue )
-            FOREACH ( ignore in CASE entity.type WHEN 'ObjectHasSelf' THEN [1] ELSE [] END | SET n:ObjectHasSelf )
-            FOREACH ( ignore in CASE entity.type WHEN 'ObjectMinCardinality' THEN [1] ELSE [] END | SET n:ObjectMinCardinality )
-            FOREACH ( ignore in CASE entity.type WHEN 'ObjectMaxCardinality' THEN [1] ELSE [] END | SET n:ObjectMaxCardinality )
-            FOREACH ( ignore in CASE entity.type WHEN 'ObjectExactCardinality' THEN [0] ELSE [] END | SET n:ObjectExactCardinality )
-            FOREACH ( ignore in CASE entity.type WHEN 'DataSomeValuesFrom' THEN [1] ELSE [] END | SET n:DataSomeValuesFrom )
-            FOREACH ( ignore in CASE entity.type WHEN 'DataAllValuesFrom' THEN [1] ELSE [] END | SET n:DataAllValuesFrom )
-            FOREACH ( ignore in CASE entity.type WHEN 'DataHasValue' THEN [1] ELSE [] END | SET n:DataHasValue )
-            FOREACH ( ignore in CASE entity.type WHEN 'DataMinCardinality' THEN [1] ELSE [] END | SET n:DataMinCardinality )
-            FOREACH ( ignore in CASE entity.type WHEN 'DataMaxCardinality' THEN [1] ELSE [] END | SET n:DataMaxCardinality )
-            FOREACH ( ignore in CASE entity.type WHEN 'DataExactCardinality' THEN [1] ELSE [] END | SET n:DataExactCardinality )
-            FOREACH ( ignore in CASE entity.type WHEN 'ObjectProperty' THEN [1] ELSE [] END | SET n:ObjectProperty )
-            FOREACH ( ignore in CASE entity.type WHEN 'InverseObjectProperty' THEN [0] ELSE [] END | SET n:InverseObjectProperty )
-            FOREACH ( ignore in CASE entity.type WHEN 'DataProperty' THEN [1] ELSE [] END | SET n:DataProperty )
-            FOREACH ( ignore in CASE entity.type WHEN 'Annotation' THEN [1] ELSE [] END | SET n:Annotation )
-            FOREACH ( ignore in CASE entity.type WHEN 'Individual' THEN [1] ELSE [] END | SET n:Individual )
-            FOREACH ( ignore in CASE entity.type WHEN 'AnnotationProperty' THEN [1] ELSE [] END | SET n:AnnotationProperty )
-            FOREACH ( ignore in CASE entity.type WHEN 'ClassAssertion' THEN [1] ELSE [] END | SET n:ClassAssertion )
-            FOREACH ( ignore in CASE entity.type WHEN 'NegativeClassAssertion' THEN [1] ELSE [] END | SET n:NegativeClassAssertion )
-            FOREACH ( ignore in CASE entity.type WHEN 'ObjectPropertyAssertion' THEN [1] ELSE [] END | SET n:ObjectPropertyAssertion )
-            FOREACH ( ignore in CASE entity.type WHEN 'NegativeObjectPropertyAssertion' THEN [1] ELSE [] END | SET n:NegativeObjectPropertyAssertion )
-            FOREACH ( ignore in CASE entity.type WHEN 'DataPropertyAssertion' THEN [1] ELSE [] END | SET n:DataPropertyAssertion )
-            FOREACH ( ignore in CASE entity.type WHEN 'NegativeDataPropertyAssertion' THEN [1] ELSE [] END | SET n:NegativeDataPropertyAssertion )
-            FOREACH ( ignore in CASE entity.type WHEN 'AnnotationAssertion' THEN [1] ELSE [] END | SET n:AnnotationAssertion )
-            FOREACH ( ignore in CASE entity.type WHEN 'NegativeAnnotationAssertion' THEN [1] ELSE [] END | SET n:NegativeAnnotationAssertion )
-            FOREACH ( ignore in CASE entity.type WHEN 'Literal' THEN [1] ELSE [] END | SET n:Literal )
-            FOREACH ( ignore in CASE entity.type WHEN 'Datatype' THEN [1] ELSE [] END | SET n:Datatype )
-            FOREACH ( ignore in CASE entity.type WHEN 'DataIntersectionOf' THEN [1] ELSE [] END | SET n:DataIntersectionOf )
-            FOREACH ( ignore in CASE entity.type WHEN 'DataUnionOf' THEN [1] ELSE [] END | SET n:DataUnionOf )
-            FOREACH ( ignore in CASE entity.type WHEN 'DataComplementOf' THEN [1] ELSE [] END | SET n:DataComplementOf )
-            FOREACH ( ignore in CASE entity.type WHEN 'DataOneOf' THEN [1] ELSE [] END | SET n:DataOneOf )
+            {labels}
             WITH n, entity
             UNWIND entity.relationships as relationship
                 MERGE (m:RlayEntity {{ cid: relationship.cid }})
@@ -331,6 +302,7 @@ impl Neo4jBackend {
                 FOREACH ( ignore in CASE relationship.kind_name WHEN 'datatypes' THEN [1] ELSE [] END | MERGE (n)-[:datatypes]->(m) )
                 FOREACH ( ignore in CASE relationship.kind_name WHEN 'values' THEN [1] ELSE [] END | MERGE (n)-[:values]->(m) )
             RETURN DISTINCT entity.cid",
+            labels = sub_query_labels
         );
 
         let statement_query = Statement::new(&statement_query_main)

@@ -14,7 +14,7 @@ rlay-payout = { path = "../rlay-payout" }
 
 web3 = "0.6.0"
 cid = { package = "cid_fork_rlay", version = "0.3.1" }
-rlay_ontology = { version = "0.2.3", features = ["web3_compat"] }
+rlay_ontology = { version = "0.2.5", features = ["web3_compat"] }
 ethabi = { git = "https://github.com/hobofan/ethabi", rev = '42df1ca0ac5976040b9091f35875b9548c30ef41' }
 rustc-hex = "1.0.0"
 tokio-core = "0.1.17"

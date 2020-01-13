@@ -13,7 +13,7 @@ failure = "0.1.5"
 futures-preview = { version = "0.3.0-alpha.19" }
 log = "0.4.6"
 redis = { git = "https://github.com/hobofan/redis-rs", rev = "9d12e65ef3a2974f84654037ace7c21234ebeeec" }
-rlay_ontology = { version = "0.2.3", features = ["web3_compat"] }
+rlay_ontology = { version = "0.2.5", features = ["web3_compat"] }
 rustc-hex = "1.0.0"
 serde = "=1.0.79"
 serde_derive = "=1.0.79"
