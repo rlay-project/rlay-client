@@ -68,82 +68,6 @@ impl Neo4jBackend {
             .await;
     }
 
-    /// Convert rows that has a return statement like `RETURN labels(n),n,type(r),m` into entities
-    fn rows_to_entity(rows: Rows) -> Vec<Entity> {
-        let mut entity_map = HashMap::<String, Value>::new();
-
-        for row in rows {
-            let labels: Value = row.get("labels(n)").unwrap();
-            let label = labels
-                .as_array()
-                .unwrap()
-                .into_iter()
-                // TODO: make more robust against additional labels
-                // currently only filter out the known extra label RlayEntity that is used for
-                // a index
-                .filter(|n| n.as_str().unwrap() != "RlayEntity")
-                .collect::<Vec<_>>()[0]
-                .clone();
-            // build empty entity with which we can check if fields are supposed to be arrays
-            let entity_kind = EntityKind::from_name(label.as_str().unwrap()).unwrap();
-            let empty_entity: Value =
-                serde_json::to_value(FormatWeb3(entity_kind.empty_entity())).unwrap();
-
-            let main_entity_cid: String = row
-                .get::<Value>("n")
-                .expect("Unable to get value n in neo4j result set")
-                .as_object_mut()
-                .expect("Unable to convert return neo4j return value to object")
-                .get("cid")
-                .expect("Neo4j return value does not contain \"cid\"")
-                .as_str()
-                .expect("Unable to convert neo4j return value n.cid to string")
-                .to_owned();
-
-            let entity = entity_map.entry(main_entity_cid).or_insert_with(|| {
-                let mut main_entity: Value = row.get("n").unwrap();
-                main_entity["type"] = label;
-                main_entity.as_object_mut().unwrap().remove("cid");
-
-                main_entity
-            });
-
-            let value_value: Value = row.get("m").unwrap();
-            let value_cid = value_value["cid"].clone();
-
-            let rel_type_value: Value = row.get("type(r)").unwrap();
-            let rel_type = rel_type_value.as_str().unwrap().clone();
-
-            match empty_entity[rel_type] {
-                Value::Array(_) => {
-                    if !entity[rel_type].is_array() {
-                        entity[rel_type] = Value::Array(Vec::new());
-                    }
-                    entity[rel_type].as_array_mut().unwrap().push(value_cid);
-                }
-                Value::String(_) => {
-                    entity[rel_type] = value_cid;
-                }
-                Value::Null => {
-                    entity[rel_type] = value_cid;
-                }
-                _ => unimplemented!(),
-            }
-        }
-
-        entity_map
-            .values()
-            .into_iter()
-            .map(|entity| {
-                let web3_entity: FormatWeb3<Entity> =
-                    serde_json::from_value((*entity).clone()).unwrap();
-                let entity: Entity = web3_entity.0;
-
-                entity
-            })
-            .collect()
-    }
-
     fn pattern_object_to_cid(object: &Value) -> String {
         let self_value: Value = object["self"].clone();
 
@@ -299,6 +223,18 @@ impl Neo4jBackend {
         resolve_entities_map
     }
 
+    fn pattern_rows_to_entities(rows: Rows) -> Vec<Entity> {
+        rows
+            .map(|row| {
+                let data: Value = row.get("data").unwrap();
+                Self::pattern_object_to_entities(&data)
+            })
+            .fold(vec![], |mut all_entities, entities| {
+                all_entities.extend(entities);
+                all_entities
+            })
+    }
+
     async fn get_entity(&mut self, cid: String) -> Result<Option<Entity>, Error> {
         let entities = self.get_entities(vec![cid]).await?;
         Ok(entities.get(0).map(|n| n.to_owned()))
@@ -317,8 +253,18 @@ impl Neo4jBackend {
         let query = format!(
             "
             UNWIND $cids AS cid
-            MATCH (n:RlayEntity {{cid: cid}})-[r]->(m)
-            RETURN labels(n),n,type(r),m"
+            MATCH (n0:RlayEntity {{cid: cid}})
+            RETURN
+            cid as cid,
+            {{
+                self: n0,
+                self_labels: labels(n0),
+                children: [(n0:RlayEntity)-[r0]->(n1:RlayEntity) | {{
+                    rel_type: type(r0),
+                    self: n1,
+                    self_labels: labels(n1)
+                }}]
+            }} as data"
         );
         let statement_query = Statement::new(&query).with_param("cids", &deduped_cids)?;
 
@@ -332,7 +278,7 @@ impl Neo4jBackend {
             return Ok(vec![]);
         }
 
-        let entities = Self::rows_to_entity(query_res.rows());
+        let entities = Self::pattern_rows_to_entities(query_res.rows());
         trace!("get_entities retrieved {} entities", entities.len());
         debug_assert!(
             deduped_cids.len() == entities.len(),
