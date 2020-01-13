@@ -367,16 +367,16 @@ impl Neo4jBackend {
             {{
                 self: n0,
                 self_labels: labels(n0),
-                children: [(n0)-[r0]->(n1) | {{
+                children: [(n0:RlayEntity)-[r0]->(n1:RlayEntity) | {{
                     rel_type: type(r0),
                     self: n1,
                     self_labels: labels(n1),
-                    children: [(n1)-[r1]->(n2) | {{
+                    children: [(n1:RlayEntity)-[r1]->(n2:RlayEntity) | {{
                         rel_type: type(r1),
                         self: n2,
                         self_labels: labels(n2),
                         children: CASE single(x IN labels(n2) WHERE x = 'Individual' AND n2 <> n0) WHEN TRUE
-                            THEN [(n2)-[r2]->(n3) | {{
+                            THEN [(n2:RlayEntity)-[r2]->(n3:RlayEntity) | {{
                                 rel_type: type(r2),
                                 self: n3,
                                 self_labels: labels(n3)
@@ -384,16 +384,16 @@ impl Neo4jBackend {
                             END
                     }}]
                 }}] +
-                [(n0)<-[r0:subject]-(n1) | {{
+                [(n0:RlayEntity)<-[r0:subject]-(n1:RlayEntity) | {{
                     rel_type: type(r0),
                     self: n1,
                     self_labels: labels(n1),
-                    children: [(n1)-[r1]->(n2) | {{
+                    children: [(n1:RlayEntity)-[r1]->(n2:RlayEntity) | {{
                         rel_type: type(r1),
                         self: n2,
                         self_labels: labels(n2),
                         children: CASE single(x IN labels(n2) WHERE x = 'Individual' AND n2 <> n0) WHEN TRUE
-                            THEN [(n2)-[r2]->(n3) | {{
+                            THEN [(n2:RlayEntity)-[r2]->(n3:RlayEntity) | {{
                                 rel_type: type(r2),
                                 self: n3,
                                 self_labels: labels(n3)
