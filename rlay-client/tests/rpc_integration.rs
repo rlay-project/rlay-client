@@ -60,14 +60,14 @@ fn get_health() {
     std::fs::copy(
         "./tests/rlay.config.neo4j.toml.test_template",
         config_file.path(),
-        )
-        .unwrap();
+    )
+    .unwrap();
 
     let rt = Runtime::new().unwrap();
     let docker = clients::Cli::default();
     let node = docker.run(neo4j_container());
 
-    set_neo4j_port(config_file.path(), node.get_host_port(7474).unwrap());
+    set_neo4j_port(config_file.path(), node.get_host_port(7474).unwrap().into());
     let rpc_port = set_rpc_port(config_file.path());
     let mut child_client = Command::cargo_bin("rlay-client")
         .unwrap()
@@ -81,7 +81,10 @@ fn get_health() {
     let base_url = format!("http://127.0.0.1:{}", rpc_port);
     let rpc_result_value = rt.block_on(async {
         let client = Client::new();
-        let res = client.get(format!("{}/health", base_url).parse().unwrap()).await.unwrap();
+        let res = client
+            .get(format!("{}/health", base_url).parse().unwrap())
+            .await
+            .unwrap();
 
         let body: Vec<u8> = res.into_body().try_concat().await.unwrap().to_vec();
         let rpc_result_value: Value = serde_json::from_slice(&body).unwrap();
@@ -109,7 +112,7 @@ fn store_and_get_roundtrip() {
     let docker = clients::Cli::default();
     let node = docker.run(neo4j_container());
 
-    set_neo4j_port(config_file.path(), node.get_host_port(7474).unwrap());
+    set_neo4j_port(config_file.path(), node.get_host_port(7474).unwrap().into());
     let rpc_port = set_rpc_port(config_file.path());
     let mut child_client = Command::cargo_bin("rlay-client")
         .unwrap()
@@ -143,7 +146,7 @@ fn proxy_support() {
     let docker = clients::Cli::default();
     let node = docker.run(ganache_container());
 
-    set_ganache_port(config_file.path(), node.get_host_port(8545).unwrap());
+    set_ganache_port(config_file.path(), node.get_host_port(8545).unwrap().into());
     let rpc_port = set_rpc_port(config_file.path());
     let mut child_client = Command::cargo_bin("rlay-client")
         .unwrap()
