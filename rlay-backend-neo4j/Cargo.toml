@@ -14,7 +14,7 @@ cid = { package = "cid_fork_rlay", version = "0.3.1" }
 failure = "0.1.1"
 futures-preview = { version = "0.3.0-alpha.19", features = ["compat"] }
 log = "0.4.6"
-rlay_ontology = { version = "0.2.3", features = ["web3_compat"] }
+rlay_ontology = { version = "0.2.6", features = ["web3_compat"] }
 rustc-hex = "1.0.0"
 rusted_cypher = { git = "https://github.com/hobofan/rusted-cypher", rev = 'ab30cdb6b9a0ff7ef0299ee02fa5cb41a0eb3c0d' }
 serde = "1.0.79"
@@ -24,5 +24,5 @@ tokio = "0.2.0-alpha.4"
 err-ctx = "0.2.3"
 
 [dev-dependencies]
-testcontainers = "0.7"
+testcontainers = { git = "https://github.com/testcontainers/testcontainers-rs", rev = "b6f9dbe82478f28f5c5b46686bcc4dfe422fd9ea" }
 env_logger = "0.6.2"

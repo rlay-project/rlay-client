@@ -8,7 +8,7 @@ edition = "2018"
 [dependencies]
 rlay-backend-ethereum = { path = "../rlay-backend-ethereum" }
 
-rlay_ontology = { version = "0.2.3", features = ["web3_compat"] }
+rlay_ontology = { version = "0.2.6", features = ["web3_compat"] }
 cid = { package = "cid_fork_rlay", version = "0.3.1" }
 futures-preview = { version = "0.3.0-alpha.17", features = ["compat"] }
 futures01 = { package = "futures", version = "0.1.28" }
