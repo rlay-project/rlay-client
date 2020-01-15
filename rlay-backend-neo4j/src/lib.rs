@@ -270,6 +270,33 @@ impl Neo4jBackend {
         .collect::<Vec<String>>()
         .join("\n");
 
+        // collect all possible field names
+        let mut all_cid_field_names: Vec<String> = vec![];
+
+        macro_rules! cid_field_names {
+            ($kind:path) => {
+                all_cid_field_names.extend(<$kind>::cid_field_names()
+                    .into_iter()
+                    .map(|field| field.to_owned().to_owned())
+                    .collect::<Vec<String>>());
+            };
+        }
+
+        rlay_ontology::call_with_entity_kinds!(ALL; cid_field_names!);
+
+        all_cid_field_names.sort();
+        all_cid_field_names.dedup();
+
+        let sub_query_relations = all_cid_field_names
+            .iter()
+            .map(|field_name| {
+                format!(
+                    "FOREACH ( ignore in CASE relationship.kind_name WHEN '{}' THEN [1] ELSE [] END | MERGE (n)-[:{}]->(m) )",
+                    field_name, field_name)
+            })
+            .collect::<Vec<String>>()
+            .join("\n");
+
         let statement_query_main = format!("
             UNWIND $entities as entity
             MERGE (n:RlayEntity {{cid: entity.cid }})
@@ -280,29 +307,10 @@ impl Neo4jBackend {
             WITH n, entity
             UNWIND entity.relationships as relationship
                 MERGE (m:RlayEntity {{ cid: relationship.cid }})
-                FOREACH ( ignore in CASE relationship.kind_name WHEN 'annotations' THEN [1] ELSE [] END | MERGE (n)-[:annotations]->(m) )
-                FOREACH ( ignore in CASE relationship.kind_name WHEN 'superClassExpression' THEN [0] ELSE [] END | MERGE (n)-[:superClassExpression]->(m) )
-                FOREACH ( ignore in CASE relationship.kind_name WHEN 'complementOf' THEN [1] ELSE [] END | MERGE (n)-[:complementOf]->(m) )
-                FOREACH ( ignore in CASE relationship.kind_name WHEN 'superObjectPropertyExpression' THEN [0] ELSE [] END | MERGE (n)-[:superObjectPropertyExpression]->(m) )
-                FOREACH ( ignore in CASE relationship.kind_name WHEN 'superDataPropertyExpression' THEN [1] ELSE [] END | MERGE (n)-[:superDataPropertyExpression]->(m) )
-                FOREACH ( ignore in CASE relationship.kind_name WHEN 'domain' THEN [1] ELSE [] END | MERGE (n)-[:domain]->(m) )
-                FOREACH ( ignore in CASE relationship.kind_name WHEN 'range' THEN [1] ELSE [] END | MERGE (n)-[:range]->(m) )
-                FOREACH ( ignore in CASE relationship.kind_name WHEN 'property' THEN [0] ELSE [] END | MERGE (n)-[:property]->(m) )
-                FOREACH ( ignore in CASE relationship.kind_name WHEN 'value' THEN [1] ELSE [] END | MERGE (n)-[:value]->(m) )
-                FOREACH ( ignore in CASE relationship.kind_name WHEN 'class_assertions' THEN [0] ELSE [] END | MERGE (n)-[:class_assertions]->(m) )
-                FOREACH ( ignore in CASE relationship.kind_name WHEN 'negative_class_assertions' THEN [1] ELSE [] END | MERGE (n)-[:negative_class_assertions]->(m) )
-                FOREACH ( ignore in CASE relationship.kind_name WHEN 'object_property_assertions' THEN [1] ELSE [] END | MERGE (n)-[:object_property_assertions]->(m) )
-                FOREACH ( ignore in CASE relationship.kind_name WHEN 'negative_object_property_assertions' THEN [1] ELSE [] END | MERGE (n)-[:negative_object_property_assertions]->(m) )
-                FOREACH ( ignore in CASE relationship.kind_name WHEN 'data_property_assertions' THEN [0] ELSE [] END | MERGE (n)-[:data_property_assertions]->(m) )
-                FOREACH ( ignore in CASE relationship.kind_name WHEN 'negative_data_property_assertions' THEN [1] ELSE [] END | MERGE (n)-[:negative_data_property_assertions]->(m) )
-                FOREACH ( ignore in CASE relationship.kind_name WHEN 'subject' THEN [1] ELSE [] END | MERGE (n)-[:subject]->(m) )
-                FOREACH ( ignore in CASE relationship.kind_name WHEN 'class' THEN [1] ELSE [] END | MERGE (n)-[:class]->(m) )
-                FOREACH ( ignore in CASE relationship.kind_name WHEN 'target' THEN [1] ELSE [] END | MERGE (n)-[:target]->(m) )
-                FOREACH ( ignore in CASE relationship.kind_name WHEN 'datatype' THEN [1] ELSE [] END | MERGE (n)-[:datatype]->(m) )
-                FOREACH ( ignore in CASE relationship.kind_name WHEN 'datatypes' THEN [1] ELSE [] END | MERGE (n)-[:datatypes]->(m) )
-                FOREACH ( ignore in CASE relationship.kind_name WHEN 'values' THEN [1] ELSE [] END | MERGE (n)-[:values]->(m) )
+                {relations}
             RETURN DISTINCT entity.cid",
-            labels = sub_query_labels
+            labels = sub_query_labels,
+            relations = sub_query_relations
         );
 
         let statement_query = Statement::new(&statement_query_main)
