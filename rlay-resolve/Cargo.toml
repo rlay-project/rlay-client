@@ -6,5 +6,5 @@ license = "MIT OR Apache-2.0"
 edition = "2018"
 
 [dependencies]
-rlay_ontology = { version = "0.2.3", features = ["web3_compat"] }
+rlay_ontology = { version = "0.2.6", features = ["web3_compat"] }
 futures-preview = { version = "0.3.0-alpha.17", features = ["compat"] }

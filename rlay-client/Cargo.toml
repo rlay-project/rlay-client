@@ -14,7 +14,7 @@ rlay-payout = { path = "../rlay-payout" }
 
 web3 = "0.6.0"
 cid = { package = "cid_fork_rlay", version = "0.3.1" }
-rlay_ontology = { version = "0.2.5", features = ["web3_compat"] }
+rlay_ontology = { version = "0.2.6", features = ["web3_compat"] }
 ethabi = { git = "https://github.com/hobofan/ethabi", rev = '42df1ca0ac5976040b9091f35875b9548c30ef41' }
 rustc-hex = "1.0.0"
 tokio-core = "0.1.17"
@@ -41,7 +41,7 @@ toml_edit = "0.1.3"
 
 [dev-dependencies]
 assert_cmd = "0.11"
-testcontainers = "0.7"
+testcontainers = { git = "https://github.com/testcontainers/testcontainers-rs", rev = "b6f9dbe82478f28f5c5b46686bcc4dfe422fd9ea" }
 rlay-jsonrpc-client = { path = "../rlay-jsonrpc-client" }
 tokio_futures3 = { package = "tokio", version = "0.2.0-alpha.1" }
 tempfile = "3.1"

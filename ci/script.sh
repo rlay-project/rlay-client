@@ -6,7 +6,7 @@ set -ex
 main() {
     # cross build --target $TARGET
     # cross build --target $TARGET --release
-    cd rlay-client && cargo build --features backend_neo4j && cd ..
+    cd rlay-client && cargo build -p rlay-client --features backend_neo4j && cd ..
     cargo build -p rlay-backend
     cargo build -p rlay-backend-ethereum
     cargo build -p rlay-backend-neo4j

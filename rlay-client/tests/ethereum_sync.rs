@@ -39,7 +39,7 @@ fn setup_deploy() {
     let ganache_node = docker.run(ganache_container());
     set_ganache_port(
         config_file.path(),
-        ganache_node.get_host_port(8545).unwrap(),
+        ganache_node.get_host_port(8545).unwrap().into(),
     );
     set_rpc_port(config_file.path());
 
