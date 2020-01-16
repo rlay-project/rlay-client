@@ -2,7 +2,6 @@
 extern crate serde_json;
 
 use assert_cmd::prelude::*;
-use futures::prelude::*;
 use hyper::{header, Body, Client, Request};
 use rand::Rng;
 use rlay_jsonrpc_client::RlayClient;
@@ -12,7 +11,7 @@ use std::path::Path;
 use std::process::Command;
 use tempfile::NamedTempFile;
 use testcontainers::*;
-use tokio_futures3::runtime::Runtime;
+use tokio::runtime::Runtime;
 
 fn neo4j_container() -> images::generic::GenericImage {
     images::generic::GenericImage::new("neo4j:3.4.8")
@@ -63,7 +62,7 @@ fn get_health() {
     )
     .unwrap();
 
-    let rt = Runtime::new().unwrap();
+    let mut rt = Runtime::new().unwrap();
     let docker = clients::Cli::default();
     let node = docker.run(neo4j_container());
 
@@ -86,7 +85,7 @@ fn get_health() {
             .await
             .unwrap();
 
-        let body: Vec<u8> = res.into_body().try_concat().await.unwrap().to_vec();
+        let body: Vec<u8> = hyper::body::to_bytes(res).await.unwrap().to_vec();
         let rpc_result_value: Value = serde_json::from_slice(&body).unwrap();
         rpc_result_value
     });
@@ -108,7 +107,7 @@ fn store_and_get_roundtrip() {
     )
     .unwrap();
 
-    let rt = Runtime::new().unwrap();
+    let mut rt = Runtime::new().unwrap();
     let docker = clients::Cli::default();
     let node = docker.run(neo4j_container());
 
@@ -142,7 +141,7 @@ fn proxy_support() {
     let config_file = NamedTempFile::new().unwrap();
     std::fs::copy("./tests/rlay.config.toml.test_template", config_file.path()).unwrap();
 
-    let rt = Runtime::new().unwrap();
+    let mut rt = Runtime::new().unwrap();
     let docker = clients::Cli::default();
     let node = docker.run(ganache_container());
 
@@ -176,7 +175,7 @@ fn proxy_support() {
             .expect("request builder");
 
         let res = client.request(req).await.unwrap();
-        let body: Vec<u8> = res.into_body().try_concat().await.unwrap().to_vec();
+        let body: Vec<u8> = hyper::body::to_bytes(res).await.unwrap().to_vec();
         let rpc_result_value: Value = serde_json::from_slice(&body).unwrap();
         rpc_result_value
     });

@@ -1,4 +1,3 @@
-use futures::prelude::*;
 use hyper::{header, Body, Client, Request};
 use serde_json::Value;
 
@@ -14,7 +13,7 @@ pub async fn proxy_rpc_call(target_url: String, request_body: Value) -> JsonRpcR
         .expect("request builder");
 
     let res = client.request(req).await.unwrap();
-    let body = res.into_body().try_concat().await.unwrap();
+    let body = hyper::body::to_bytes(res).await.unwrap();
     let value: Value = serde_json::from_slice(&body).unwrap();
 
     Ok(value)

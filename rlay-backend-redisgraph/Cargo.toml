@@ -10,20 +10,17 @@ rlay-backend = { path = "../rlay-backend" }
 
 cid = { package = "cid_fork_rlay", version = "0.3.1" }
 failure = "0.1.5"
-futures-preview = { version = "0.3.0-alpha.19" }
+futures = { version = "0.3.0" }
 log = "0.4.6"
-redis = { git = "https://github.com/hobofan/redis-rs", rev = "9d12e65ef3a2974f84654037ace7c21234ebeeec" }
+redis = { version = "0.14.0", features = ["tokio-rt-core"] }
 rlay_ontology = { version = "0.2.6", features = ["web3_compat"] }
 rustc-hex = "1.0.0"
-serde = "=1.0.79"
-serde_derive = "=1.0.79"
+serde = "1.0.79"
+serde_derive = "1.0.79"
 serde_json = { version = "1.0.22", features = ["preserve_order"] }
-tokio-core = "0.1.17"
 itertools = "0.8.0"
 
 [dev-dependencies]
 testcontainers = { git = "https://github.com/testcontainers/testcontainers-rs", rev = "b6f9dbe82478f28f5c5b46686bcc4dfe422fd9ea" }
 env_logger = "0.6.2"
-tokio_01 = { package = "tokio", version = "0.1.22" }
-tokio_executor_01 = { package = "tokio-executor", version = "0.1.8" }
-tokio = "0.2.0-alpha.6"
+tokio = "0.2.0"

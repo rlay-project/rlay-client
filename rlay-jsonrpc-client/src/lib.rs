@@ -42,7 +42,7 @@ impl RlayClient {
             .expect("request builder");
 
         let res = self.client.request(req).await.unwrap();
-        let body = res.into_body().try_concat().await.unwrap();
+        let body = hyper::body::to_bytes(res).await.unwrap();
         let value: Value = serde_json::from_slice(&body).unwrap();
 
         Ok(value)

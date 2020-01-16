@@ -19,7 +19,7 @@ fn redis_container() -> images::generic::GenericImage {
 #[test]
 fn store_entity_returns_correct_cid() {
     let _ = env_logger::try_init();
-    let rt = Runtime::new().unwrap();
+    let mut rt = Runtime::new().unwrap();
     let docker = clients::Cli::default();
     let node = docker.run(redis_container());
 
@@ -45,7 +45,7 @@ fn store_entity_returns_correct_cid() {
 #[test]
 fn multiple_store_produces_correct_number_of_nodes() {
     let _ = env_logger::try_init();
-    let rt = Runtime::new().unwrap();
+    let mut rt = Runtime::new().unwrap();
     let docker = clients::Cli::default();
     let node = docker.run(redis_container());
 
@@ -79,7 +79,7 @@ fn multiple_store_produces_correct_number_of_nodes() {
 #[test]
 fn store_and_get_roundtrip_works() {
     let _ = env_logger::try_init();
-    let rt = Runtime::new().unwrap();
+    let mut rt = Runtime::new().unwrap();
     let docker = clients::Cli::default();
     let node = docker.run(redis_container());
 
@@ -113,7 +113,7 @@ fn store_and_get_roundtrip_works() {
 #[test]
 fn cypher_query_works() {
     let _ = env_logger::try_init();
-    let rt = Runtime::new().unwrap();
+    let mut rt = Runtime::new().unwrap();
     let docker = clients::Cli::default();
     let node = docker.run(redis_container());
 
@@ -155,7 +155,7 @@ fn cypher_query_works() {
 /// unknown.
 fn get_entity_leaf_node_returns_none() {
     let _ = env_logger::try_init();
-    let rt = Runtime::new().unwrap();
+    let mut rt = Runtime::new().unwrap();
     let docker = clients::Cli::default();
     let node = docker.run(redis_container());
 
