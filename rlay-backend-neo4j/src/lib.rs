@@ -287,7 +287,7 @@ impl Neo4jBackend {
         all_cid_field_names.sort();
         all_cid_field_names.dedup();
 
-        let sub_query_relations = all_cid_field_names
+        let sub_query_relations_cids = all_cid_field_names
             .iter()
             .map(|field_name| {
                 format!(
@@ -297,20 +297,48 @@ impl Neo4jBackend {
             .collect::<Vec<String>>()
             .join("\n");
 
+        // collect all possible data field names
+        let mut all_data_field_names: Vec<(String, String)> = vec![];
+
+        macro_rules! data_field_names {
+            ($kind:path) => {
+                all_data_field_names.extend(<$kind>::data_field_names()
+                    .into_iter()
+                    .map(|field| {
+                        let entity_instance = <$kind>::default();
+                        let entity = Into::<Entity>::into(entity_instance);
+                        let entity_kind = entity.kind();
+                        (Into::<&str>::into(entity_kind).to_owned(), field.to_owned().to_owned())
+                    })
+                    .collect::<Vec<(String, String)>>());
+            }
+        }
+
+        rlay_ontology::call_with_entity_kinds!(ALL; data_field_names!);
+
+        let sub_query_relations_data = all_data_field_names
+            .iter()
+            .map(|field_tuple| {
+                format!(
+                    "SET (CASE WHEN entity.type = '{}' THEN n END).{} = entity.{}",
+                    field_tuple.0, field_tuple.1, field_tuple.1)
+            })
+            .collect::<Vec<String>>()
+            .join("\n");
+
         let statement_query_main = format!("
             UNWIND $entities as entity
             MERGE (n:RlayEntity {{cid: entity.cid }})
-            SET (CASE WHEN entity.type = 'Annotation' THEN n END).value = entity.value
-            SET (CASE WHEN entity.type = 'DataPropertyAssertion' THEN n END).target = entity.target
-            SET (CASE WHEN entity.type = 'NegativeDataPropertyAssertion' THEN n END).target = entity.target
+            {relations_data}
             {labels}
             WITH n, entity
             UNWIND entity.relationships as relationship
                 MERGE (m:RlayEntity {{ cid: relationship.cid }})
-                {relations}
+                {relations_cids}
             RETURN DISTINCT entity.cid",
             labels = sub_query_labels,
-            relations = sub_query_relations
+            relations_data = sub_query_relations_data,
+            relations_cids = sub_query_relations_cids
         );
 
         let statement_query = Statement::new(&statement_query_main)
