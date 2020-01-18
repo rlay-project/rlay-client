@@ -145,34 +145,8 @@ impl Neo4jBackend {
     }
 
     async fn get_entity(&mut self, cid: String) -> Result<Option<Entity>, Error> {
-        let client = self.client().err_into::<Error>().await?;
-
-        let query = format!(
-            "MATCH (n:RlayEntity {{ cid: \"{0}\" }})-[r]->(m) RETURN labels(n),n,type(r),m",
-            cid
-        );
-        trace!("get_entity query: {:?}", query);
-
-        let query_res = client.exec(query).await?;
-        if query_res.rows().count() == 0 {
-            return Ok(None);
-        }
-
-        let entity = Self::rows_to_entity(query_res.rows())
-            .get(0)
-            .unwrap()
-            .to_owned();
-
-        let retrieved_cid = format!("0x{}", entity.to_cid().unwrap().to_bytes().to_hex());
-        if retrieved_cid != cid {
-            return Err(format_err!(
-                "The retrieved CID did not match the requested cid: {} !+ {}",
-                cid,
-                retrieved_cid
-            ));
-        }
-
-        Ok(Some(entity))
+        let entities = self.get_entities(vec![cid]).await?;
+        Ok(entities.get(0).map(|n| n.to_owned()))
     }
 
     pub async fn get_entities(&mut self, cids: Vec<String>) -> Result<Vec<Entity>, Error> {
@@ -185,13 +159,19 @@ impl Neo4jBackend {
             deduped_cids
         };
 
-        let query = format!(
-            "MATCH (n:RlayEntity)-[r]->(m) WHERE n.cid IN {0:?} RETURN labels(n),n,type(r),m",
-            deduped_cids,
+        let query = format!("
+            UNWIND $cids AS cid
+            MATCH (n:RlayEntity {{cid: cid}})-[r]->(m)
+            RETURN labels(n),n,type(r),m"
         );
-        trace!("get_entities query: \"{}\"", query);
+        let statement_query = Statement::new(&query)
+            .with_param("cids", &deduped_cids)?;
 
-        let query_res = client.exec(query).await?;
+        trace!("NEO4J QUERY: {:?}", statement_query);
+        let start = std::time::Instant::now();
+        let query_res = client.exec(statement_query).await?;
+        let end = std::time::Instant::now();
+        trace!("Query duration: {:?}", end - start);
 
         if query_res.rows().count() == 0 {
             return Ok(vec![]);
@@ -219,77 +199,159 @@ impl Neo4jBackend {
     }
 
     async fn store_entity(&mut self, entity: Entity) -> Result<Cid, Error> {
-        let raw_cid = entity.to_cid().unwrap();
-        let cid: String = format!("0x{}", raw_cid.to_bytes().to_hex());
+        let cids = self.store_entities(vec![entity]).await?;
+        Ok(cids[0].clone())
+    }
 
+    async fn store_entities(&mut self, entities: Vec<Entity>) -> Result<Vec<Cid>, Error> {
+        let mut entity_objects = Vec::new();
         let client = self.client().await?;
 
-        let kind_name: &str = entity.kind().into();
-        let entity_val = serde_json::to_value(FormatWeb3(entity.clone())).unwrap();
-        let val = entity_val.as_object().unwrap();
-        let mut values = Vec::new();
-        let mut relationships = Vec::new();
-        {
-            let mut add_relationship_value = |cid, key, value| {
-                let rel_query = format!(
-                            "MATCH (n:RlayEntity {{ cid: \"{0}\"}}) MERGE (m:RlayEntity {{ cid: {2} }}) MERGE (n)-[r:{1}]->(m)",
-                            cid, key, value
-                        );
-                relationships.push(rel_query);
-            };
+        for entity in entities.iter() {
+            let kind_name: &str = entity.kind().into();
+            let entity_val = serde_json::to_value(FormatWeb3(entity.clone())).unwrap();
+            let mut val = entity_val.as_object().unwrap().to_owned();
+            let mut relationships = Vec::new();
+            {
+                #[derive(Serialize, Deserialize, Debug)]
+                struct RelationshipQueryPart {
+                    cid: String,
+                    kind_name: String
+                }
 
-            for (key, value) in val {
-                if key == "cid" || key == "type" {
-                    continue;
-                }
-                if (kind_name == "DataPropertyAssertion"
-                    || kind_name == "NegativeDataPropertyAssertion")
-                    && key == "target"
-                {
-                    values.push(format!("n.{0} = {1}", key, value));
-                    continue;
-                }
-                if kind_name == "Annotation" && key == "value" {
-                    values.push(format!("n.{0} = {1}", key, value));
-                    continue;
-                }
-                if let Value::Array(array_val) = value {
-                    for relationship_value in array_val {
-                        add_relationship_value(cid.clone(), key, relationship_value);
+                // fetch the parts of the payload that should become relationships
+                // aka. those that are not self-referencing CIDs
+                for (key, value) in val.iter() {
+                    if key == "cid" || key == "type" {
+                        continue;
                     }
-                    continue;
+                    if (kind_name == "DataPropertyAssertion"
+                        || kind_name == "NegativeDataPropertyAssertion")
+                        && key == "target"
+                    {
+                        continue;
+                    }
+                    if kind_name == "Annotation" && key == "value" {
+                        continue;
+                    }
+                    if let Value::Array(array_val) = value {
+                        for array_val_cid in array_val {
+                            relationships.push(RelationshipQueryPart{
+                                cid: array_val_cid.as_str().unwrap().to_string(),
+                                kind_name: key.clone()
+                            });
+                        }
+                        continue;
+                    }
+                    if let Value::String(_) = value {
+                        relationships.push(RelationshipQueryPart{
+                            cid: value.as_str().unwrap().to_string(),
+                            kind_name: key.clone()
+                        });
+                    }
                 }
-                if let Value::String(_) = value {
-                    add_relationship_value(cid.clone(), key, value);
-                }
+            }
+
+            val.insert("relationships".to_string(), serde_json::Value::Array(
+                relationships
+                    .iter()
+                    .map(serde_json::to_value)
+                    .map(|r| r.unwrap())
+                    .collect()
+            ));
+            entity_objects.push(val);
+        }
+
+        let sub_query_labels = EntityKind::variants().iter().map(|variant| {
+            format!(
+                "FOREACH ( ignore in CASE entity.type WHEN '{}' THEN [1] ELSE [] END | SET n:{} )",
+                variant, variant)
+        })
+        .collect::<Vec<String>>()
+        .join("\n");
+
+        // collect all possible field names
+        let mut all_cid_field_names: Vec<String> = vec![];
+
+        macro_rules! cid_field_names {
+            ($kind:path) => {
+                all_cid_field_names.extend(<$kind>::cid_field_names()
+                    .into_iter()
+                    .map(|field| field.to_owned().to_owned())
+                    .collect::<Vec<String>>());
+            };
+        }
+
+        rlay_ontology::call_with_entity_kinds!(ALL; cid_field_names!);
+
+        all_cid_field_names.sort();
+        all_cid_field_names.dedup();
+
+        let sub_query_relations_cids = all_cid_field_names
+            .iter()
+            .map(|field_name| {
+                format!(
+                    "FOREACH ( ignore in CASE relationship.kind_name WHEN '{}' THEN [1] ELSE [] END | MERGE (n)-[:{}]->(m) )",
+                    field_name, field_name)
+            })
+            .collect::<Vec<String>>()
+            .join("\n");
+
+        // collect all possible data field names
+        let mut all_data_field_names: Vec<(String, String)> = vec![];
+
+        macro_rules! data_field_names {
+            ($kind:path) => {
+                all_data_field_names.extend(<$kind>::data_field_names()
+                    .into_iter()
+                    .map(|field| {
+                        let entity_instance = <$kind>::default();
+                        let entity = Into::<Entity>::into(entity_instance);
+                        let entity_kind = entity.kind();
+                        (Into::<&str>::into(entity_kind).to_owned(), field.to_owned().to_owned())
+                    })
+                    .collect::<Vec<(String, String)>>());
             }
         }
 
-        let mut statement_query = format!(
-            "MERGE (n:RlayEntity {{cid: \"{1}\"}}) SET n:{0}",
-            kind_name, cid
+        rlay_ontology::call_with_entity_kinds!(ALL; data_field_names!);
+
+        let sub_query_relations_data = all_data_field_names
+            .iter()
+            .map(|field_tuple| {
+                format!(
+                    "SET (CASE WHEN entity.type = '{}' THEN n END).{} = entity.{}",
+                    field_tuple.0, field_tuple.1, field_tuple.1)
+            })
+            .collect::<Vec<String>>()
+            .join("\n");
+
+        let statement_query_main = format!("
+            UNWIND $entities as entity
+            MERGE (n:RlayEntity {{cid: entity.cid }})
+            {relations_data}
+            {labels}
+            WITH n, entity
+            UNWIND entity.relationships as relationship
+                MERGE (m:RlayEntity {{ cid: relationship.cid }})
+                {relations_cids}
+            RETURN DISTINCT entity.cid",
+            labels = sub_query_labels,
+            relations_data = sub_query_relations_data,
+            relations_cids = sub_query_relations_cids
         );
-        if !values.is_empty() {
-            statement_query.push_str(", ");
-            statement_query.push_str(&values.join(", "));
-        }
 
-        let (mut transaction, _) = client.transaction().begin().await?;
+        let statement_query = Statement::new(&statement_query_main)
+            .with_param("entities", &entity_objects)?;
 
-        // let mut query = client.query();
-        trace!("NEO4J QUERY: {}", statement_query);
-        transaction.add_statement(Statement::new(statement_query));
-        for relationship in relationships {
-            trace!("NEO4J QUERY: {}", relationship);
-            transaction.add_statement(Statement::new(relationship));
-        }
-
+        trace!("NEO4J QUERY: {:?}", statement_query);
         let start = std::time::Instant::now();
-        transaction.commit().await?;
+        client.exec(statement_query).await?;
         let end = std::time::Instant::now();
         trace!("Query duration: {:?}", end - start);
 
-        Ok(raw_cid)
+
+        Ok(entities.iter().map(|entity| entity.to_cid().unwrap()).collect())
     }
 }
 
@@ -315,8 +377,20 @@ impl BackendRpcMethods for Neo4jBackend {
         Box::pin(self.store_entity(entity.to_owned()))
     }
 
+    fn store_entities(
+        &mut self,
+        entities: &Vec<Entity>,
+        _options_object: &Value,
+    ) -> BoxFuture<Result<Vec<Cid>, Error>> {
+        Box::pin(self.store_entities(entities.to_owned()))
+    }
+
     fn get_entity(&mut self, cid: &str) -> BoxFuture<Result<Option<Entity>, Error>> {
         Box::pin(self.get_entity(cid.to_owned()))
+    }
+
+    fn get_entities(&mut self, cids: Vec<String>) -> BoxFuture<Result<Vec<Entity>, Error>> {
+        Box::pin(self.get_entities(cids))
     }
 
     fn list_cids(&mut self, entity_kind: Option<&str>) -> BoxFuture<Result<Vec<String>, Error>> {
