@@ -1,10 +1,17 @@
+use lazy_static::lazy_static;
+use nonparallel::nonparallel;
 use rlay_backend::BackendRpcMethods;
 use rlay_backend_neo4j::*;
 use rlay_ontology::prelude::*;
 use rustc_hex::{FromHex, ToHex};
 use serde_json::Value;
+use std::sync::Mutex;
 use testcontainers::*;
 use tokio::runtime::Runtime;
+
+lazy_static! {
+    static ref MUT_A: Mutex<()> = Mutex::new(());
+}
 
 fn neo4j_container() -> images::generic::GenericImage {
     images::generic::GenericImage::new("neo4j:3.4.8")
@@ -15,9 +22,10 @@ fn neo4j_container() -> images::generic::GenericImage {
 }
 
 #[test]
+#[nonparallel(MUT_A)]
 fn store_entity_returns_correct_cid() {
     let _ = env_logger::try_init();
-    let rt = Runtime::new().unwrap();
+    let mut rt = Runtime::new().unwrap();
     let docker = clients::Cli::default();
     let node = docker.run(neo4j_container());
 
@@ -43,9 +51,10 @@ fn store_entity_returns_correct_cid() {
 }
 
 #[test]
+#[nonparallel(MUT_A)]
 fn store_and_get_roundtrip_works() {
     let _ = env_logger::try_init();
-    let rt = Runtime::new().unwrap();
+    let mut rt = Runtime::new().unwrap();
     let docker = clients::Cli::default();
     let node = docker.run(neo4j_container());
 
@@ -77,12 +86,13 @@ fn store_and_get_roundtrip_works() {
 }
 
 #[test]
+#[nonparallel(MUT_A)]
 /// When using a CID in an entity, a leaf node is created in the graph, that doesn't have enough
 /// information on it to be correctly restored, so it should be non-retrievable like a CID that is
 /// unknown.
 fn get_entity_leaf_node_returns_none() {
     let _ = env_logger::try_init();
-    let rt = Runtime::new().unwrap();
+    let mut rt = Runtime::new().unwrap();
     let docker = clients::Cli::default();
     let node = docker.run(neo4j_container());
 

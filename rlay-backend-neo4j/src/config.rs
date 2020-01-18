@@ -1,5 +1,4 @@
 use bb8_cypher::CypherConnectionManager;
-use futures::compat::Future01CompatExt;
 use l337::{Config, Pool};
 
 #[derive(Debug, Deserialize, Clone)]
@@ -20,7 +19,6 @@ impl Neo4jBackendConfig {
                 max_size: 30,
             },
         )
-        .compat()
         .await
         .unwrap()
     }

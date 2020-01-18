@@ -14,7 +14,7 @@ use failure::{format_err, Error};
 use futures::future::BoxFuture;
 use futures::prelude::*;
 use itertools::Itertools;
-use redis::{aio::SharedConnection, FromRedisValue};
+use redis::{aio::MultiplexedConnection, FromRedisValue};
 use rlay_backend::{BackendFromConfigAndSyncState, BackendRpcMethods};
 use rlay_ontology::prelude::*;
 use rustc_hex::ToHex;
@@ -26,7 +26,7 @@ use crate::parse::{CidList, GetQueryRelationship};
 #[derive(Clone)]
 pub struct RedisgraphBackend {
     pub config: RedisgraphBackendConfig,
-    client: Option<SharedConnection>,
+    client: Option<MultiplexedConnection>,
 }
 
 impl RedisgraphBackend {
@@ -37,7 +37,7 @@ impl RedisgraphBackend {
         }
     }
 
-    pub async fn client(&mut self) -> Result<SharedConnection, Error> {
+    pub async fn client(&mut self) -> Result<MultiplexedConnection, Error> {
         if let Some(ref client) = self.client {
             return Ok(client.clone());
         }
@@ -291,7 +291,7 @@ impl BackendFromConfigAndSyncState for RedisgraphBackend {
 
 #[derive(Clone)]
 pub struct SyncState {
-    pub connection_pool: Option<SharedConnection>,
+    pub connection_pool: Option<MultiplexedConnection>,
 }
 
 impl BackendRpcMethods for RedisgraphBackend {

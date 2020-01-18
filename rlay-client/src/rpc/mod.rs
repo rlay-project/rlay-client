@@ -12,7 +12,7 @@ use rustc_hex::{FromHex, ToHex};
 use serde_json::Value;
 use std::error::Error;
 use std::net::ToSocketAddrs;
-use tokio_futures3::runtime::Runtime;
+use tokio::runtime::Runtime;
 use url::Url;
 
 use self::proxy::proxy_rpc_call;
@@ -149,7 +149,7 @@ async fn handle_jsonrpc(
     req: Request<Body>,
 ) -> Result<Response<Body>, GenericError> {
     let config = full_config.clone();
-    let body: Vec<u8> = req.into_body().try_concat().await?.to_vec();
+    let body: Vec<u8> = hyper::body::to_bytes(req).await?.to_vec();
     let body_value: Value = serde_json::from_slice(&body).unwrap();
 
     let id = body_value.as_object().unwrap()["id"].clone();

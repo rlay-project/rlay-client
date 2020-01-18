@@ -8,8 +8,8 @@ edition = "2018"
 [dependencies]
 rlay-resolve = { path = "../rlay-resolve" }
 
-futures-preview = { version = "0.3.0-alpha.19", features = ["compat"] }
-hyper = { version = "0.13.0-alpha.4", features = ["unstable-stream"] }
+futures = { version = "0.3.0", features = ["compat"] }
+hyper = "0.13.0"
 log = "0.4.6"
 rlay_ontology = { version = "0.2.6", features = ["web3_compat"] }
 serde = "1.0.79"

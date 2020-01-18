@@ -1,4 +1,4 @@
-use redis::{aio::SharedConnection, Client};
+use redis::{aio::MultiplexedConnection, Client};
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct RedisgraphBackendConfig {
@@ -7,9 +7,9 @@ pub struct RedisgraphBackendConfig {
 }
 
 impl RedisgraphBackendConfig {
-    pub async fn connection_pool(&self) -> SharedConnection {
+    pub async fn connection_pool(&self) -> MultiplexedConnection {
         trace!("Creating new Redis connection");
         let client = Client::open(self.uri.as_str()).unwrap();
-        client.get_shared_async_connection().await.unwrap()
+        client.get_multiplexed_tokio_connection().await.unwrap()
     }
 }

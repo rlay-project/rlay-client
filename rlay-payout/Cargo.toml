@@ -10,7 +10,6 @@ rlay-backend-ethereum = { path = "../rlay-backend-ethereum" }
 
 rlay_ontology = { version = "0.2.6", features = ["web3_compat"] }
 cid = { package = "cid_fork_rlay", version = "0.3.1" }
-futures-preview = { version = "0.3.0-alpha.17", features = ["compat"] }
 futures01 = { package = "futures", version = "0.1.28" }
 log = "0.4.6"
 merkle_light = { git = "https://github.com/hobofan/merkle_light", rev = 'f069616df909cb7a4426f6deb328bde6422a3510' }

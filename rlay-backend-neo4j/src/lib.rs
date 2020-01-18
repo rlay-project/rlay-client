@@ -12,7 +12,6 @@ pub mod config;
 use bb8_cypher::CypherConnectionManager;
 use cid::{Cid, ToCid};
 use failure::{err_msg, Error};
-use futures::compat::Future01CompatExt;
 use futures::future::BoxFuture;
 use futures::prelude::*;
 use l337::Pool;
@@ -52,7 +51,6 @@ impl Neo4jBackend {
         if let Some(ref client) = self.client {
             return client
                 .connection()
-                .compat()
                 .map_err(|_| err_msg("Failure getting connection"))
                 .await;
         }
@@ -64,7 +62,6 @@ impl Neo4jBackend {
             .as_ref()
             .expect("Tried to get non-existent internal connection pool")
             .connection()
-            .compat()
             .map_err(|_| err_msg("Failure getting connection"))
             .await;
     }
