@@ -14,9 +14,8 @@ use tokio::runtime::Runtime;
 use url::Url;
 
 use self::proxy::proxy_rpc_call;
-use crate::backend::Backend;
+use crate::backend::{Backend, SyncState};
 use crate::config::Config;
-use crate::sync::MultiBackendSyncState;
 
 const NETWORK_VERSION: &'static str = "0.3.3";
 const CLIENT_VERSION: &'static str = env!("CARGO_PKG_VERSION");
@@ -24,7 +23,7 @@ const CLIENT_VERSION: &'static str = env!("CARGO_PKG_VERSION");
 type GenericError = Box<dyn std::error::Error + Send + Sync>;
 type JsonRpcResult<T> = std::result::Result<T, jsonrpc_core::Error>;
 
-pub fn start_rpc(full_config: &Config, sync_state: MultiBackendSyncState) {
+pub fn start_rpc(full_config: &Config) {
     let config = full_config.rpc.clone();
     if config.disabled {
         debug!("RPC disabled. Not starting RPC server.");
@@ -32,17 +31,8 @@ pub fn start_rpc(full_config: &Config, sync_state: MultiBackendSyncState) {
     }
 
     let http_proxy_config = full_config.clone();
-    let http_proxy_sync_state = sync_state.clone();
     // HTTP RPC
-    run_rpc_with_tokio(&http_proxy_config, http_proxy_sync_state).unwrap();
-}
-
-fn extract_option_backend(options_object: Option<Value>) -> Option<String> {
-    options_object
-        .as_ref()
-        .and_then(|n| n.as_object())
-        .and_then(|n| n.get("backend"))
-        .and_then(|n| n.as_str().map(ToOwned::to_owned))
+    run_rpc_with_tokio(&http_proxy_config).unwrap();
 }
 
 fn extract_options_object(params_array: &[Value], pos: usize) -> Option<Value> {
@@ -53,13 +43,12 @@ fn extract_options_object(params_array: &[Value], pos: usize) -> Option<Value> {
         .or_else(|| Some(default_options))
 }
 
-fn backend_from_backend_name(
+fn get_backend(
     config: &Config,
-    sync_state: &MultiBackendSyncState,
-    backend_name: Option<String>,
+    sync_state: &SyncState,
 ) -> impl Future<Output = JsonRpcResult<Backend>> {
     config
-        .get_backend_with_syncstate(backend_name.as_ref().map(|x| &**x), sync_state)
+        .get_backend_with_syncstate(sync_state)
         .map_err(|_| jsonrpc_core::Error::invalid_params("Could not find specified backend"))
 }
 
@@ -69,16 +58,7 @@ fn failure_into_jsonrpc_err(err: ::failure::Error) -> jsonrpc_core::Error {
     e
 }
 
-// fn generic_into_jsonrpc_err(err: GenericError) -> jsonrpc_core::Error {
-// let mut e = jsonrpc_core::Error::internal_error();
-// e.message = format!("{}", err);
-// e
-// }
-
-async fn run_rpc(
-    full_config: &Config,
-    _sync_state: MultiBackendSyncState,
-) -> Result<(), GenericError> {
+async fn run_rpc(full_config: &Config) -> Result<(), GenericError> {
     let addr = full_config
         .rpc
         .network_address
@@ -90,16 +70,7 @@ async fn run_rpc(
         .unwrap();
 
     let full_config = full_config.clone();
-    let sync_state = {
-        let mut sync_state = MultiBackendSyncState::new();
-        for (backend_name, config) in full_config.backends.iter() {
-            sync_state
-                .add_backend_conn(backend_name.clone(), config.clone())
-                .await;
-        }
-
-        sync_state
-    };
+    let sync_state = SyncState::new(full_config.get_backend_config().unwrap()).await;
 
     let new_service = make_service_fn(move |_| {
         let full_config = full_config.clone();
@@ -131,17 +102,14 @@ async fn http_get_health() -> Result<Response<Body>, GenericError> {
     Ok(response)
 }
 
-pub fn run_rpc_with_tokio(
-    full_config: &Config,
-    sync_state: MultiBackendSyncState,
-) -> Result<(), GenericError> {
+pub fn run_rpc_with_tokio(full_config: &Config) -> Result<(), GenericError> {
     let mut rt = Runtime::new().unwrap();
-    rt.block_on(run_rpc(full_config, sync_state))
+    rt.block_on(run_rpc(full_config))
 }
 
 async fn handle_jsonrpc(
     full_config: Config,
-    sync_state: MultiBackendSyncState,
+    sync_state: SyncState,
     req: Request<Body>,
 ) -> Result<Response<Body>, GenericError> {
     let config = full_config.clone();
@@ -217,7 +185,7 @@ async fn rpc_rlay_version(_config: Config) -> JsonRpcResult<Value> {
 
 async fn rpc_rlay_experimental_store_entity(
     config: Config,
-    sync_state: MultiBackendSyncState,
+    sync_state: SyncState,
     params_array: Vec<Value>,
 ) -> JsonRpcResult<Value> {
     let entity_object = params_array
@@ -230,9 +198,7 @@ async fn rpc_rlay_experimental_store_entity(
     let entity: Entity = web3_entity.0;
 
     let options_object = extract_options_object(&params_array, 1);
-    let backend_name = extract_option_backend(options_object.clone());
-
-    let mut backend = backend_from_backend_name(&config, &sync_state, backend_name).await?;
+    let mut backend = get_backend(&config, &sync_state).await?;
 
     let cid = BackendRpcMethods::store_entity(&mut backend, &entity, &options_object.unwrap())
         .map_err(failure_into_jsonrpc_err)
@@ -248,7 +214,7 @@ async fn rpc_rlay_experimental_store_entity(
 
 async fn rpc_rlay_experimental_store_entities(
     config: Config,
-    sync_state: MultiBackendSyncState,
+    sync_state: SyncState,
     params_array: Vec<Value>,
 ) -> JsonRpcResult<Value> {
     let entity_objects = params_array
@@ -271,9 +237,7 @@ async fn rpc_rlay_experimental_store_entities(
         .collect();
 
     let options_object = extract_options_object(&params_array, 1);
-    let backend_name = extract_option_backend(options_object.clone());
-
-    let mut backend = backend_from_backend_name(&config, &sync_state, backend_name).await?;
+    let mut backend = get_backend(&config, &sync_state).await?;
 
     let cids = BackendRpcMethods::store_entities(&mut backend, &entities, &options_object.unwrap())
         .map_err(failure_into_jsonrpc_err)
@@ -293,15 +257,12 @@ async fn rpc_rlay_experimental_store_entities(
 
 async fn rpc_rlay_experimental_get_entity(
     config: Config,
-    sync_state: MultiBackendSyncState,
+    sync_state: SyncState,
     params_array: Vec<Value>,
 ) -> JsonRpcResult<Value> {
     let cid = params_array.get(0).unwrap().as_str().unwrap().to_owned();
 
-    let options_object = extract_options_object(&params_array, 1);
-    let backend_name = extract_option_backend(options_object);
-
-    let mut backend = backend_from_backend_name(&config, &sync_state, backend_name).await?;
+    let mut backend = get_backend(&config, &sync_state).await?;
 
     let entity: serde_json::Value = BackendRpcMethods::get_entity(&mut backend, &cid)
         .map_err(failure_into_jsonrpc_err)
@@ -317,7 +278,7 @@ async fn rpc_rlay_experimental_get_entity(
 
 async fn rpc_rlay_experimental_get_entities(
     config: Config,
-    sync_state: MultiBackendSyncState,
+    sync_state: SyncState,
     params_array: Vec<Value>,
 ) -> JsonRpcResult<Value> {
     let cid_array = params_array.get(0).unwrap().as_array().unwrap().to_owned();
@@ -329,10 +290,7 @@ async fn rpc_rlay_experimental_get_entities(
         })
         .collect();
 
-    let options_object = extract_options_object(&params_array, 1);
-    let backend_name = extract_option_backend(options_object);
-
-    let mut backend = backend_from_backend_name(&config, &sync_state, backend_name).await?;
+    let mut backend = get_backend(&config, &sync_state).await?;
 
     let result: serde_json::Value = BackendRpcMethods::get_entities(&mut backend, cids)
         .map_err(failure_into_jsonrpc_err)
@@ -350,7 +308,7 @@ async fn rpc_rlay_experimental_get_entities(
 
 async fn rpc_rlay_experimental_neo4j_query(
     config: Config,
-    sync_state: MultiBackendSyncState,
+    sync_state: SyncState,
     params_array: Vec<Value>,
 ) -> JsonRpcResult<Value> {
     let filter_registry = crate::modules::ModuleRegistry::with_builtins();
@@ -359,7 +317,6 @@ async fn rpc_rlay_experimental_neo4j_query(
 
     let default_options = json!({});
     let options_object = params_array.get(1).or_else(|| Some(&default_options));
-    let backend_name = extract_option_backend(options_object.map(|n| n.clone()).clone());
 
     let activated_filters_names: Vec<String> = options_object
         .and_then(|n| n.as_object())
@@ -380,7 +337,7 @@ async fn rpc_rlay_experimental_neo4j_query(
     let sync_state = sync_state.clone();
     let filter_registry = filter_registry.clone();
 
-    let mut backend = backend_from_backend_name(&config, &sync_state, backend_name).await?;
+    let mut backend = get_backend(&config, &sync_state).await?;
 
     let cids: Vec<String> = BackendRpcMethods::neo4j_query(&mut backend, &query)
         .map_err(failure_into_jsonrpc_err)
@@ -419,15 +376,12 @@ async fn rpc_rlay_experimental_neo4j_query(
 /// List all CIDs seen via "<Entity>Stored" events.
 async fn rpc_rlay_experimental_list_cids(
     config: Config,
-    sync_state: MultiBackendSyncState,
+    sync_state: SyncState,
     params_array: Vec<Value>,
 ) -> JsonRpcResult<Value> {
     let entity_kind: Option<String> = params_array.get(0).unwrap().as_str().map(|n| n.to_owned());
 
-    let options_object = extract_options_object(&params_array, 1);
-    let backend_name = extract_option_backend(options_object);
-
-    let mut backend = backend_from_backend_name(&config, &sync_state, backend_name).await?;
+    let mut backend = get_backend(&config, &sync_state).await?;
 
     let cids: Vec<String> =
         BackendRpcMethods::list_cids(&mut backend, entity_kind.as_ref().map(|n| &**n))

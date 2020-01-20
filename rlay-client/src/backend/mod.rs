@@ -30,6 +30,15 @@ pub enum SyncState {
 }
 
 impl SyncState {
+    pub async fn new(config: &BackendConfig) -> Self {
+        match config {
+            #[cfg(feature = "backend_neo4j")]
+            BackendConfig::Neo4j(config) => SyncState::new_neo4j(&config).await,
+            #[cfg(feature = "backend_redisgraph")]
+            BackendConfig::Redisgraph(config) => SyncState::new_redisgraph(&config).await,
+        }
+    }
+
     #[cfg(feature = "backend_neo4j")]
     pub fn new_neo4j_empty(_config: &Neo4jBackendConfig) -> Self {
         SyncState::Neo4j(Neo4jSyncState {
