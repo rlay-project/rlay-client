@@ -1,3 +1,4 @@
+use ambassador::delegatable_trait;
 use cid::Cid;
 use failure::{err_msg, Error};
 use futures::future::{err, BoxFuture, FutureExt};
@@ -13,6 +14,7 @@ pub trait BackendFromConfigAndSyncState: Sized {
     fn from_config_and_syncstate(config: Self::C, sync_state: Self::S) -> Self::R;
 }
 
+#[delegatable_trait]
 pub trait BackendRpcMethods {
     #[allow(unused_variables)]
     fn store_entity(

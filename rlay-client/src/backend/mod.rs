@@ -1,8 +1,7 @@
-#![allow(unused_imports)]
-use ::futures::compat::{Compat, Future01CompatExt};
-use ::futures::future::{self, BoxFuture, Either, FutureExt, TryFutureExt};
+use ambassador::Delegate;
 use cid::Cid;
-use failure::{err_msg, Error};
+use failure::Error;
+use futures::future::{BoxFuture, FutureExt, TryFutureExt};
 use rlay_backend::{BackendFromConfigAndSyncState, BackendRpcMethods};
 use rlay_ontology::ontology::Entity;
 use serde_json::Value;
@@ -84,7 +83,8 @@ impl SyncState {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Delegate)]
+#[delegate(rlay_backend::BackendRpcMethods)]
 pub enum Backend {
     #[cfg(feature = "backend_neo4j")]
     Neo4j(Neo4jBackend),
@@ -117,78 +117,6 @@ impl BackendFromConfigAndSyncState for Backend {
                     .map_ok(|backend| Backend::Redisgraph(backend))
                     .boxed()
             }
-        }
-    }
-}
-
-impl BackendRpcMethods for Backend {
-    fn store_entity(
-        &mut self,
-        entity: &Entity,
-        options_object: &Value,
-    ) -> BoxFuture<Result<Cid, Error>> {
-        match self {
-            #[cfg(feature = "backend_neo4j")]
-            Backend::Neo4j(backend) => {
-                BackendRpcMethods::store_entity(backend, entity, options_object)
-            }
-            #[cfg(feature = "backend_redisgraph")]
-            Backend::Redisgraph(backend) => {
-                BackendRpcMethods::store_entity(backend, entity, options_object)
-            }
-        }
-    }
-
-    fn store_entities(
-        &mut self,
-        entities: &Vec<Entity>,
-        options_object: &Value,
-    ) -> BoxFuture<Result<Vec<Cid>, Error>> {
-        match self {
-            #[cfg(feature = "backend_neo4j")]
-            Backend::Neo4j(backend) => {
-                BackendRpcMethods::store_entities(backend, entities, options_object)
-            }
-            #[cfg(feature = "backend_redisgraph")]
-            Backend::Redisgraph(backend) => {
-                BackendRpcMethods::store_entities(backend, entities, options_object)
-            }
-        }
-    }
-
-    fn get_entity(&mut self, cid: &str) -> BoxFuture<Result<Option<Entity>, Error>> {
-        match self {
-            #[cfg(feature = "backend_neo4j")]
-            Backend::Neo4j(backend) => BackendRpcMethods::get_entity(backend, cid),
-            #[cfg(feature = "backend_redisgraph")]
-            Backend::Redisgraph(backend) => BackendRpcMethods::get_entity(backend, cid),
-        }
-    }
-
-    fn get_entities(&mut self, cids: Vec<String>) -> BoxFuture<Result<Vec<Entity>, Error>> {
-        match self {
-            #[cfg(feature = "backend_neo4j")]
-            Backend::Neo4j(backend) => BackendRpcMethods::get_entities(backend, cids),
-            #[cfg(feature = "backend_redisgraph")]
-            Backend::Redisgraph(backend) => BackendRpcMethods::get_entities(backend, cids),
-        }
-    }
-
-    fn list_cids(&mut self, entity_kind: Option<&str>) -> BoxFuture<Result<Vec<String>, Error>> {
-        match self {
-            #[cfg(feature = "backend_neo4j")]
-            Backend::Neo4j(backend) => BackendRpcMethods::list_cids(backend, entity_kind),
-            #[cfg(feature = "backend_redisgraph")]
-            Backend::Redisgraph(backend) => BackendRpcMethods::list_cids(backend, entity_kind),
-        }
-    }
-
-    fn neo4j_query(&mut self, query: &str) -> BoxFuture<Result<Vec<String>, Error>> {
-        match self {
-            #[cfg(feature = "backend_neo4j")]
-            Backend::Neo4j(backend) => BackendRpcMethods::neo4j_query(backend, query),
-            #[cfg(feature = "backend_redisgraph")]
-            Backend::Redisgraph(backend) => BackendRpcMethods::neo4j_query(backend, query),
         }
     }
 }

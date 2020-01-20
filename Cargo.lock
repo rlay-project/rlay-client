@@ -1435,6 +1435,7 @@ dependencies = [
 name = "rlay-backend"
 version = "0.1.0"
 dependencies = [
+ "ambassador 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "cid_fork_rlay 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "failure 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1492,6 +1493,7 @@ dependencies = [
 name = "rlay-client"
 version = "0.2.7"
 dependencies = [
+ "ambassador 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "assert_cmd 0.11.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "cid_fork_rlay 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "clap 2.33.0 (registry+https://github.com/rust-lang/crates.io-index)",

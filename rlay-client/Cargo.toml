@@ -10,6 +10,7 @@ rlay-backend = { path = "../rlay-backend" }
 rlay-backend-neo4j = { path = "../rlay-backend-neo4j", optional = true }
 rlay-backend-redisgraph = { path = "../rlay-backend-redisgraph", optional = true }
 
+ambassador = "0.2.1"
 cid = { package = "cid_fork_rlay", version = "0.3.1" }
 rlay_ontology = { version = "0.2.6", features = ["web3_compat"] }
 rustc-hex = "1.0.0"
