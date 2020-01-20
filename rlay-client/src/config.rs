@@ -1,17 +1,11 @@
 use failure::{err_msg, Error};
 use rlay_backend::BackendFromConfigAndSyncState;
-use rlay_backend_ethereum::config::EthereumBackendConfig;
-use rlay_payout::config::PayoutConfig;
 use std::collections::HashMap;
 use std::fs::{self, File};
 use std::future::Future;
 use std::io::Read;
 use std::path::Path;
-use tokio_core;
 use toml;
-use url::Url;
-use web3;
-use web3::DuplexTransport;
 
 pub use self::backend::BackendConfig;
 pub use self::rpc::RpcConfig;
@@ -76,57 +70,12 @@ impl Config {
         Ok(config)
     }
 
-    pub fn web3_with_handle(
-        &self,
-        eloop_handle: &tokio_core::reactor::Handle,
-    ) -> web3::Web3<impl DuplexTransport> {
-        let network_address: Url = self
-            .default_eth_backend_config()
-            .unwrap()
-            .network_address
-            .as_ref()
-            .unwrap()
-            .parse()
-            .unwrap();
-        let transport = match network_address.scheme() {
-            #[cfg(feature = "transport_ws")]
-            "ws" => web3::transports::WebSocket::with_event_loop(
-                    self
-                        .default_eth_backend_config()
-                        .unwrap()
-                        .network_address
-                        .as_ref()
-                        .unwrap(),
-                    eloop_handle
-                ).unwrap()
-            ,
-            #[cfg(feature = "transport_ipc")]
-            "file" => 
-                web3::transports::Ipc::with_event_loop(
-                    network_address.path(),
-                    eloop_handle,
-                ).unwrap()
-            ,
-            _ => panic!(
-                "Only \"file://\" (for IPC) and \"ws://\" addresses are currently supported, and the client has to be compiled with the appropriate flag (transport_ipc or transport_ws)."
-            ),
-        };
-
-        web3::Web3::new(transport)
-    }
-
     pub fn init_data_dir(&self) -> ::std::io::Result<()> {
         let data_path = self.data_path.as_ref().unwrap();
 
         fs::create_dir_all(data_path)?;
         fs::create_dir_all(Path::new(data_path).join("epoch_payouts"))?;
         Ok(())
-    }
-
-    // #[cfg_attr(debug_assertions, deprecated(note = "Refactoring to swappable backends"))]
-    pub fn default_eth_backend_config(&self) -> Result<&EthereumBackendConfig, Error> {
-        let config = self.get_backend_config(Some("default_eth"))?;
-        Ok(config.as_ethereum().unwrap())
     }
 
     pub fn get_backend_config(&self, backend_name: Option<&str>) -> Result<&BackendConfig, Error> {
@@ -160,14 +109,6 @@ impl Config {
             config_for_name.to_owned(),
             sync_state_for_name.map(|n| n.to_owned()),
         )
-    }
-}
-
-impl Into<PayoutConfig> for Config {
-    fn into(self) -> PayoutConfig {
-        PayoutConfig {
-            data_path: self.data_path,
-        }
     }
 }
 
@@ -205,7 +146,6 @@ pub mod rpc {
 }
 
 pub mod backend {
-    use rlay_backend_ethereum::config::EthereumBackendConfig;
     #[cfg(feature = "backend_neo4j")]
     use rlay_backend_neo4j::config::Neo4jBackendConfig;
     #[cfg(feature = "backend_redisgraph")]
@@ -214,22 +154,11 @@ pub mod backend {
     #[derive(Debug, Deserialize, Clone)]
     #[serde(tag = "type")]
     pub enum BackendConfig {
-        #[serde(rename = "ethereum")]
-        Ethereum(EthereumBackendConfig),
         #[serde(rename = "neo4j")]
         #[cfg(feature = "backend_neo4j")]
         Neo4j(Neo4jBackendConfig),
         #[serde(rename = "redisgraph")]
         #[cfg(feature = "backend_redisgraph")]
         Redisgraph(RedisgraphBackendConfig),
-    }
-
-    impl BackendConfig {
-        pub fn as_ethereum(&self) -> Option<&EthereumBackendConfig> {
-            match self {
-                BackendConfig::Ethereum(config) => Some(config),
-                _ => None,
-            }
-        }
     }
 }

@@ -12,7 +12,6 @@ use std::sync::Arc;
 
 use crate::config::backend::BackendConfig;
 
-pub use rlay_backend_ethereum::{EthereumBackend, SyncState as EthereumSyncState};
 #[cfg(feature = "backend_neo4j")]
 pub use rlay_backend_neo4j::{
     config::Neo4jBackendConfig, Neo4jBackend, SyncState as Neo4jSyncState,
@@ -24,7 +23,6 @@ pub use rlay_backend_redisgraph::{
 
 #[derive(Clone)]
 pub enum SyncState {
-    Ethereum(EthereumSyncState),
     #[cfg(feature = "backend_neo4j")]
     Neo4j(Neo4jSyncState),
     #[cfg(feature = "backend_redisgraph")]
@@ -32,14 +30,10 @@ pub enum SyncState {
 }
 
 impl SyncState {
-    pub fn new_ethereum() -> Self {
-        SyncState::Ethereum(EthereumSyncState::new())
-    }
-
     #[cfg(feature = "backend_neo4j")]
-    pub fn new_neo4j_empty(config: &Neo4jBackendConfig) -> Self {
+    pub fn new_neo4j_empty(_config: &Neo4jBackendConfig) -> Self {
         SyncState::Neo4j(Neo4jSyncState {
-            connection_pool: None
+            connection_pool: None,
         })
     }
 
@@ -51,7 +45,7 @@ impl SyncState {
     }
 
     #[cfg(feature = "backend_redisgraph")]
-    pub fn new_redisgraph_empty(config: &RedisgraphBackendConfig) -> Self {
+    pub fn new_redisgraph_empty(_config: &RedisgraphBackendConfig) -> Self {
         SyncState::Redisgraph(RedisgraphSyncState {
             connection_pool: None,
         })
@@ -62,22 +56,6 @@ impl SyncState {
         SyncState::Redisgraph(RedisgraphSyncState {
             connection_pool: Some(config.connection_pool().await),
         })
-    }
-
-    pub fn as_ethereum(self) -> Option<EthereumSyncState> {
-        match self {
-            SyncState::Ethereum(sync_state) => Some(sync_state),
-            #[cfg(feature = "backend_neo4j")]
-            _ => None,
-        }
-    }
-
-    pub fn as_ethereum_ref(&self) -> Option<&EthereumSyncState> {
-        match self {
-            SyncState::Ethereum(ref sync_state) => Some(sync_state),
-            #[cfg(feature = "backend_neo4j")]
-            _ => None,
-        }
     }
 
     #[cfg(feature = "backend_neo4j")]
@@ -99,7 +77,6 @@ impl SyncState {
 
 #[derive(Clone)]
 pub enum Backend {
-    Ethereum(EthereumBackend),
     #[cfg(feature = "backend_neo4j")]
     Neo4j(Neo4jBackend),
     #[cfg(feature = "backend_redisgraph")]
@@ -113,13 +90,6 @@ impl BackendFromConfigAndSyncState for Backend {
 
     fn from_config_and_syncstate(config: Self::C, sync_state: Self::S) -> Self::R {
         match config {
-            BackendConfig::Ethereum(config) => {
-                let backend = EthereumBackend::from_config_and_syncstate(
-                    config,
-                    sync_state.unwrap().as_ethereum().unwrap(),
-                );
-                backend.map_ok(|backend| Backend::Ethereum(backend)).boxed()
-            }
             #[cfg(feature = "backend_neo4j")]
             BackendConfig::Neo4j(config) => {
                 let backend = Neo4jBackend::from_config_and_syncstate(
@@ -157,9 +127,6 @@ impl BackendRpcMethods for Backend {
             Backend::Redisgraph(backend) => {
                 BackendRpcMethods::store_entity(backend, entity, options_object)
             }
-            Backend::Ethereum(backend) => {
-                BackendRpcMethods::store_entity(backend, entity, options_object)
-            }
         }
     }
 
@@ -177,9 +144,6 @@ impl BackendRpcMethods for Backend {
             Backend::Redisgraph(backend) => {
                 BackendRpcMethods::store_entities(backend, entities, options_object)
             }
-            Backend::Ethereum(backend) => {
-                BackendRpcMethods::store_entities(backend, entities, options_object)
-            }
         }
     }
 
@@ -189,20 +153,15 @@ impl BackendRpcMethods for Backend {
             Backend::Neo4j(backend) => BackendRpcMethods::get_entity(backend, cid),
             #[cfg(feature = "backend_redisgraph")]
             Backend::Redisgraph(backend) => BackendRpcMethods::get_entity(backend, cid),
-            Backend::Ethereum(backend) => BackendRpcMethods::get_entity(backend, cid),
         }
     }
 
-    fn get_entities(
-        &mut self,
-        cids: Vec<String>,
-    ) -> BoxFuture<Result<Vec<Entity>, Error>> {
+    fn get_entities(&mut self, cids: Vec<String>) -> BoxFuture<Result<Vec<Entity>, Error>> {
         match self {
             #[cfg(feature = "backend_neo4j")]
             Backend::Neo4j(backend) => BackendRpcMethods::get_entities(backend, cids),
             #[cfg(feature = "backend_redisgraph")]
             Backend::Redisgraph(backend) => BackendRpcMethods::get_entities(backend, cids),
-            Backend::Ethereum(backend) => BackendRpcMethods::get_entities(backend, cids),
         }
     }
 
@@ -212,7 +171,6 @@ impl BackendRpcMethods for Backend {
             Backend::Neo4j(backend) => BackendRpcMethods::list_cids(backend, entity_kind),
             #[cfg(feature = "backend_redisgraph")]
             Backend::Redisgraph(backend) => BackendRpcMethods::list_cids(backend, entity_kind),
-            Backend::Ethereum(backend) => BackendRpcMethods::list_cids(backend, entity_kind),
         }
     }
 
@@ -222,7 +180,6 @@ impl BackendRpcMethods for Backend {
             Backend::Neo4j(backend) => BackendRpcMethods::neo4j_query(backend, query),
             #[cfg(feature = "backend_redisgraph")]
             Backend::Redisgraph(backend) => BackendRpcMethods::neo4j_query(backend, query),
-            Backend::Ethereum(backend) => BackendRpcMethods::neo4j_query(backend, query),
         }
     }
 }

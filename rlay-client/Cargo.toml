@@ -7,37 +7,29 @@ edition = "2018"
 
 [dependencies]
 rlay-backend = { path = "../rlay-backend" }
-rlay-backend-ethereum = { path = "../rlay-backend-ethereum" }
 rlay-backend-neo4j = { path = "../rlay-backend-neo4j", optional = true }
 rlay-backend-redisgraph = { path = "../rlay-backend-redisgraph", optional = true }
-rlay-payout = { path = "../rlay-payout" }
 
-web3 = "0.6.0"
 cid = { package = "cid_fork_rlay", version = "0.3.1" }
 rlay_ontology = { version = "0.2.6", features = ["web3_compat"] }
-ethabi = { git = "https://github.com/hobofan/ethabi", rev = '42df1ca0ac5976040b9091f35875b9548c30ef41' }
 rustc-hex = "1.0.0"
 tokio-core = "0.1.17"
 clap = "2.31"
-console = "0.6.1"
 failure = "0.1.1"
 serde = "1.0.79"
 toml = "0.4.6"
 serde_derive = "1.0.79"
-futures-timer = "0.1.1"
-futures = { version = "0.3.0", features = ["compat"] }
-futures01 = { package = "futures", version = "0.1.28" }
+futures = "0.3.0"
 log = "0.4.6"
 env_logger = "0.5.10"
 serde_json = { version = "1.0.22", features = ["preserve_order"] }
 jsonrpc-core = "13.0.0"
-hyper = { version = "0.13.0" }
-tokio = { version = "0.2.0" }
+hyper = "0.13.0"
+tokio = "0.2.0"
 url = "1.7.1"
 failure_derive = "0.1.1"
 dialoguer = "0.1.0"
 hlua = "0.4.1"
-toml_edit = "0.1.3"
 
 [dev-dependencies]
 assert_cmd = "0.11"
@@ -49,7 +41,7 @@ rand = "0.7"
 
 [features]
 default = ["transport_ws", "backend_neo4j", "backend_redisgraph"]
-transport_ipc = ["rlay-backend-ethereum/transport_ipc"]
-transport_ws = ["rlay-backend-ethereum/transport_ws"]
+transport_ipc = []
+transport_ws = []
 backend_neo4j = ["rlay-backend-neo4j"]
 backend_redisgraph = ["rlay-backend-redisgraph"]

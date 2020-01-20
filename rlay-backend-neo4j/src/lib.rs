@@ -17,7 +17,6 @@ use futures::prelude::*;
 use l337::Pool;
 use rlay_backend::{BackendFromConfigAndSyncState, BackendRpcMethods};
 use rlay_ontology::prelude::*;
-use rustc_hex::ToHex;
 use rusted_cypher::cypher::result::Rows;
 use rusted_cypher::cypher::Statement;
 use rusted_cypher::GraphClient;
@@ -156,13 +155,13 @@ impl Neo4jBackend {
             deduped_cids
         };
 
-        let query = format!("
+        let query = format!(
+            "
             UNWIND $cids AS cid
             MATCH (n:RlayEntity {{cid: cid}})-[r]->(m)
             RETURN labels(n),n,type(r),m"
         );
-        let statement_query = Statement::new(&query)
-            .with_param("cids", &deduped_cids)?;
+        let statement_query = Statement::new(&query).with_param("cids", &deduped_cids)?;
 
         trace!("NEO4J QUERY: {:?}", statement_query);
         let start = std::time::Instant::now();
@@ -213,7 +212,7 @@ impl Neo4jBackend {
                 #[derive(Serialize, Deserialize, Debug)]
                 struct RelationshipQueryPart {
                     cid: String,
-                    kind_name: String
+                    kind_name: String,
                 }
 
                 // fetch the parts of the payload that should become relationships
@@ -233,49 +232,56 @@ impl Neo4jBackend {
                     }
                     if let Value::Array(array_val) = value {
                         for array_val_cid in array_val {
-                            relationships.push(RelationshipQueryPart{
+                            relationships.push(RelationshipQueryPart {
                                 cid: array_val_cid.as_str().unwrap().to_string(),
-                                kind_name: key.clone()
+                                kind_name: key.clone(),
                             });
                         }
                         continue;
                     }
                     if let Value::String(_) = value {
-                        relationships.push(RelationshipQueryPart{
+                        relationships.push(RelationshipQueryPart {
                             cid: value.as_str().unwrap().to_string(),
-                            kind_name: key.clone()
+                            kind_name: key.clone(),
                         });
                     }
                 }
             }
 
-            val.insert("relationships".to_string(), serde_json::Value::Array(
-                relationships
-                    .iter()
-                    .map(serde_json::to_value)
-                    .map(|r| r.unwrap())
-                    .collect()
-            ));
+            val.insert(
+                "relationships".to_string(),
+                serde_json::Value::Array(
+                    relationships
+                        .iter()
+                        .map(serde_json::to_value)
+                        .map(|r| r.unwrap())
+                        .collect(),
+                ),
+            );
             entity_objects.push(val);
         }
 
-        let sub_query_labels = EntityKind::variants().iter().map(|variant| {
-            format!(
+        let sub_query_labels = EntityKind::variants()
+            .iter()
+            .map(|variant| {
+                format!(
                 "FOREACH ( ignore in CASE entity.type WHEN '{}' THEN [1] ELSE [] END | SET n:{} )",
                 variant, variant)
-        })
-        .collect::<Vec<String>>()
-        .join("\n");
+            })
+            .collect::<Vec<String>>()
+            .join("\n");
 
         // collect all possible field names
         let mut all_cid_field_names: Vec<String> = vec![];
 
         macro_rules! cid_field_names {
             ($kind:path) => {
-                all_cid_field_names.extend(<$kind>::cid_field_names()
-                    .into_iter()
-                    .map(|field| field.to_owned().to_owned())
-                    .collect::<Vec<String>>());
+                all_cid_field_names.extend(
+                    <$kind>::cid_field_names()
+                        .into_iter()
+                        .map(|field| field.to_owned().to_owned())
+                        .collect::<Vec<String>>(),
+                );
             };
         }
 
@@ -299,16 +305,21 @@ impl Neo4jBackend {
 
         macro_rules! data_field_names {
             ($kind:path) => {
-                all_data_field_names.extend(<$kind>::data_field_names()
-                    .into_iter()
-                    .map(|field| {
-                        let entity_instance = <$kind>::default();
-                        let entity = Into::<Entity>::into(entity_instance);
-                        let entity_kind = entity.kind();
-                        (Into::<&str>::into(entity_kind).to_owned(), field.to_owned().to_owned())
-                    })
-                    .collect::<Vec<(String, String)>>());
-            }
+                all_data_field_names.extend(
+                    <$kind>::data_field_names()
+                        .into_iter()
+                        .map(|field| {
+                            let entity_instance = <$kind>::default();
+                            let entity = Into::<Entity>::into(entity_instance);
+                            let entity_kind = entity.kind();
+                            (
+                                Into::<&str>::into(entity_kind).to_owned(),
+                                field.to_owned().to_owned(),
+                            )
+                        })
+                        .collect::<Vec<(String, String)>>(),
+                );
+            };
         }
 
         rlay_ontology::call_with_entity_kinds!(ALL; data_field_names!);
@@ -318,12 +329,14 @@ impl Neo4jBackend {
             .map(|field_tuple| {
                 format!(
                     "SET (CASE WHEN entity.type = '{}' THEN n END).{} = entity.{}",
-                    field_tuple.0, field_tuple.1, field_tuple.1)
+                    field_tuple.0, field_tuple.1, field_tuple.1
+                )
             })
             .collect::<Vec<String>>()
             .join("\n");
 
-        let statement_query_main = format!("
+        let statement_query_main = format!(
+            "
             UNWIND $entities as entity
             MERGE (n:RlayEntity {{cid: entity.cid }})
             {relations_data}
@@ -338,8 +351,8 @@ impl Neo4jBackend {
             relations_cids = sub_query_relations_cids
         );
 
-        let statement_query = Statement::new(&statement_query_main)
-            .with_param("entities", &entity_objects)?;
+        let statement_query =
+            Statement::new(&statement_query_main).with_param("entities", &entity_objects)?;
 
         trace!("NEO4J QUERY: {:?}", statement_query);
         let start = std::time::Instant::now();
@@ -347,8 +360,10 @@ impl Neo4jBackend {
         let end = std::time::Instant::now();
         trace!("Query duration: {:?}", end - start);
 
-
-        Ok(entities.iter().map(|entity| entity.to_cid().unwrap()).collect())
+        Ok(entities
+            .iter()
+            .map(|entity| entity.to_cid().unwrap())
+            .collect())
     }
 }
 
