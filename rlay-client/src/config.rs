@@ -9,8 +9,7 @@ use toml;
 
 pub use self::backend::BackendConfig;
 pub use self::rpc::RpcConfig;
-use crate::backend::Backend;
-use crate::sync::MultiBackendSyncState;
+use crate::backend::{Backend, SyncState};
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Config {
@@ -22,7 +21,9 @@ pub struct Config {
     #[serde(default = "default_rpc_section")]
     pub rpc: RpcConfig,
     #[serde(default)]
-    pub backends: HashMap<String, BackendConfig>,
+    pub backend: Option<BackendConfig>,
+    #[serde(default)]
+    pub backends: Option<HashMap<String, BackendConfig>>,
 }
 
 fn default_data_path() -> Option<String> {
@@ -78,32 +79,28 @@ impl Config {
         Ok(())
     }
 
-    pub fn get_backend_config(&self, backend_name: Option<&str>) -> Result<&BackendConfig, Error> {
-        match backend_name {
-            None => {
-                if self.backends.len() > 1 {
-                    let backend_names: Vec<_> = self.backends.keys().collect();
-                    Err(format_err!("Multiple backends have been configured. Must specify the name of a backend to use. Available backends: {:?}", backend_names))
-                } else if self.backends.len() == 0 {
-                    Err(err_msg("No backends have been configured."))
-                } else {
-                    Ok(self.backends.values().next().unwrap())
-                }
-            }
-            Some(backend_name) => self
-                .backends
-                .get(backend_name)
-                .ok_or_else(|| format_err!("Unable to find backend for name \"{}\"", backend_name)),
+    pub fn get_backend_config(&self) -> Result<&BackendConfig, Error> {
+        if let Some(backend_config) = &self.backend {
+            return Ok(backend_config);
+        }
+        warn!("No config value found for \"backend\" key. Trying to use \"backends\" instead.");
+
+        if self.backends.clone().unwrap().len() > 1 {
+            Err(format_err!("Multiple backends have been configured. Support for multiple backends has been removed. Please use the \"backend\" config key for a singular backend instead."))
+        } else if self.backends.clone().unwrap().len() == 0 {
+            Err(err_msg("No backends have been configured."))
+        } else {
+            warn!("Using backend from \"backends\" config key. Support for multiple backends has been removed. Please use the \"backend\" config key for a singular backend instead.");
+            Ok(self.backends.as_ref().unwrap().values().next().unwrap())
         }
     }
 
     pub fn get_backend_with_syncstate(
         &self,
-        backend_name: Option<&str>,
-        sync_state: &MultiBackendSyncState,
+        sync_state: &SyncState,
     ) -> impl Future<Output = Result<Backend, Error>> {
-        let config_for_name: &BackendConfig = self.get_backend_config(backend_name).unwrap();
-        let sync_state_for_name: Option<_> = sync_state.get_backend(backend_name).ok();
+        let config_for_name: &BackendConfig = self.get_backend_config().unwrap();
+        let sync_state_for_name: Option<_> = Some(sync_state);
 
         Backend::from_config_and_syncstate(
             config_for_name.to_owned(),
