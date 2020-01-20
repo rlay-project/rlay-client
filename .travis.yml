@@ -76,7 +76,6 @@ install:
   - source ~/.cargo/env || true
 
 script:
-  - docker pull trufflesuite/ganache-cli:v6.1.0
   - bash ci/script.sh
 
 after_script: set +e

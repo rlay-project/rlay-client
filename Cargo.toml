@@ -4,17 +4,14 @@ members = [
   "rlay-backend",
   "rlay-resolve",
   # Backends
-  "rlay-backend-ethereum",
   "rlay-backend-neo4j",
   "rlay-backend-redisgraph",
   # Binaries
   "rlay-client",
   # Other
-  "rlay-payout",
   "rlay-jsonrpc-client",
 ]
 
 [patch.crates-io]
-ethabi = { git = "https://github.com/hobofan/ethabi", rev = '42df1ca0ac5976040b9091f35875b9548c30ef41' }
 # Last dependency with 0.x syn dependency; See https://github.com/mcarton/rust-derivative/pull/50
 derivative = { git = "https://github.com/jakobhellermann/rust-derivative", rev = '89873bf622657d3d59ebc2b7abfea0dbecbd2d11' }

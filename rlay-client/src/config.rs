@@ -1,22 +1,15 @@
 use failure::{err_msg, Error};
 use rlay_backend::BackendFromConfigAndSyncState;
-use rlay_backend_ethereum::config::EthereumBackendConfig;
-use rlay_payout::config::PayoutConfig;
 use std::collections::HashMap;
 use std::fs::{self, File};
 use std::future::Future;
 use std::io::Read;
 use std::path::Path;
-use tokio_core;
 use toml;
-use url::Url;
-use web3;
-use web3::DuplexTransport;
 
 pub use self::backend::BackendConfig;
 pub use self::rpc::RpcConfig;
-use crate::backend::Backend;
-use crate::sync::MultiBackendSyncState;
+use crate::backend::{Backend, SyncState};
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Config {
@@ -28,7 +21,9 @@ pub struct Config {
     #[serde(default = "default_rpc_section")]
     pub rpc: RpcConfig,
     #[serde(default)]
-    pub backends: HashMap<String, BackendConfig>,
+    pub backend: Option<BackendConfig>,
+    #[serde(default)]
+    pub backends: Option<HashMap<String, BackendConfig>>,
 }
 
 fn default_data_path() -> Option<String> {
@@ -76,45 +71,6 @@ impl Config {
         Ok(config)
     }
 
-    pub fn web3_with_handle(
-        &self,
-        eloop_handle: &tokio_core::reactor::Handle,
-    ) -> web3::Web3<impl DuplexTransport> {
-        let network_address: Url = self
-            .default_eth_backend_config()
-            .unwrap()
-            .network_address
-            .as_ref()
-            .unwrap()
-            .parse()
-            .unwrap();
-        let transport = match network_address.scheme() {
-            #[cfg(feature = "transport_ws")]
-            "ws" => web3::transports::WebSocket::with_event_loop(
-                    self
-                        .default_eth_backend_config()
-                        .unwrap()
-                        .network_address
-                        .as_ref()
-                        .unwrap(),
-                    eloop_handle
-                ).unwrap()
-            ,
-            #[cfg(feature = "transport_ipc")]
-            "file" => 
-                web3::transports::Ipc::with_event_loop(
-                    network_address.path(),
-                    eloop_handle,
-                ).unwrap()
-            ,
-            _ => panic!(
-                "Only \"file://\" (for IPC) and \"ws://\" addresses are currently supported, and the client has to be compiled with the appropriate flag (transport_ipc or transport_ws)."
-            ),
-        };
-
-        web3::Web3::new(transport)
-    }
-
     pub fn init_data_dir(&self) -> ::std::io::Result<()> {
         let data_path = self.data_path.as_ref().unwrap();
 
@@ -123,51 +79,33 @@ impl Config {
         Ok(())
     }
 
-    // #[cfg_attr(debug_assertions, deprecated(note = "Refactoring to swappable backends"))]
-    pub fn default_eth_backend_config(&self) -> Result<&EthereumBackendConfig, Error> {
-        let config = self.get_backend_config(Some("default_eth"))?;
-        Ok(config.as_ethereum().unwrap())
-    }
+    pub fn get_backend_config(&self) -> Result<&BackendConfig, Error> {
+        if let Some(backend_config) = &self.backend {
+            return Ok(backend_config);
+        }
+        warn!("No config value found for \"backend\" key. Trying to use \"backends\" instead.");
 
-    pub fn get_backend_config(&self, backend_name: Option<&str>) -> Result<&BackendConfig, Error> {
-        match backend_name {
-            None => {
-                if self.backends.len() > 1 {
-                    let backend_names: Vec<_> = self.backends.keys().collect();
-                    Err(format_err!("Multiple backends have been configured. Must specify the name of a backend to use. Available backends: {:?}", backend_names))
-                } else if self.backends.len() == 0 {
-                    Err(err_msg("No backends have been configured."))
-                } else {
-                    Ok(self.backends.values().next().unwrap())
-                }
-            }
-            Some(backend_name) => self
-                .backends
-                .get(backend_name)
-                .ok_or_else(|| format_err!("Unable to find backend for name \"{}\"", backend_name)),
+        if self.backends.clone().unwrap().len() > 1 {
+            Err(format_err!("Multiple backends have been configured. Support for multiple backends has been removed. Please use the \"backend\" config key for a singular backend instead."))
+        } else if self.backends.clone().unwrap().len() == 0 {
+            Err(err_msg("No backends have been configured."))
+        } else {
+            warn!("Using backend from \"backends\" config key. Support for multiple backends has been removed. Please use the \"backend\" config key for a singular backend instead.");
+            Ok(self.backends.as_ref().unwrap().values().next().unwrap())
         }
     }
 
     pub fn get_backend_with_syncstate(
         &self,
-        backend_name: Option<&str>,
-        sync_state: &MultiBackendSyncState,
+        sync_state: &SyncState,
     ) -> impl Future<Output = Result<Backend, Error>> {
-        let config_for_name: &BackendConfig = self.get_backend_config(backend_name).unwrap();
-        let sync_state_for_name: Option<_> = sync_state.get_backend(backend_name).ok();
+        let config_for_name: &BackendConfig = self.get_backend_config().unwrap();
+        let sync_state_for_name: Option<_> = Some(sync_state);
 
         Backend::from_config_and_syncstate(
             config_for_name.to_owned(),
             sync_state_for_name.map(|n| n.to_owned()),
         )
-    }
-}
-
-impl Into<PayoutConfig> for Config {
-    fn into(self) -> PayoutConfig {
-        PayoutConfig {
-            data_path: self.data_path,
-        }
     }
 }
 
@@ -205,7 +143,6 @@ pub mod rpc {
 }
 
 pub mod backend {
-    use rlay_backend_ethereum::config::EthereumBackendConfig;
     #[cfg(feature = "backend_neo4j")]
     use rlay_backend_neo4j::config::Neo4jBackendConfig;
     #[cfg(feature = "backend_redisgraph")]
@@ -214,22 +151,11 @@ pub mod backend {
     #[derive(Debug, Deserialize, Clone)]
     #[serde(tag = "type")]
     pub enum BackendConfig {
-        #[serde(rename = "ethereum")]
-        Ethereum(EthereumBackendConfig),
         #[serde(rename = "neo4j")]
         #[cfg(feature = "backend_neo4j")]
         Neo4j(Neo4jBackendConfig),
         #[serde(rename = "redisgraph")]
         #[cfg(feature = "backend_redisgraph")]
         Redisgraph(RedisgraphBackendConfig),
-    }
-
-    impl BackendConfig {
-        pub fn as_ethereum(&self) -> Option<&EthereumBackendConfig> {
-            match self {
-                BackendConfig::Ethereum(config) => Some(config),
-                _ => None,
-            }
-        }
     }
 }
