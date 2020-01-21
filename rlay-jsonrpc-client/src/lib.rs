@@ -3,9 +3,9 @@ extern crate serde_json;
 
 use futures::prelude::*;
 use hyper::{client::HttpConnector, header, Body, Client, Request};
+use rlay_backend::{BoxFuture, GetEntity};
 use rlay_ontology::ontology::Entity;
 use rlay_ontology::prelude::FormatWeb3;
-use rlay_resolve::{BoxFuture, ResolveCid};
 use serde_json::Map;
 use serde_json::Value;
 
@@ -97,10 +97,10 @@ impl RlayClient {
     }
 }
 
-impl<'a> ResolveCid<'a> for RlayClient {
+impl<'a> GetEntity<'a> for RlayClient {
     type F = BoxFuture<'a, Option<Entity>>;
 
-    fn resolve<B: AsRef<[u8]>>(&'a self, cid: B) -> Self::F {
+    fn get_entity<B: AsRef<[u8]>>(&'a self, cid: B) -> Self::F {
         let cid: String = serde_json::to_string(&FormatWeb3(cid.as_ref().to_vec())).unwrap();
         // remove quotes from serialized string
         let cid2 = cid[1..cid.len() - 1].to_owned();

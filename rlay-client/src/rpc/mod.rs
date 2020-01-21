@@ -4,7 +4,7 @@ use cid::ToCid;
 use futures::prelude::*;
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{header, Body, Method, Request, Response, Server, StatusCode};
-use rlay_backend::BackendRpcMethods;
+use rlay_backend::rpc::*;
 use rlay_ontology::prelude::*;
 use rustc_hex::ToHex;
 use serde_json::Value;

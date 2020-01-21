@@ -6,14 +6,13 @@ license = "MIT OR Apache-2.0"
 edition = "2018"
 
 [dependencies]
-rlay-backend = { path = "../rlay-backend" }
+rlay-backend = { path = "../rlay-backend", features = ["rpc"] }
 rlay-backend-neo4j = { path = "../rlay-backend-neo4j", optional = true }
 rlay-backend-redisgraph = { path = "../rlay-backend-redisgraph", optional = true }
 
 cid = { package = "cid_fork_rlay", version = "0.3.1" }
 rlay_ontology = { version = "0.2.6", features = ["web3_compat"] }
 rustc-hex = "1.0.0"
-tokio-core = "0.1.17"
 clap = "2.31"
 failure = "0.1.1"
 serde = "1.0.79"
@@ -30,6 +29,8 @@ url = "1.7.1"
 failure_derive = "0.1.1"
 dialoguer = "0.1.0"
 hlua = "0.4.1"
+static_assertions = "1.1.0"
+ambassador = "0.2.1"
 
 [dev-dependencies]
 assert_cmd = "0.11"
@@ -40,8 +41,6 @@ tempfile = "3.1"
 rand = "0.7"
 
 [features]
-default = ["transport_ws", "backend_neo4j", "backend_redisgraph"]
-transport_ipc = []
-transport_ws = []
+default = ["backend_neo4j", "backend_redisgraph"]
 backend_neo4j = ["rlay-backend-neo4j"]
 backend_redisgraph = ["rlay-backend-redisgraph"]

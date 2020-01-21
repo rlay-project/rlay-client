@@ -6,9 +6,9 @@ license = "MIT OR Apache-2.0"
 edition = "2018"
 
 [dependencies]
-rlay-resolve = { path = "../rlay-resolve" }
+rlay-backend = { path = "../rlay-backend" }
 
-futures = { version = "0.3.0", features = ["compat"] }
+futures = "0.3.0"
 hyper = "0.13.0"
 log = "0.4.6"
 rlay_ontology = { version = "0.2.6", features = ["web3_compat"] }
