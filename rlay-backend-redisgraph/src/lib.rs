@@ -15,7 +15,8 @@ use futures::future::BoxFuture;
 use futures::prelude::*;
 use itertools::Itertools;
 use redis::{aio::MultiplexedConnection, FromRedisValue};
-use rlay_backend::{BackendFromConfigAndSyncState, BackendRpcMethods};
+use rlay_backend::rpc::*;
+use rlay_backend::BackendFromConfigAndSyncState;
 use rlay_ontology::prelude::*;
 use rustc_hex::ToHex;
 use serde_json::Value;
@@ -294,7 +295,13 @@ pub struct SyncState {
     pub connection_pool: Option<MultiplexedConnection>,
 }
 
-impl BackendRpcMethods for RedisgraphBackend {
+impl BackendRpcMethodGetEntity for RedisgraphBackend {
+    fn get_entity(&mut self, cid: &str) -> BoxFuture<Result<Option<Entity>, Error>> {
+        Box::pin(self.get_entity(cid.to_owned()))
+    }
+}
+
+impl BackendRpcMethodStoreEntity for RedisgraphBackend {
     fn store_entity(
         &mut self,
         entity: &Entity,
@@ -302,12 +309,15 @@ impl BackendRpcMethods for RedisgraphBackend {
     ) -> BoxFuture<Result<Cid, Error>> {
         Box::pin(self.store_entity(entity.to_owned()))
     }
+}
 
-    fn get_entity(&mut self, cid: &str) -> BoxFuture<Result<Option<Entity>, Error>> {
-        Box::pin(self.get_entity(cid.to_owned()))
-    }
-
+impl BackendRpcMethodNeo4jQuery for RedisgraphBackend {
     fn neo4j_query(&mut self, query: &str) -> BoxFuture<Result<Vec<String>, Error>> {
         Box::pin(self.query_entities(query.to_owned()))
     }
 }
+
+impl BackendRpcMethodGetEntities for RedisgraphBackend {}
+impl BackendRpcMethodListCids for RedisgraphBackend {}
+impl BackendRpcMethodStoreEntities for RedisgraphBackend {}
+impl BackendRpcMethods for RedisgraphBackend {}

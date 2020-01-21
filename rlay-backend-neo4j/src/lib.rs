@@ -15,7 +15,8 @@ use failure::{err_msg, Error};
 use futures::future::BoxFuture;
 use futures::prelude::*;
 use l337::Pool;
-use rlay_backend::{BackendFromConfigAndSyncState, BackendRpcMethods};
+use rlay_backend::rpc::*;
+use rlay_backend::BackendFromConfigAndSyncState;
 use rlay_ontology::prelude::*;
 use rusted_cypher::cypher::result::Rows;
 use rusted_cypher::cypher::Statement;
@@ -380,7 +381,13 @@ impl BackendFromConfigAndSyncState for Neo4jBackend {
     }
 }
 
-impl BackendRpcMethods for Neo4jBackend {
+impl BackendRpcMethodGetEntity for Neo4jBackend {
+    fn get_entity(&mut self, cid: &str) -> BoxFuture<Result<Option<Entity>, Error>> {
+        Box::pin(self.get_entity(cid.to_owned()))
+    }
+}
+
+impl BackendRpcMethodStoreEntity for Neo4jBackend {
     fn store_entity(
         &mut self,
         entity: &Entity,
@@ -388,7 +395,9 @@ impl BackendRpcMethods for Neo4jBackend {
     ) -> BoxFuture<Result<Cid, Error>> {
         Box::pin(self.store_entity(entity.to_owned()))
     }
+}
 
+impl BackendRpcMethodStoreEntities for Neo4jBackend {
     fn store_entities(
         &mut self,
         entities: &Vec<Entity>,
@@ -396,15 +405,15 @@ impl BackendRpcMethods for Neo4jBackend {
     ) -> BoxFuture<Result<Vec<Cid>, Error>> {
         Box::pin(self.store_entities(entities.to_owned()))
     }
+}
 
-    fn get_entity(&mut self, cid: &str) -> BoxFuture<Result<Option<Entity>, Error>> {
-        Box::pin(self.get_entity(cid.to_owned()))
-    }
-
+impl BackendRpcMethodGetEntities for Neo4jBackend {
     fn get_entities(&mut self, cids: Vec<String>) -> BoxFuture<Result<Vec<Entity>, Error>> {
         Box::pin(self.get_entities(cids))
     }
+}
 
+impl BackendRpcMethodListCids for Neo4jBackend {
     fn list_cids(&mut self, entity_kind: Option<&str>) -> BoxFuture<Result<Vec<String>, Error>> {
         let query = match entity_kind {
             None => "MATCH (n:RlayEntity) RETURN DISTINCT n.cid".to_owned(),
@@ -412,8 +421,12 @@ impl BackendRpcMethods for Neo4jBackend {
         };
         self.neo4j_query(&query)
     }
+}
 
+impl BackendRpcMethodNeo4jQuery for Neo4jBackend {
     fn neo4j_query(&mut self, query: &str) -> BoxFuture<Result<Vec<String>, Error>> {
         Box::pin(self.query_entities(query.to_owned()))
     }
 }
+
+impl BackendRpcMethods for Neo4jBackend {}

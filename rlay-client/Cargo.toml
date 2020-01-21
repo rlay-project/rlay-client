@@ -30,6 +30,8 @@ url = "1.7.1"
 failure_derive = "0.1.1"
 dialoguer = "0.1.0"
 hlua = "0.4.1"
+static_assertions = "1.1.0"
+ambassador = "0.2.1"
 
 [dev-dependencies]
 assert_cmd = "0.11"

@@ -2,7 +2,6 @@
 members = [
   # Common traits and types
   "rlay-backend",
-  "rlay-resolve",
   # Backends
   "rlay-backend-neo4j",
   "rlay-backend-redisgraph",

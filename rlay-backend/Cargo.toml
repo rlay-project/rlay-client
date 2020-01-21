@@ -11,3 +11,4 @@ rlay_ontology = { version = "0.2.6", features = ["web3_compat"] }
 failure = "0.1.1"
 serde_json = { version = "1.0.22", features = ["preserve_order"] }
 futures = "0.3.0"
+ambassador = "0.2.1"
