@@ -41,8 +41,6 @@ tempfile = "3.1"
 rand = "0.7"
 
 [features]
-default = ["transport_ws", "backend_neo4j", "backend_redisgraph"]
-transport_ipc = []
-transport_ws = []
+default = ["backend_neo4j", "backend_redisgraph"]
 backend_neo4j = ["rlay-backend-neo4j"]
 backend_redisgraph = ["rlay-backend-redisgraph"]

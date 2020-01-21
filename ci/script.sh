@@ -9,7 +9,7 @@ main() {
     cd rlay-client && cargo build -p rlay-client --features backend_neo4j && cd ..
     cargo build -p rlay-backend
     cargo build -p rlay-backend-neo4j
-    cargo build -p rlay-resolve
+    cargo build -p rlay-backend-redisgraph
 
     if [ ! -z $DISABLE_TESTS ]; then
         return
