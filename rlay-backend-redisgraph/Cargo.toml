@@ -6,7 +6,7 @@ license = "MIT OR Apache-2.0"
 edition = "2018"
 
 [dependencies]
-rlay-backend = { path = "../rlay-backend" }
+rlay-backend = { path = "../rlay-backend", features = ["rpc"] }
 
 cid = { package = "cid_fork_rlay", version = "0.3.1" }
 failure = "0.1.5"

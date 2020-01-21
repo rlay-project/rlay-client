@@ -1,3 +1,4 @@
+#[cfg(feature = "rpc")]
 pub mod rpc;
 
 use failure::Error;
@@ -7,7 +8,8 @@ use rlay_ontology::ontology::Entity;
 use std::future::Future;
 
 pub use futures::future::BoxFuture;
-pub use rpc::{BackendRpcMethodGetEntity, BackendRpcMethods};
+#[cfg(feature = "rpc")]
+pub use rpc::BackendRpcMethods;
 
 pub trait GetEntity<'a> {
     type F: Future<Output = Option<Entity>>;

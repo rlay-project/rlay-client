@@ -6,7 +6,7 @@ license = "MIT OR Apache-2.0"
 edition = "2018"
 
 [dependencies]
-rlay-backend = { path = "../rlay-backend" }
+rlay-backend = { path = "../rlay-backend", features = ["rpc"] }
 rlay-backend-neo4j = { path = "../rlay-backend-neo4j", optional = true }
 rlay-backend-redisgraph = { path = "../rlay-backend-redisgraph", optional = true }
 
