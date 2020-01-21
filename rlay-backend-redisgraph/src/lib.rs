@@ -5,6 +5,7 @@ extern crate log;
 extern crate failure;
 #[macro_use]
 extern crate serde_derive;
+extern crate static_assertions as sa;
 
 pub mod config;
 mod parse;
@@ -14,6 +15,7 @@ use failure::{format_err, Error};
 use futures::future::BoxFuture;
 use futures::prelude::*;
 use itertools::Itertools;
+use once_cell::sync::OnceCell;
 use redis::{aio::MultiplexedConnection, FromRedisValue};
 use rlay_backend::rpc::*;
 use rlay_backend::BackendFromConfigAndSyncState;
@@ -24,31 +26,33 @@ use serde_json::Value;
 use crate::config::RedisgraphBackendConfig;
 use crate::parse::{CidList, GetQueryRelationship};
 
+sa::assert_impl_all!(RedisgraphBackend: Send, Sync);
 #[derive(Clone)]
 pub struct RedisgraphBackend {
     pub config: RedisgraphBackendConfig,
-    client: Option<MultiplexedConnection>,
+    client: OnceCell<MultiplexedConnection>,
 }
 
 impl RedisgraphBackend {
     pub fn from_config(config: RedisgraphBackendConfig) -> Self {
         Self {
             config,
-            client: None,
+            client: OnceCell::new(),
         }
     }
 
-    pub async fn client(&mut self) -> Result<MultiplexedConnection, Error> {
-        if let Some(ref client) = self.client {
+    pub async fn client(&self) -> Result<MultiplexedConnection, Error> {
+        if let Some(client) = self.client.get() {
             return Ok(client.clone());
         }
 
         trace!("Creating new connection pool for backend.");
-        self.client = Some(self.config.connection_pool().await);
-        return Ok(self.client.as_ref().unwrap().clone());
+        let new_connection = self.config.connection_pool().await;
+        let _ = self.client.set(new_connection.clone());
+        return Ok(new_connection);
     }
 
-    async fn get_entity(&mut self, cid: String) -> Result<Option<Entity>, Error> {
+    async fn get_entity(&self, cid: String) -> Result<Option<Entity>, Error> {
         let mut client = self.client().await?;
 
         let query = format!(
@@ -283,9 +287,13 @@ impl BackendFromConfigAndSyncState for RedisgraphBackend {
     type R = Box<dyn Future<Output = Result<Self, Error>> + Send + Unpin>;
 
     fn from_config_and_syncstate(config: Self::C, sync_state: Self::S) -> Self::R {
+        let client_cell = OnceCell::new();
+        if let Some(existing_connection) = sync_state.connection_pool {
+            let _ = client_cell.set(existing_connection.clone());
+        }
         Box::new(future::ok(Self {
             config,
-            client: sync_state.connection_pool.clone(),
+            client: client_cell,
         }))
     }
 }
@@ -297,7 +305,7 @@ pub struct SyncState {
 
 impl BackendRpcMethodGetEntity for RedisgraphBackend {
     fn get_entity(&mut self, cid: &str) -> BoxFuture<Result<Option<Entity>, Error>> {
-        Box::pin(self.get_entity(cid.to_owned()))
+        Box::pin(RedisgraphBackend::get_entity(self, cid.to_owned()))
     }
 }
 
