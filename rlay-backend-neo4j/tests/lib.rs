@@ -104,19 +104,32 @@ fn resolve_entity_works() {
     };
     let mut backend = Neo4jBackend::from_config(backend_config);
 
-    let inserted_entity = Annotation::default().into();
-    let inserted_cid = rt
-        .block_on(backend.store_entity(&inserted_entity, &Value::Null))
+    let ind = Individual::default().into();
+    let ind_cid = rt
+        .block_on(backend.store_entity(&ind, &Value::Null))
         .unwrap();
-    let formatted_cid: String = format!("0x{}", inserted_cid.to_bytes().to_hex());
+    let formatted_cid: String = format!("0x{}", ind_cid.to_bytes().to_hex());
 
-    let retrieved_entity = rt
-        .block_on(backend.resolve_entity(&formatted_cid))
-        .unwrap()
+    let dpa = DataPropertyAssertion {
+        subject: Some(ind_cid.to_bytes()),
+        property: Some(vec![12, 34]),
+        target: Some(vec![56, 78]),
+        ..DataPropertyAssertion::default()
+    }
+    .into();
+    let dpa_cid = rt
+        .block_on(backend.store_entity(&dpa, &Value::Null))
         .unwrap();
+    let dpa_cid_formatted: String = format!("0x{}", dpa_cid.to_bytes().to_hex());
 
+    let resolved_entities = rt.block_on(backend.resolve_entity(&formatted_cid)).unwrap();
+
+    dbg!(&formatted_cid);
+    dbg!(&dpa_cid_formatted);
+    dbg!(&resolved_entities);
     assert_eq!(
-        inserted_entity, retrieved_entity,
+        resolved_entities.get(&formatted_cid).unwrap(),
+        &vec![ind, dpa],
         "inserted and retrieved entity don't match"
     );
 }

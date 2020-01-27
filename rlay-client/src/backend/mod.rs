@@ -9,7 +9,6 @@ use serde_json::Value;
 use std::collections::HashMap;
 use std::future::Future;
 use std::pin::Pin;
-use std::sync::Arc;
 
 use crate::config::backend::BackendConfig;
 
@@ -43,7 +42,7 @@ impl SyncState {
     #[cfg(feature = "backend_neo4j")]
     pub async fn new_neo4j(config: &Neo4jBackendConfig) -> Self {
         SyncState::Neo4j(Neo4jSyncState {
-            connection_pool: Some(Arc::new(async { config.connection_pool().await }.await)),
+            connection_pool: Some(async { config.connection_pool().await }.await),
         })
     }
 

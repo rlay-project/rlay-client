@@ -6,15 +6,17 @@ extern crate log;
 extern crate failure;
 #[macro_use]
 extern crate serde_derive;
+extern crate static_assertions as sa;
 
 pub mod config;
 
 use bb8_cypher::CypherConnectionManager;
 use cid::{Cid, ToCid};
-use failure::{err_msg, Error};
+use failure::Error;
 use futures::future::BoxFuture;
 use futures::prelude::*;
 use l337::Pool;
+use once_cell::sync::OnceCell;
 use rlay_backend::rpc::*;
 use rlay_backend::BackendFromConfigAndSyncState;
 use rlay_ontology::prelude::*;
@@ -24,48 +26,42 @@ use rusted_cypher::GraphClient;
 use serde_json::{self, Value};
 use std::collections::HashMap;
 use std::future::Future;
-use std::sync::Arc;
 
 use crate::config::Neo4jBackendConfig;
 
+sa::assert_impl_all!(Neo4jBackend: Send, Sync);
 #[derive(Clone)]
 pub struct Neo4jBackend {
     pub config: Neo4jBackendConfig,
-    client: Option<Arc<Pool<CypherConnectionManager>>>,
+    client: OnceCell<Pool<CypherConnectionManager>>,
 }
 
 #[derive(Clone)]
 pub struct SyncState {
-    pub connection_pool: Option<Arc<Pool<CypherConnectionManager>>>,
+    pub connection_pool: Option<Pool<CypherConnectionManager>>,
 }
 
+/// Map with CID of resolved entity as key, and Vec of all contained entities within the resolved
+/// entity as values.
 type ResolvedEntities = HashMap<String, Vec<Entity>>;
 
 impl Neo4jBackend {
     pub fn from_config(config: Neo4jBackendConfig) -> Self {
         Self {
             config,
-            client: None,
+            client: OnceCell::new(),
         }
     }
 
-    pub async fn client(&mut self) -> Result<impl std::ops::Deref<Target = GraphClient>, Error> {
-        if let Some(ref client) = self.client {
-            return client
-                .connection()
-                .map_err(|_| err_msg("Failure getting connection"))
-                .await;
+    pub async fn client(&self) -> Result<impl std::ops::Deref<Target = GraphClient>, Error> {
+        if let Some(client) = self.client.get() {
+            return Ok(client.connection().await.unwrap());
         }
 
         trace!("Creating new connection pool for backend.");
-        self.client = Some(Arc::new(self.config.connection_pool().await));
-        return self
-            .client
-            .as_ref()
-            .expect("Tried to get non-existent internal connection pool")
-            .connection()
-            .map_err(|_| err_msg("Failure getting connection"))
-            .await;
+        let new_connection = self.config.connection_pool().await;
+        let _ = self.client.set(new_connection.clone());
+        Ok(new_connection.connection().await.unwrap())
     }
 
     fn pattern_object_to_cid(object: &Value) -> String {
@@ -234,12 +230,12 @@ impl Neo4jBackend {
         })
     }
 
-    async fn get_entity(&mut self, cid: String) -> Result<Option<Entity>, Error> {
-        let entities = self.get_entities(vec![cid]).await?;
+    async fn get_entity(&self, cid: String) -> Result<Option<Entity>, Error> {
+        let entities = Self::get_entities(self, vec![cid]).await?;
         Ok(entities.get(0).map(|n| n.to_owned()))
     }
 
-    pub async fn get_entities(&mut self, cids: Vec<String>) -> Result<Vec<Entity>, Error> {
+    pub async fn get_entities(&self, cids: Vec<String>) -> Result<Vec<Entity>, Error> {
         let cids: Vec<String> = cids.to_owned();
         let client = self.client().await?;
 
@@ -550,16 +546,20 @@ impl BackendFromConfigAndSyncState for Neo4jBackend {
     type R = Box<dyn Future<Output = Result<Self, Error>> + Send + Unpin>;
 
     fn from_config_and_syncstate(config: Self::C, sync_state: Self::S) -> Self::R {
+        let client_cell = OnceCell::new();
+        if let Some(existing_connection) = sync_state.connection_pool {
+            let _ = client_cell.set(existing_connection.clone());
+        }
         Box::new(future::ok(Self {
             config,
-            client: sync_state.connection_pool.clone(),
+            client: client_cell,
         }))
     }
 }
 
 impl BackendRpcMethodGetEntity for Neo4jBackend {
     fn get_entity(&mut self, cid: &str) -> BoxFuture<Result<Option<Entity>, Error>> {
-        Box::pin(self.get_entity(cid.to_owned()))
+        Box::pin(Self::get_entity(self, cid.to_owned()))
     }
 }
 
@@ -585,7 +585,7 @@ impl BackendRpcMethodStoreEntities for Neo4jBackend {
 
 impl BackendRpcMethodGetEntities for Neo4jBackend {
     fn get_entities(&mut self, cids: Vec<String>) -> BoxFuture<Result<Vec<Entity>, Error>> {
-        Box::pin(self.get_entities(cids))
+        Box::pin(Self::get_entities(self, cids))
     }
 }
 
