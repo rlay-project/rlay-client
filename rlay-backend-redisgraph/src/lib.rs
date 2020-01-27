@@ -328,4 +328,6 @@ impl BackendRpcMethodNeo4jQuery for RedisgraphBackend {
 impl BackendRpcMethodGetEntities for RedisgraphBackend {}
 impl BackendRpcMethodListCids for RedisgraphBackend {}
 impl BackendRpcMethodStoreEntities for RedisgraphBackend {}
+impl BackendRpcMethodResolveEntity for RedisgraphBackend {}
+impl BackendRpcMethodResolveEntities for RedisgraphBackend {}
 impl BackendRpcMethods for RedisgraphBackend {}

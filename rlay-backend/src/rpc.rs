@@ -80,15 +80,8 @@ pub trait BackendRpcMethodNeo4jQuery {
     }
 }
 
-pub trait BackendRpcMethods:
-    Send
-    + BackendRpcMethodGetEntity
-    + BackendRpcMethodGetEntities
-    + BackendRpcMethodStoreEntity
-    + BackendRpcMethodStoreEntities
-    + BackendRpcMethodListCids
-    + BackendRpcMethodNeo4jQuery
-{
+#[delegatable_trait]
+pub trait BackendRpcMethodResolveEntity {
     #[allow(unused_variables)]
     fn resolve_entity(
         &mut self,
@@ -99,7 +92,10 @@ pub trait BackendRpcMethods:
         ))
         .boxed()
     }
+}
 
+#[delegatable_trait]
+pub trait BackendRpcMethodResolveEntities {
     #[allow(unused_variables)]
     fn resolve_entities(
         &mut self,
@@ -110,4 +106,17 @@ pub trait BackendRpcMethods:
         ))
         .boxed()
     }
+}
+
+pub trait BackendRpcMethods:
+    Send
+    + BackendRpcMethodGetEntity
+    + BackendRpcMethodGetEntities
+    + BackendRpcMethodStoreEntity
+    + BackendRpcMethodStoreEntities
+    + BackendRpcMethodResolveEntity
+    + BackendRpcMethodResolveEntities
+    + BackendRpcMethodListCids
+    + BackendRpcMethodNeo4jQuery
+{
 }

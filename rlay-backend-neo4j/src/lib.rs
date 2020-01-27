@@ -224,15 +224,14 @@ impl Neo4jBackend {
     }
 
     fn pattern_rows_to_entities(rows: Rows) -> Vec<Entity> {
-        rows
-            .map(|row| {
-                let data: Value = row.get("data").unwrap();
-                Self::pattern_object_to_entities(&data)
-            })
-            .fold(vec![], |mut all_entities, entities| {
-                all_entities.extend(entities);
-                all_entities
-            })
+        rows.map(|row| {
+            let data: Value = row.get("data").unwrap();
+            Self::pattern_object_to_entities(&data)
+        })
+        .fold(vec![], |mut all_entities, entities| {
+            all_entities.extend(entities);
+            all_entities
+        })
     }
 
     async fn get_entity(&mut self, cid: String) -> Result<Option<Entity>, Error> {
@@ -606,14 +605,16 @@ impl BackendRpcMethodNeo4jQuery for Neo4jBackend {
     }
 }
 
-impl BackendRpcMethods for Neo4jBackend {
+impl BackendRpcMethodResolveEntity for Neo4jBackend {
     fn resolve_entity(
         &mut self,
         cid: &str,
     ) -> BoxFuture<Result<HashMap<String, Vec<Entity>>, Error>> {
         Box::pin(self.resolve_entity(cid.to_owned()))
     }
+}
 
+impl BackendRpcMethodResolveEntities for Neo4jBackend {
     fn resolve_entities(
         &mut self,
         cids: Vec<String>,
@@ -621,3 +622,5 @@ impl BackendRpcMethods for Neo4jBackend {
         Box::pin(self.resolve_entities(cids))
     }
 }
+
+impl BackendRpcMethods for Neo4jBackend {}

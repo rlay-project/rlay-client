@@ -76,8 +76,10 @@ sa::assert_impl_all!(Backend: Send);
 #[delegate(rlay_backend::BackendRpcMethodGetEntity)]
 // TODO: Bugged; See https://github.com/hobofan/ambassador/issues/16
 // #[delegate(rlay_backend::BackendRpcMethodGetEntities)]
+// #[delegate(rlay_backend::BackendRpcMethodResolveEntities)]
 #[delegate(rlay_backend::BackendRpcMethodStoreEntity)]
 #[delegate(rlay_backend::BackendRpcMethodStoreEntities)]
+#[delegate(rlay_backend::BackendRpcMethodResolveEntity)]
 #[delegate(rlay_backend::BackendRpcMethodListCids)]
 #[delegate(rlay_backend::BackendRpcMethodNeo4jQuery)]
 pub enum Backend {
@@ -127,19 +129,7 @@ impl BackendRpcMethodGetEntities for Backend {
     }
 }
 
-impl BackendRpcMethods for Backend {
-    fn resolve_entity(
-        &mut self,
-        cid: &str,
-    ) -> BoxFuture<Result<HashMap<String, Vec<Entity>>, Error>> {
-        match self {
-            #[cfg(feature = "backend_neo4j")]
-            Backend::Neo4j(backend) => BackendRpcMethods::resolve_entity(backend, cid),
-            #[cfg(feature = "backend_redisgraph")]
-            Backend::Redisgraph(backend) => BackendRpcMethods::resolve_entity(backend, cid),
-        }
-    }
-
+impl BackendRpcMethodResolveEntities for Backend {
     fn resolve_entities(
         &mut self,
         cids: Vec<String>,
@@ -152,3 +142,5 @@ impl BackendRpcMethods for Backend {
         }
     }
 }
+
+impl BackendRpcMethods for Backend {}
