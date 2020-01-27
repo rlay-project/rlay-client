@@ -11,6 +11,8 @@ rlay-backend = { path = "../rlay-backend" }
 futures = "0.3.0"
 hyper = "0.13.0"
 log = "0.4.6"
+failure = "0.1.1"
 rlay_ontology = { version = "0.2.6", features = ["web3_compat"] }
 serde = "1.0.79"
 serde_json = { version = "1.0.22", features = ["preserve_order"] }
+rustc-hex = "2.0"

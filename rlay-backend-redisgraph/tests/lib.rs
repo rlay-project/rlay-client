@@ -1,6 +1,7 @@
 #![recursion_limit = "128"]
 
 use redis::FromRedisValue;
+use rlay_backend::rpc::*;
 use rlay_backend::BackendRpcMethods;
 use rlay_backend_redisgraph::*;
 use rlay_ontology::prelude::*;
