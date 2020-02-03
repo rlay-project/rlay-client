@@ -18,6 +18,8 @@ pub struct Config {
     pub(crate) config_path: Option<String>,
     #[serde(default = "default_data_path")]
     pub data_path: Option<String>,
+    #[serde(default = "default_plugins_path")]
+    pub plugins_path: String,
     #[serde(default = "default_rpc_section")]
     pub rpc: RpcConfig,
     #[serde(default)]
@@ -28,6 +30,10 @@ pub struct Config {
 
 fn default_data_path() -> Option<String> {
     Some("./rlay_data".to_owned())
+}
+
+fn default_plugins_path() -> String {
+    "./plugins".to_owned()
 }
 
 fn default_rpc_section() -> RpcConfig {

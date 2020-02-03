@@ -16,7 +16,7 @@ use futures::future::BoxFuture;
 use futures::prelude::*;
 use l337::Pool;
 use rlay_backend::rpc::*;
-use rlay_backend::BackendFromConfigAndSyncState;
+use rlay_backend::{BackendFromConfigAndSyncState, GetEntity};
 use rlay_ontology::prelude::*;
 use rusted_cypher::cypher::result::Rows;
 use rusted_cypher::cypher::Statement;
@@ -378,6 +378,15 @@ impl BackendFromConfigAndSyncState for Neo4jBackend {
             config,
             client: sync_state.connection_pool.clone(),
         }))
+    }
+}
+
+impl<'a> GetEntity<'a> for Neo4jBackend {
+    type F = BoxFuture<'a, Result<Option<Entity>, Error>>;
+
+    fn get_entity(&'a self, cid: &[u8]) -> Self::F {
+        todo!()
+        // future::ready(Ok(self.get(cid).map(|n| n.to_owned()))).boxed()
     }
 }
 

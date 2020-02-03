@@ -2,6 +2,7 @@
 members = [
   # Common traits and types
   "rlay-backend",
+  "rlay-plugin-interface",
   # Backends
   "rlay-backend-neo4j",
   "rlay-backend-redisgraph",
@@ -9,6 +10,8 @@ members = [
   "rlay-client",
   # Other
   "rlay-jsonrpc-client",
+  # Examples
+  "example-filter-plugin",
 ]
 
 [patch.crates-io]

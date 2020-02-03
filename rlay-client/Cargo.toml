@@ -9,6 +9,7 @@ edition = "2018"
 rlay-backend = { path = "../rlay-backend", features = ["rpc"] }
 rlay-backend-neo4j = { path = "../rlay-backend-neo4j", optional = true }
 rlay-backend-redisgraph = { path = "../rlay-backend-redisgraph", optional = true }
+rlay-plugin-interface = { path = "../rlay-plugin-interface" }
 
 cid = { package = "cid_fork_rlay", version = "0.3.1" }
 rlay_ontology = { version = "0.2.6", features = ["web3_compat"] }
@@ -31,6 +32,7 @@ dialoguer = "0.1.0"
 hlua = "0.4.1"
 static_assertions = "1.1.0"
 ambassador = "0.2.1"
+libloading = "0.5.2"
 
 [dev-dependencies]
 assert_cmd = "0.11"

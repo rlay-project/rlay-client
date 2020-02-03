@@ -14,14 +14,14 @@ pub use rpc::BackendRpcMethods;
 pub trait GetEntity<'a> {
     type F: Future<Output = Result<Option<Entity>, Error>>;
 
-    fn get_entity<B: AsRef<[u8]>>(&'a self, cid: B) -> Self::F;
+    fn get_entity(&'a self, cid: &[u8]) -> Self::F;
 }
 
 impl<'a> GetEntity<'a> for std::collections::BTreeMap<&[u8], Entity> {
     type F = BoxFuture<'a, Result<Option<Entity>, Error>>;
 
-    fn get_entity<B: AsRef<[u8]>>(&'a self, cid: B) -> Self::F {
-        future::ready(Ok(self.get(cid.as_ref()).map(|n| n.to_owned()))).boxed()
+    fn get_entity(&'a self, cid: &[u8]) -> Self::F {
+        future::ready(Ok(self.get(cid).map(|n| n.to_owned()))).boxed()
     }
 }
 

@@ -1,0 +1,13 @@
+[package]
+name = "example-filter-plugin"
+version = "0.1.0"
+authors = ["Maximilian Goisser <goisser94@gmail.com>"]
+edition = "2018"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+cid = { package = "cid_fork_rlay", version = "0.3.1" }
+rlay-plugin-interface = { path = "../rlay-plugin-interface" }
+rustc-hex = "1.0.0"

@@ -6,6 +6,7 @@ use hyper::service::{make_service_fn, service_fn};
 use hyper::{header, Body, Method, Request, Response, Server, StatusCode};
 use rlay_backend::rpc::*;
 use rlay_ontology::prelude::*;
+use rlay_plugin_interface::{FilterContext, RlayFilter};
 use rustc_hex::ToHex;
 use serde_json::Value;
 use std::error::Error;
@@ -311,7 +312,7 @@ async fn rpc_rlay_experimental_neo4j_query(
     sync_state: SyncState,
     params_array: Vec<Value>,
 ) -> JsonRpcResult<Value> {
-    let filter_registry = crate::modules::ModuleRegistry::with_builtins();
+    let filter_registry = crate::plugins::PluginRegistry::from_dir(config.clone().plugins_path);
 
     let query = params_array.get(0).unwrap().as_str().unwrap().to_owned();
 
@@ -335,7 +336,6 @@ async fn rpc_rlay_experimental_neo4j_query(
 
     let config = config.clone();
     let sync_state = sync_state.clone();
-    let filter_registry = filter_registry.clone();
 
     let mut backend = get_backend(&config, &sync_state).await?;
 
@@ -355,11 +355,14 @@ async fn rpc_rlay_experimental_neo4j_query(
         .await
         .unwrap();
 
+    let filter_ctx = FilterContext {
+        backend: Box::new(backend),
+    };
     let filtered_entities = entities
         .into_iter()
         .filter(|entity| {
             for filter in &activated_filters {
-                if !filter.lock().unwrap().filter(entity.clone()) {
+                if !filter.filter_entity(&filter_ctx, &entity.clone()) {
                     return false;
                 }
             }
