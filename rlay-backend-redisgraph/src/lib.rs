@@ -49,7 +49,7 @@ impl RedisgraphBackend {
         trace!("Creating new connection pool for backend.");
         let new_connection = self.config.connection_pool().await;
         let _ = self.client.set(new_connection.clone());
-        return Ok(new_connection);
+        Ok(new_connection)
     }
 
     async fn get_entity(&self, cid: String) -> Result<Option<Entity>, Error> {
@@ -305,7 +305,7 @@ pub struct SyncState {
 
 impl BackendRpcMethodGetEntity for RedisgraphBackend {
     fn get_entity(&mut self, cid: &str) -> BoxFuture<Result<Option<Entity>, Error>> {
-        Box::pin(RedisgraphBackend::get_entity(self, cid.to_owned()))
+        Box::pin(Self::get_entity(self, cid.to_owned()))
     }
 }
 
@@ -328,4 +328,6 @@ impl BackendRpcMethodNeo4jQuery for RedisgraphBackend {
 impl BackendRpcMethodGetEntities for RedisgraphBackend {}
 impl BackendRpcMethodListCids for RedisgraphBackend {}
 impl BackendRpcMethodStoreEntities for RedisgraphBackend {}
+impl BackendRpcMethodResolveEntity for RedisgraphBackend {}
+impl BackendRpcMethodResolveEntities for RedisgraphBackend {}
 impl BackendRpcMethods for RedisgraphBackend {}

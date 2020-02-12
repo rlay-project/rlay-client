@@ -7,7 +7,7 @@ use hyper::{header, Body, Method, Request, Response, Server, StatusCode};
 use rlay_backend::rpc::*;
 use rlay_ontology::prelude::*;
 use rustc_hex::ToHex;
-use serde_json::Value;
+use serde_json::{Map, Value};
 use std::error::Error;
 use std::net::ToSocketAddrs;
 use tokio::runtime::Runtime;
@@ -136,6 +136,14 @@ async fn handle_jsonrpc(
         ),
         "rlay_experimentalGetEntities" => Some(
             rpc_rlay_experimental_get_entities(full_config, sync_state, params.to_owned()).await?,
+        ),
+        "rlay_experimentalResolveEntity" => Some(
+            rpc_rlay_experimental_resolve_entity(full_config, sync_state, params.to_owned())
+                .await?,
+        ),
+        "rlay_experimentalResolveEntities" => Some(
+            rpc_rlay_experimental_resolve_entities(full_config, sync_state, params.to_owned())
+                .await?,
         ),
         "rlay_experimentalNeo4jQuery" => Some(
             rpc_rlay_experimental_neo4j_query(full_config, sync_state, params.to_owned()).await?,
@@ -299,6 +307,75 @@ async fn rpc_rlay_experimental_get_entities(
                 .iter()
                 .map(|raw_entity| serde_json::to_value(FormatWeb3(raw_entity)).unwrap())
                 .collect();
+        })
+        .await
+        .unwrap();
+
+    Ok(result)
+}
+
+async fn rpc_rlay_experimental_resolve_entity(
+    config: Config,
+    sync_state: SyncState,
+    params_array: Vec<Value>,
+) -> JsonRpcResult<Value> {
+    let cid = params_array.get(0).unwrap().as_str().unwrap().to_owned();
+
+    let mut backend = get_backend(&config, &sync_state).await?;
+
+    let entity: serde_json::Value = BackendRpcMethods::resolve_entity(&mut backend, &cid)
+        .map_err(failure_into_jsonrpc_err)
+        .map_ok(|resolved_entities| {
+            let mut serde_map: Map<String, Value> = Map::new();
+            for (cid, raw_entities) in resolved_entities {
+                let serde_vec: Value = serde_json::to_value::<Value>(
+                    raw_entities
+                        .iter()
+                        .map(|raw_entity| serde_json::to_value(FormatWeb3(raw_entity)).unwrap())
+                        .collect(),
+                )
+                .unwrap();
+                serde_map.insert(cid, serde_vec);
+            }
+            return serde_json::to_value(serde_map).unwrap();
+        })
+        .await
+        .unwrap();
+
+    Ok(entity)
+}
+
+async fn rpc_rlay_experimental_resolve_entities(
+    config: Config,
+    sync_state: SyncState,
+    params_array: Vec<Value>,
+) -> JsonRpcResult<Value> {
+    let cid_array = params_array.get(0).unwrap().as_array().unwrap().to_owned();
+
+    let cids: Vec<String> = cid_array
+        .iter()
+        .map(|cid_value| {
+            return cid_value.as_str().unwrap().to_owned();
+        })
+        .collect();
+
+    let mut backend = get_backend(&config, &sync_state).await?;
+
+    let result: serde_json::Value = BackendRpcMethods::resolve_entities(&mut backend, cids)
+        .map_err(failure_into_jsonrpc_err)
+        .map_ok(|resolved_entities| {
+            let mut serde_map: Map<String, Value> = Map::new();
+            for (cid, raw_entities) in resolved_entities {
+                let serde_vec: Value = serde_json::to_value::<Value>(
+                    raw_entities
+                        .iter()
+                        .map(|raw_entity| serde_json::to_value(FormatWeb3(raw_entity)).unwrap())
+                        .collect(),
+                )
+                .unwrap();
+                serde_map.insert(cid, serde_vec);
+            }
+            return serde_json::to_value(serde_map).unwrap();
         })
         .await
         .unwrap();

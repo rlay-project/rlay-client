@@ -6,9 +6,9 @@ use rlay_backend::rpc::*;
 use rlay_backend::BackendFromConfigAndSyncState;
 use rlay_ontology::ontology::Entity;
 use serde_json::Value;
+use std::collections::HashMap;
 use std::future::Future;
 use std::pin::Pin;
-use std::sync::Arc;
 
 use crate::config::backend::BackendConfig;
 
@@ -42,7 +42,7 @@ impl SyncState {
     #[cfg(feature = "backend_neo4j")]
     pub async fn new_neo4j(config: &Neo4jBackendConfig) -> Self {
         SyncState::Neo4j(Neo4jSyncState {
-            connection_pool: Some(Arc::new(async { config.connection_pool().await }.await)),
+            connection_pool: Some(async { config.connection_pool().await }.await),
         })
     }
 
@@ -75,8 +75,10 @@ sa::assert_impl_all!(Backend: Send);
 #[delegate(rlay_backend::BackendRpcMethodGetEntity)]
 // TODO: Bugged; See https://github.com/hobofan/ambassador/issues/16
 // #[delegate(rlay_backend::BackendRpcMethodGetEntities)]
+// #[delegate(rlay_backend::BackendRpcMethodResolveEntities)]
 #[delegate(rlay_backend::BackendRpcMethodStoreEntity)]
 #[delegate(rlay_backend::BackendRpcMethodStoreEntities)]
+#[delegate(rlay_backend::BackendRpcMethodResolveEntity)]
 #[delegate(rlay_backend::BackendRpcMethodListCids)]
 #[delegate(rlay_backend::BackendRpcMethodNeo4jQuery)]
 pub enum Backend {
@@ -122,6 +124,20 @@ impl BackendRpcMethodGetEntities for Backend {
             Backend::Neo4j(backend) => BackendRpcMethods::get_entities(backend, cids),
             #[cfg(feature = "backend_redisgraph")]
             Backend::Redisgraph(backend) => BackendRpcMethods::get_entities(backend, cids),
+        }
+    }
+}
+
+impl BackendRpcMethodResolveEntities for Backend {
+    fn resolve_entities(
+        &mut self,
+        cids: Vec<String>,
+    ) -> BoxFuture<Result<HashMap<String, Vec<Entity>>, Error>> {
+        match self {
+            #[cfg(feature = "backend_neo4j")]
+            Backend::Neo4j(backend) => BackendRpcMethods::resolve_entities(backend, cids),
+            #[cfg(feature = "backend_redisgraph")]
+            Backend::Redisgraph(backend) => BackendRpcMethods::resolve_entities(backend, cids),
         }
     }
 }

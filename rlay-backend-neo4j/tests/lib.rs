@@ -1,5 +1,6 @@
 use lazy_static::lazy_static;
 use nonparallel::nonparallel;
+use rlay_backend::rpc::*;
 use rlay_backend::BackendRpcMethods;
 use rlay_backend_neo4j::*;
 use rlay_ontology::prelude::*;
@@ -81,6 +82,54 @@ fn store_and_get_roundtrip_works() {
 
     assert_eq!(
         inserted_entity, retrieved_entity,
+        "inserted and retrieved entity don't match"
+    );
+}
+
+#[test]
+#[nonparallel(MUT_A)]
+fn resolve_entity_works() {
+    let _ = env_logger::try_init();
+    let mut rt = Runtime::new().unwrap();
+    let docker = clients::Cli::default();
+    let node = docker.run(neo4j_container());
+
+    let connection_string = format!(
+        "http://127.0.0.1:{}/db/data/",
+        node.get_host_port(7474).unwrap()
+    );
+
+    let backend_config = config::Neo4jBackendConfig {
+        uri: connection_string,
+    };
+    let mut backend = Neo4jBackend::from_config(backend_config);
+
+    let ind = Individual::default().into();
+    let ind_cid = rt
+        .block_on(backend.store_entity(&ind, &Value::Null))
+        .unwrap();
+    let formatted_cid: String = format!("0x{}", ind_cid.to_bytes().to_hex());
+
+    let dpa = DataPropertyAssertion {
+        subject: Some(ind_cid.to_bytes()),
+        property: Some(vec![12, 34]),
+        target: Some(vec![56, 78]),
+        ..DataPropertyAssertion::default()
+    }
+    .into();
+    let dpa_cid = rt
+        .block_on(backend.store_entity(&dpa, &Value::Null))
+        .unwrap();
+    let dpa_cid_formatted: String = format!("0x{}", dpa_cid.to_bytes().to_hex());
+
+    let resolved_entities = rt.block_on(backend.resolve_entity(&formatted_cid)).unwrap();
+
+    dbg!(&formatted_cid);
+    dbg!(&dpa_cid_formatted);
+    dbg!(&resolved_entities);
+    assert_eq!(
+        resolved_entities.get(&formatted_cid).unwrap(),
+        &vec![ind, dpa],
         "inserted and retrieved entity don't match"
     );
 }
