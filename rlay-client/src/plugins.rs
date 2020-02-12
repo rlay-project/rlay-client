@@ -2,7 +2,7 @@ use ambassador::Delegate;
 use libloading as lib;
 use libloading::Symbol;
 use rlay_ontology::prelude::Entity;
-use rlay_plugin_interface::{FilterContext, RlayFilter};
+use rlay_plugin_interface::prelude::{BoxFuture, FilterContext, RlayFilter};
 use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::path::Path;

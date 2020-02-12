@@ -3,7 +3,7 @@ use cid::Cid;
 use failure::Error;
 use futures::future::{BoxFuture, FutureExt, TryFutureExt};
 use rlay_backend::rpc::*;
-use rlay_backend::{BackendFromConfigAndSyncState, GetEntity};
+use rlay_backend::{BackendFromConfigAndSyncState, GetEntity, ResolveEntity};
 use rlay_ontology::ontology::Entity;
 use serde_json::Value;
 use std::collections::HashMap;
@@ -153,6 +153,19 @@ impl<'a> GetEntity<'a> for Backend {
             Backend::Neo4j(backend) => GetEntity::get_entity(backend, cid),
             #[cfg(feature = "backend_redisgraph")]
             Backend::Redisgraph(backend) => GetEntity::get_entity(backend, cid),
+        }
+    }
+}
+
+impl<'a> ResolveEntity<'a> for Backend {
+    type F = BoxFuture<'a, Result<HashMap<Vec<u8>, Vec<Entity>>, Error>>;
+
+    fn resolve_entity(&'a self, cid: &[u8]) -> Self::F {
+        match self {
+            #[cfg(feature = "backend_neo4j")]
+            Backend::Neo4j(backend) => ResolveEntity::resolve_entity(backend, cid),
+            #[cfg(feature = "backend_redisgraph")]
+            Backend::Redisgraph(backend) => ResolveEntity::resolve_entity(backend, cid),
         }
     }
 }

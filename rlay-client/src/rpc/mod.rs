@@ -17,6 +17,7 @@ use url::Url;
 use self::proxy::proxy_rpc_call;
 use crate::backend::{Backend, SyncState};
 use crate::config::Config;
+use crate::plugins::PluginRegistry;
 
 const NETWORK_VERSION: &'static str = "0.3.3";
 const CLIENT_VERSION: &'static str = env!("CARGO_PKG_VERSION");
@@ -315,6 +316,72 @@ async fn rpc_rlay_experimental_get_entities(
     Ok(result)
 }
 
+#[derive(Deserialize, Debug, Clone)]
+struct FilterArgument {
+    filter: String,
+    #[serde(default)]
+    params: Value,
+}
+
+impl FilterArgument {
+    pub fn from_options_object(options_object: Option<&Value>) -> Vec<Self> {
+        options_object
+            .and_then(|n| n.as_object())
+            .and_then(|n| n.get("filters"))
+            .and_then(|n| {
+                n.as_array().and_then(|filters_arr| {
+                    Some(
+                        filters_arr
+                            .into_iter()
+                            .map(|n| serde_json::from_value(n.clone()).unwrap())
+                            .collect::<Vec<_>>(),
+                    )
+                })
+            })
+            .unwrap_or_else(Vec::new)
+    }
+}
+
+async fn filter_entities(
+    backend: Backend,
+    filter_registry: &PluginRegistry,
+    activated_filters_arg: Vec<FilterArgument>,
+    entities: Vec<Entity>,
+) -> Vec<Entity> {
+    let activated_filters_names: Vec<String> = activated_filters_arg
+        .iter()
+        .map(|n| n.filter.to_owned())
+        .collect();
+
+    let activated_filters: Vec<_> = activated_filters_names
+        .into_iter()
+        .filter_map(|filter_name| filter_registry.filter(&filter_name.to_owned()))
+        .collect();
+
+    let mut filtered_entities = entities;
+    for (filter, params) in activated_filters
+        .iter()
+        .zip(activated_filters_arg.iter().map(|filter| &filter.params))
+    {
+        let filter_ctx = FilterContext {
+            backend: Box::new(backend.clone()),
+            params: &params,
+        };
+
+        let filter_values = filter
+            .filter_entities(&filter_ctx, filtered_entities.clone())
+            .await;
+        filtered_entities = filtered_entities
+            .into_iter()
+            .zip(filter_values.iter())
+            .filter(|(_, is_filtered)| **is_filtered)
+            .map(|(entity, _)| entity)
+            .collect();
+    }
+
+    filtered_entities
+}
+
 async fn rpc_rlay_experimental_resolve_entity(
     config: Config,
     sync_state: SyncState,
@@ -389,27 +456,14 @@ async fn rpc_rlay_experimental_neo4j_query(
     sync_state: SyncState,
     params_array: Vec<Value>,
 ) -> JsonRpcResult<Value> {
-    let filter_registry = crate::plugins::PluginRegistry::from_dir(config.clone().plugins_path);
+    let filter_registry = PluginRegistry::from_dir(config.clone().plugins_path);
 
     let query = params_array.get(0).unwrap().as_str().unwrap().to_owned();
 
     let default_options = json!({});
     let options_object = params_array.get(1).or_else(|| Some(&default_options));
 
-    let activated_filters_names: Vec<String> = options_object
-        .and_then(|n| n.as_object())
-        .and_then(|n| n.get("filters"))
-        .and_then(|n| {
-            n.as_array().and_then(|filters_arr| {
-                Some(
-                    filters_arr
-                        .into_iter()
-                        .map(|n| n.as_str().unwrap().to_owned())
-                        .collect::<Vec<_>>(),
-                )
-            })
-        })
-        .unwrap_or_else(Vec::new);
+    let activated_filters_arg = FilterArgument::from_options_object(options_object);
 
     let config = config.clone();
     let sync_state = sync_state.clone();
@@ -421,32 +475,22 @@ async fn rpc_rlay_experimental_neo4j_query(
         .await
         .unwrap();
 
-    let activated_filters: Vec<_> = activated_filters_names
-        .into_iter()
-        .filter_map(|filter_name| filter_registry.filter(&filter_name.to_owned()))
-        .collect();
-
     let entities = backend
         .get_entities(cids)
         .map_err(failure_into_jsonrpc_err)
         .await
         .unwrap();
 
-    let filter_ctx = FilterContext {
-        backend: Box::new(backend),
-    };
-    let filtered_entities = entities
-        .into_iter()
-        .filter(|entity| {
-            for filter in &activated_filters {
-                if !filter.filter_entity(&filter_ctx, &entity.clone()) {
-                    return false;
-                }
-            }
-            return true;
-        })
-        .map(|entity| FormatWeb3(entity))
-        .collect::<Vec<_>>();
+    let filtered_entities = filter_entities(
+        backend.clone(),
+        &filter_registry,
+        activated_filters_arg,
+        entities,
+    )
+    .await
+    .into_iter()
+    .map(FormatWeb3)
+    .collect::<Vec<_>>();
 
     Ok(serde_json::to_value(filtered_entities).unwrap())
 }

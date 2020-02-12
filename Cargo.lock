@@ -439,6 +439,7 @@ dependencies = [
  "cid_fork_rlay 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "rlay-plugin-interface 0.1.0",
  "rustc-hex 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_json 1.0.44 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -1464,6 +1465,7 @@ dependencies = [
  "ambassador 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "rlay-backend 0.1.0",
  "rlay_ontology 0.2.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_json 1.0.44 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

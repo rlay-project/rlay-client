@@ -19,10 +19,30 @@ impl RlayFilter for WhitelistFilter {
         "whitelist"
     }
 
-    fn filter_entity(&self, _ctx: &FilterContext, entity: &Entity) -> bool {
-        let raw_cid = entity.to_cid().unwrap();
-        let cid: String = format!("0x{}", raw_cid.to_bytes().to_hex());
+    fn filter_entities(&self, ctx: &FilterContext, entities: Vec<Entity>) -> BoxFuture<Vec<bool>> {
+        let raw_cids = entities
+            .into_iter()
+            .map(|entity| entity.to_cid().unwrap())
+            .collect::<Vec<_>>();
 
-        WHITELIST.contains(&&*cid)
+        let used_whitelist: Vec<String> = ctx
+            .params
+            .as_object()
+            .and_then(|obj| obj.get("whitelist"))
+            .and_then(|whitelist| {
+                serde_json::from_value(whitelist.clone()).expect("Unable to parse whitelist")
+            })
+            .unwrap_or_else(|| WHITELIST.iter().map(|n| n.to_string()).collect());
+
+        Box::pin(async move {
+            let cids: Vec<String> = raw_cids
+                .iter()
+                .map(|raw_cid| format!("0x{}", raw_cid.to_bytes().to_hex()))
+                .collect();
+
+            cids.into_iter()
+                .map(|cid| used_whitelist.contains(&cid))
+                .collect()
+        })
     }
 }
