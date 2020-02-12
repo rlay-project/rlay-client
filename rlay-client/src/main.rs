@@ -14,7 +14,7 @@ extern crate static_assertions as sa;
 pub mod backend;
 pub mod cli;
 pub mod config;
-pub mod modules;
+pub mod plugins;
 pub mod rpc;
 pub mod sync;
 

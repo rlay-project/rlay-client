@@ -102,7 +102,7 @@ impl RlayClient {
 impl<'a> GetEntity<'a> for RlayClient {
     type F = BoxFuture<'a, Result<Option<Entity>, rlay_backend::Error>>;
 
-    fn get_entity<B: AsRef<[u8]>>(&'a self, cid: B) -> Self::F {
+    fn get_entity(&'a self, cid: &[u8]) -> Self::F {
         let cid_str: String = cid.as_ref().to_hex();
 
         self.get_entity(cid_str)
