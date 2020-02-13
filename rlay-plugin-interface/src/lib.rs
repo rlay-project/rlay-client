@@ -8,37 +8,26 @@ pub mod prelude {
 }
 
 use ambassador::delegatable_trait;
-use rlay_backend::{BoxFuture, Error, GetEntity, ResolveEntity};
+use async_trait::async_trait;
+use rlay_backend::{GetEntity, ResolveEntity};
 use rlay_ontology::prelude::*;
 use serde_json::Value;
-use std::collections::HashMap;
+use std::sync::Arc;
 
-pub trait FilterBackend<'a>:
-    Send
-    + Sync
-    + GetEntity<'a, F = BoxFuture<'a, Result<Option<Entity>, Error>>>
-    + ResolveEntity<'a, F = BoxFuture<'a, Result<HashMap<Vec<u8>, Vec<Entity>>, Error>>>
-{
-}
+pub trait FilterBackend: Send + Sync + GetEntity + ResolveEntity {}
 
-impl<
-        'a,
-        T: Send
-            + Sync
-            + GetEntity<'a, F = BoxFuture<'a, Result<Option<Entity>, Error>>>
-            + ResolveEntity<'a, F = BoxFuture<'a, Result<HashMap<Vec<u8>, Vec<Entity>>, Error>>>,
-    > FilterBackend<'a> for T
-{
-}
+impl<T: Send + Sync + GetEntity + ResolveEntity> FilterBackend for T {}
 
-pub struct FilterContext<'a> {
-    pub backend: Box<dyn FilterBackend<'a>>,
-    pub params: &'a Value,
+#[derive(Clone)]
+pub struct FilterContext {
+    pub backend: Arc<dyn FilterBackend>,
+    pub params: Value,
 }
 
 #[delegatable_trait]
+#[async_trait]
 pub trait RlayFilter {
     fn filter_name(&self) -> &'static str;
 
-    fn filter_entities(&self, ctx: &FilterContext, entities: Vec<Entity>) -> BoxFuture<Vec<bool>>;
+    async fn filter_entities(&self, ctx: FilterContext, entities: Vec<Entity>) -> Vec<bool>;
 }

@@ -10,6 +10,7 @@ extern crate static_assertions as sa;
 pub mod config;
 mod parse;
 
+use async_trait::async_trait;
 use cid::{Cid, ToCid};
 use failure::{format_err, Error};
 use futures::future::BoxFuture;
@@ -304,19 +305,17 @@ pub struct SyncState {
     pub connection_pool: Option<MultiplexedConnection>,
 }
 
-impl<'a> GetEntity<'a> for RedisgraphBackend {
-    type F = BoxFuture<'a, Result<Option<Entity>, Error>>;
-
-    fn get_entity(&'a self, _cid: &[u8]) -> Self::F {
+#[async_trait]
+impl GetEntity for RedisgraphBackend {
+    async fn get_entity(&self, _cid: &[u8]) -> Result<Option<Entity>, Error> {
         todo!()
         // future::ready(Ok(self.get(cid).map(|n| n.to_owned()))).boxed()
     }
 }
 
-impl<'a> ResolveEntity<'a> for RedisgraphBackend {
-    type F = BoxFuture<'a, Result<HashMap<Vec<u8>, Vec<Entity>>, Error>>;
-
-    fn resolve_entity(&'a self, _cid: &[u8]) -> Self::F {
+#[async_trait]
+impl ResolveEntity for RedisgraphBackend {
+    async fn resolve_entity(&self, _cid: &[u8]) -> Result<HashMap<Vec<u8>, Vec<Entity>>, Error> {
         todo!()
     }
 }

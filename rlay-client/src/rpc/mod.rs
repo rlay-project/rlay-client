@@ -359,17 +359,18 @@ async fn filter_entities(
         .collect();
 
     let mut filtered_entities = entities;
-    for (filter, params) in activated_filters
-        .iter()
-        .zip(activated_filters_arg.iter().map(|filter| &filter.params))
-    {
+    for (filter, params) in activated_filters.iter().zip(
+        activated_filters_arg
+            .iter()
+            .map(|filter| filter.params.to_owned()),
+    ) {
         let filter_ctx = FilterContext {
-            backend: Box::new(backend.clone()),
-            params: &params,
+            backend: std::sync::Arc::new(backend.clone()),
+            params,
         };
 
         let filter_values = filter
-            .filter_entities(&filter_ctx, filtered_entities.clone())
+            .filter_entities(filter_ctx, filtered_entities.clone())
             .await;
         filtered_entities = filtered_entities
             .into_iter()
@@ -387,30 +388,41 @@ async fn rpc_rlay_experimental_resolve_entity(
     sync_state: SyncState,
     params_array: Vec<Value>,
 ) -> JsonRpcResult<Value> {
+    let filter_registry = PluginRegistry::from_dir(config.clone().plugins_path);
+
     let cid = params_array.get(0).unwrap().as_str().unwrap().to_owned();
+    let default_options = json!({});
+    let options_object = params_array.get(1).or_else(|| Some(&default_options));
+    let activated_filters_arg = FilterArgument::from_options_object(options_object);
 
     let mut backend = get_backend(&config, &sync_state).await?;
 
-    let entity: serde_json::Value = BackendRpcMethods::resolve_entity(&mut backend, &cid)
+    let resolved_entities = BackendRpcMethods::resolve_entity(&mut backend, &cid)
         .map_err(failure_into_jsonrpc_err)
-        .map_ok(|resolved_entities| {
-            let mut serde_map: Map<String, Value> = Map::new();
-            for (cid, raw_entities) in resolved_entities {
-                let serde_vec: Value = serde_json::to_value::<Value>(
-                    raw_entities
-                        .iter()
-                        .map(|raw_entity| serde_json::to_value(FormatWeb3(raw_entity)).unwrap())
-                        .collect(),
-                )
-                .unwrap();
-                serde_map.insert(cid, serde_vec);
-            }
-            return serde_json::to_value(serde_map).unwrap();
-        })
         .await
         .unwrap();
 
-    Ok(entity)
+    let mut serde_map: Map<String, Value> = Map::new();
+    for (cid, raw_entities) in resolved_entities {
+        let filtered_entities = filter_entities(
+            backend.clone(),
+            &filter_registry,
+            activated_filters_arg.clone(),
+            raw_entities,
+        )
+        .await;
+        let serde_vec: Value = serde_json::to_value::<Value>(
+            filtered_entities
+                .iter()
+                .map(|raw_entity| serde_json::to_value(FormatWeb3(raw_entity)).unwrap())
+                .collect(),
+        )
+        .unwrap();
+        serde_map.insert(cid, serde_vec);
+    }
+
+    let response = serde_json::to_value(serde_map).unwrap();
+    Ok(response)
 }
 
 async fn rpc_rlay_experimental_resolve_entities(
@@ -418,7 +430,12 @@ async fn rpc_rlay_experimental_resolve_entities(
     sync_state: SyncState,
     params_array: Vec<Value>,
 ) -> JsonRpcResult<Value> {
+    let filter_registry = PluginRegistry::from_dir(config.clone().plugins_path);
+
     let cid_array = params_array.get(0).unwrap().as_array().unwrap().to_owned();
+    let default_options = json!({});
+    let options_object = params_array.get(1).or_else(|| Some(&default_options));
+    let activated_filters_arg = FilterArgument::from_options_object(options_object);
 
     let cids: Vec<String> = cid_array
         .iter()
@@ -429,26 +446,32 @@ async fn rpc_rlay_experimental_resolve_entities(
 
     let mut backend = get_backend(&config, &sync_state).await?;
 
-    let result: serde_json::Value = BackendRpcMethods::resolve_entities(&mut backend, cids)
+    let resolved_entities = BackendRpcMethods::resolve_entities(&mut backend, cids)
         .map_err(failure_into_jsonrpc_err)
-        .map_ok(|resolved_entities| {
-            let mut serde_map: Map<String, Value> = Map::new();
-            for (cid, raw_entities) in resolved_entities {
-                let serde_vec: Value = serde_json::to_value::<Value>(
-                    raw_entities
-                        .iter()
-                        .map(|raw_entity| serde_json::to_value(FormatWeb3(raw_entity)).unwrap())
-                        .collect(),
-                )
-                .unwrap();
-                serde_map.insert(cid, serde_vec);
-            }
-            return serde_json::to_value(serde_map).unwrap();
-        })
         .await
         .unwrap();
 
-    Ok(result)
+    let mut serde_map: Map<String, Value> = Map::new();
+    for (cid, raw_entities) in resolved_entities {
+        let filtered_entities = filter_entities(
+            backend.clone(),
+            &filter_registry,
+            activated_filters_arg.clone(),
+            raw_entities,
+        )
+        .await;
+        let serde_vec: Value = serde_json::to_value::<Value>(
+            filtered_entities
+                .iter()
+                .map(|raw_entity| serde_json::to_value(FormatWeb3(raw_entity)).unwrap())
+                .collect(),
+        )
+        .unwrap();
+        serde_map.insert(cid, serde_vec);
+    }
+
+    let response = serde_json::to_value(serde_map).unwrap();
+    Ok(response)
 }
 
 async fn rpc_rlay_experimental_neo4j_query(
@@ -462,7 +485,6 @@ async fn rpc_rlay_experimental_neo4j_query(
 
     let default_options = json!({});
     let options_object = params_array.get(1).or_else(|| Some(&default_options));
-
     let activated_filters_arg = FilterArgument::from_options_object(options_object);
 
     let config = config.clone();

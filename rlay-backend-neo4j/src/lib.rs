@@ -10,6 +10,7 @@ extern crate static_assertions as sa;
 
 pub mod config;
 
+use async_trait::async_trait;
 use bb8_cypher::CypherConnectionManager;
 use cid::{Cid, ToCid};
 use failure::Error;
@@ -558,31 +559,29 @@ impl BackendFromConfigAndSyncState for Neo4jBackend {
     }
 }
 
-impl<'a> GetEntity<'a> for Neo4jBackend {
-    type F = BoxFuture<'a, Result<Option<Entity>, Error>>;
-
-    fn get_entity(&'a self, cid: &[u8]) -> Self::F {
+#[async_trait]
+impl GetEntity for Neo4jBackend {
+    async fn get_entity(&self, cid: &[u8]) -> Result<Option<Entity>, Error> {
         let cid = format!("0x{}", cid.to_hex());
-        Box::pin(Self::get_entity(self, cid.to_owned()))
+        Self::get_entity(self, cid.to_owned()).await
     }
 }
 
-impl<'a> ResolveEntity<'a> for Neo4jBackend {
-    type F = BoxFuture<'a, Result<HashMap<Vec<u8>, Vec<Entity>>, Error>>;
-
-    fn resolve_entity(&'a self, cid: &[u8]) -> Self::F {
+#[async_trait]
+impl ResolveEntity for Neo4jBackend {
+    async fn resolve_entity(&self, cid: &[u8]) -> Result<HashMap<Vec<u8>, Vec<Entity>>, Error> {
         let cid = format!("0x{}", cid.to_hex());
-        Box::pin(
-            Self::resolve_entity(self, cid.to_owned()).map_ok(|resolved_entities| {
+        Self::resolve_entity(self, cid.to_owned())
+            .map_ok(|resolved_entities| {
                 resolved_entities
                     .into_iter()
                     .map(|(old_key, value)| {
-                        let key = old_key[2..].from_hex().unwrap(); // TODO
+                        let key = old_key[2..].from_hex().unwrap();
                         (key, value)
                     })
                     .collect()
-            }),
-        )
+            })
+            .await
     }
 }
 

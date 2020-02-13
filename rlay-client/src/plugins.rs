@@ -1,22 +1,33 @@
-use ambassador::Delegate;
+use async_trait::async_trait;
 use libloading as lib;
 use libloading::Symbol;
 use rlay_ontology::prelude::Entity;
-use rlay_plugin_interface::prelude::{BoxFuture, FilterContext, RlayFilter};
+use rlay_plugin_interface::prelude::{FilterContext, RlayFilter};
 use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::path::Path;
 use std::sync::Arc;
 
 sa::assert_impl_all!(RlayFilterPlugin: Send, Sync);
-#[derive(Delegate)]
-#[delegate(rlay_plugin_interface::RlayFilter, target = "filter")]
+// #[derive(Delegate)]
+// #[delegate(rlay_plugin_interface::RlayFilter, target = "filter")]
 pub struct RlayFilterPlugin {
     filter: Box<dyn RlayFilter + Send + Sync>,
     // Library that the plugin comes from.
     // Has to be the last field so that it's dropped last
     #[allow(unused)]
     library: lib::Library,
+}
+
+#[async_trait]
+impl RlayFilter for RlayFilterPlugin {
+    fn filter_name(&self) -> &'static str {
+        self.filter.filter_name()
+    }
+
+    async fn filter_entities(&self, ctx: FilterContext, entities: Vec<Entity>) -> Vec<bool> {
+        self.filter.filter_entities(ctx, entities).await
+    }
 }
 
 impl RlayFilterPlugin {
