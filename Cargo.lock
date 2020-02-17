@@ -438,7 +438,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait 0.1.24 (registry+https://github.com/rust-lang/crates.io-index)",
  "cid_fork_rlay 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "rlay-plugin-interface 0.1.0",
+ "rlay-plugin-interface 0.3.0",
  "rustc-hex 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.44 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -1434,7 +1434,7 @@ dependencies = [
  "rlay-backend-neo4j 0.1.0",
  "rlay-backend-redisgraph 0.1.0",
  "rlay-jsonrpc-client 0.1.0",
- "rlay-plugin-interface 0.1.0",
+ "rlay-plugin-interface 0.3.0",
  "rlay_ontology 0.2.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-hex 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1466,7 +1466,7 @@ dependencies = [
 
 [[package]]
 name = "rlay-plugin-interface"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "ambassador 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "async-trait 0.1.24 (registry+https://github.com/rust-lang/crates.io-index)",
