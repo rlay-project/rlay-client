@@ -12,6 +12,7 @@ failure = "0.1.1"
 serde_json = { version = "1.0.22", features = ["preserve_order"] }
 futures = "0.3.0"
 ambassador = "0.2.1"
+async-trait = "0.1.24"
 
 [features]
 rpc = ["cid"]

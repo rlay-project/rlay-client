@@ -1,10 +1,11 @@
 #[macro_use]
 extern crate serde_json;
 
+use async_trait::async_trait;
 use failure::err_msg;
 use futures::prelude::*;
 use hyper::{client::HttpConnector, header, Body, Client, Request};
-use rlay_backend::{BoxFuture, GetEntity};
+use rlay_backend::GetEntity;
 use rlay_ontology::ontology::Entity;
 use rlay_ontology::prelude::FormatWeb3;
 use rustc_hex::ToHex;
@@ -99,14 +100,13 @@ impl RlayClient {
     }
 }
 
-impl<'a> GetEntity<'a> for RlayClient {
-    type F = BoxFuture<'a, Result<Option<Entity>, rlay_backend::Error>>;
-
-    fn get_entity(&'a self, cid: &[u8]) -> Self::F {
+#[async_trait]
+impl GetEntity for RlayClient {
+    async fn get_entity(&self, cid: &[u8]) -> Result<Option<Entity>, rlay_backend::Error> {
         let cid_str: String = cid.as_ref().to_hex();
 
         self.get_entity(cid_str)
             .map_err(|_| err_msg("Failure during RPC call"))
-            .boxed()
+            .await
     }
 }

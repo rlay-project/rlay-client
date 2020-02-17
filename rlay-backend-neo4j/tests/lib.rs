@@ -1,7 +1,7 @@
 use lazy_static::lazy_static;
 use nonparallel::nonparallel;
 use rlay_backend::rpc::*;
-use rlay_backend::BackendRpcMethods;
+use rlay_backend::GetEntity;
 use rlay_backend_neo4j::*;
 use rlay_ontology::prelude::*;
 use rustc_hex::{FromHex, ToHex};
@@ -76,7 +76,20 @@ fn store_and_get_roundtrip_works() {
     let formatted_cid: String = format!("0x{}", inserted_cid.to_bytes().to_hex());
 
     let retrieved_entity = rt
-        .block_on(backend.get_entity(&formatted_cid))
+        .block_on(BackendRpcMethodGetEntity::get_entity(
+            &mut backend,
+            &formatted_cid,
+        ))
+        .unwrap()
+        .unwrap();
+
+    assert_eq!(
+        inserted_entity, retrieved_entity,
+        "inserted and retrieved entity don't match"
+    );
+
+    let retrieved_entity = rt
+        .block_on(GetEntity::get_entity(&backend, &inserted_cid.to_bytes()))
         .unwrap()
         .unwrap();
 
@@ -165,7 +178,8 @@ fn get_entity_leaf_node_returns_none() {
         .unwrap();
 
     let retrieved_entity = rt
-        .block_on(backend.get_entity(
+        .block_on(BackendRpcMethodGetEntity::get_entity(
+            &mut backend,
             "019580031b201111111111111111111111111111111111111111111111111111111111111111",
         ))
         .unwrap();

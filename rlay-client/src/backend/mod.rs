@@ -1,9 +1,10 @@
 use ambassador::Delegate;
+use async_trait::async_trait;
 use cid::Cid;
 use failure::Error;
 use futures::future::{BoxFuture, FutureExt, TryFutureExt};
 use rlay_backend::rpc::*;
-use rlay_backend::{BackendFromConfigAndSyncState, GetEntity};
+use rlay_backend::{BackendFromConfigAndSyncState, GetEntity, ResolveEntity};
 use rlay_ontology::ontology::Entity;
 use serde_json::Value;
 use std::collections::HashMap;
@@ -144,15 +145,26 @@ impl BackendRpcMethodResolveEntities for Backend {
 
 impl BackendRpcMethods for Backend {}
 
-impl<'a> GetEntity<'a> for Backend {
-    type F = BoxFuture<'a, Result<Option<Entity>, Error>>;
-
-    fn get_entity(&'a self, cid: &[u8]) -> Self::F {
+#[async_trait]
+impl GetEntity for Backend {
+    async fn get_entity(&self, cid: &[u8]) -> Result<Option<Entity>, Error> {
         match self {
             #[cfg(feature = "backend_neo4j")]
-            Backend::Neo4j(backend) => GetEntity::get_entity(backend, cid),
+            Backend::Neo4j(backend) => GetEntity::get_entity(backend, cid).await,
             #[cfg(feature = "backend_redisgraph")]
-            Backend::Redisgraph(backend) => GetEntity::get_entity(backend, cid),
+            Backend::Redisgraph(backend) => GetEntity::get_entity(backend, cid).await,
+        }
+    }
+}
+
+#[async_trait]
+impl ResolveEntity for Backend {
+    async fn resolve_entity(&self, cid: &[u8]) -> Result<HashMap<Vec<u8>, Vec<Entity>>, Error> {
+        match self {
+            #[cfg(feature = "backend_neo4j")]
+            Backend::Neo4j(backend) => ResolveEntity::resolve_entity(backend, cid).await,
+            #[cfg(feature = "backend_redisgraph")]
+            Backend::Redisgraph(backend) => ResolveEntity::resolve_entity(backend, cid).await,
         }
     }
 }

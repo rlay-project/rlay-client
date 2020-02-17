@@ -10,6 +10,7 @@ extern crate static_assertions as sa;
 pub mod config;
 mod parse;
 
+use async_trait::async_trait;
 use cid::{Cid, ToCid};
 use failure::{format_err, Error};
 use futures::future::BoxFuture;
@@ -18,10 +19,11 @@ use itertools::Itertools;
 use once_cell::sync::OnceCell;
 use redis::{aio::MultiplexedConnection, FromRedisValue};
 use rlay_backend::rpc::*;
-use rlay_backend::{BackendFromConfigAndSyncState, GetEntity};
+use rlay_backend::{BackendFromConfigAndSyncState, GetEntity, ResolveEntity};
 use rlay_ontology::prelude::*;
 use rustc_hex::ToHex;
 use serde_json::Value;
+use std::collections::HashMap;
 
 use crate::config::RedisgraphBackendConfig;
 use crate::parse::{CidList, GetQueryRelationship};
@@ -303,12 +305,18 @@ pub struct SyncState {
     pub connection_pool: Option<MultiplexedConnection>,
 }
 
-impl<'a> GetEntity<'a> for RedisgraphBackend {
-    type F = BoxFuture<'a, Result<Option<Entity>, Error>>;
-
-    fn get_entity(&'a self, cid: &[u8]) -> Self::F {
+#[async_trait]
+impl GetEntity for RedisgraphBackend {
+    async fn get_entity(&self, _cid: &[u8]) -> Result<Option<Entity>, Error> {
         todo!()
         // future::ready(Ok(self.get(cid).map(|n| n.to_owned()))).boxed()
+    }
+}
+
+#[async_trait]
+impl ResolveEntity for RedisgraphBackend {
+    async fn resolve_entity(&self, _cid: &[u8]) -> Result<HashMap<Vec<u8>, Vec<Entity>>, Error> {
+        todo!()
     }
 }
 

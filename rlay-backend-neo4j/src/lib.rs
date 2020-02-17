@@ -10,6 +10,7 @@ extern crate static_assertions as sa;
 
 pub mod config;
 
+use async_trait::async_trait;
 use bb8_cypher::CypherConnectionManager;
 use cid::{Cid, ToCid};
 use failure::Error;
@@ -18,8 +19,9 @@ use futures::prelude::*;
 use l337::Pool;
 use once_cell::sync::OnceCell;
 use rlay_backend::rpc::*;
-use rlay_backend::{BackendFromConfigAndSyncState, GetEntity};
+use rlay_backend::{BackendFromConfigAndSyncState, GetEntity, ResolveEntity};
 use rlay_ontology::prelude::*;
+use rustc_hex::{FromHex, ToHex};
 use rusted_cypher::cypher::result::Rows;
 use rusted_cypher::cypher::Statement;
 use rusted_cypher::GraphClient;
@@ -285,11 +287,11 @@ impl Neo4jBackend {
         Ok(entities)
     }
 
-    async fn resolve_entity(&mut self, cid: String) -> Result<ResolvedEntities, Error> {
+    async fn resolve_entity(&self, cid: String) -> Result<ResolvedEntities, Error> {
         self.resolve_entities(vec![cid]).await
     }
 
-    pub async fn resolve_entities(&mut self, cids: Vec<String>) -> Result<ResolvedEntities, Error> {
+    pub async fn resolve_entities(&self, cids: Vec<String>) -> Result<ResolvedEntities, Error> {
         let cids: Vec<String> = cids.to_owned();
         let client = self.client().await?;
 
@@ -557,12 +559,29 @@ impl BackendFromConfigAndSyncState for Neo4jBackend {
     }
 }
 
-impl<'a> GetEntity<'a> for Neo4jBackend {
-    type F = BoxFuture<'a, Result<Option<Entity>, Error>>;
+#[async_trait]
+impl GetEntity for Neo4jBackend {
+    async fn get_entity(&self, cid: &[u8]) -> Result<Option<Entity>, Error> {
+        let cid = format!("0x{}", cid.to_hex());
+        Self::get_entity(self, cid.to_owned()).await
+    }
+}
 
-    fn get_entity(&'a self, cid: &[u8]) -> Self::F {
-        todo!()
-        // future::ready(Ok(self.get(cid).map(|n| n.to_owned()))).boxed()
+#[async_trait]
+impl ResolveEntity for Neo4jBackend {
+    async fn resolve_entity(&self, cid: &[u8]) -> Result<HashMap<Vec<u8>, Vec<Entity>>, Error> {
+        let cid = format!("0x{}", cid.to_hex());
+        Self::resolve_entity(self, cid.to_owned())
+            .map_ok(|resolved_entities| {
+                resolved_entities
+                    .into_iter()
+                    .map(|(old_key, value)| {
+                        let key = old_key[2..].from_hex().unwrap();
+                        (key, value)
+                    })
+                    .collect()
+            })
+            .await
     }
 }
 
@@ -619,7 +638,7 @@ impl BackendRpcMethodResolveEntity for Neo4jBackend {
         &mut self,
         cid: &str,
     ) -> BoxFuture<Result<HashMap<String, Vec<Entity>>, Error>> {
-        Box::pin(self.resolve_entity(cid.to_owned()))
+        Box::pin(Self::resolve_entity(self, cid.to_owned()))
     }
 }
 
@@ -628,7 +647,7 @@ impl BackendRpcMethodResolveEntities for Neo4jBackend {
         &mut self,
         cids: Vec<String>,
     ) -> BoxFuture<Result<HashMap<String, Vec<Entity>>, Error>> {
-        Box::pin(self.resolve_entities(cids))
+        Box::pin(Self::resolve_entities(self, cids))
     }
 }
 

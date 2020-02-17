@@ -33,6 +33,7 @@ hlua = "0.4.1"
 static_assertions = "1.1.0"
 ambassador = "0.2.1"
 libloading = "0.5.2"
+async-trait = "0.1.24"
 
 [dev-dependencies]
 assert_cmd = "0.11"
