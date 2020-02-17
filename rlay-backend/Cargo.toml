@@ -1,6 +1,7 @@
 [package]
 name = "rlay-backend"
-version = "0.1.0"
+description = "Common traits for Rlay (storage) backends"
+version = "0.3.0"
 authors = ["Maximilian Goisser <goisser94@gmail.com>"]
 license = "MIT OR Apache-2.0"
 edition = "2018"
